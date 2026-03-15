@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.3.3
+ * THIS FILE IS VERSION: v1.3.4
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.3.3 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.3.4 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.3.3';
+const APP_VERSION = 'v1.3.4';
 
 // ── GLOBAL CONSTANTS ──
 const SUBJECT_COLOURS = {
@@ -102,6 +102,53 @@ async function apiCall(action, data = null) {
   }
 }
 
+// ── BATCHED LOAD — single round trip for all Sheets data ──
+async function loadAll() {
+  const result = await apiCall('getAll');
+
+  // Students
+  if (Array.isArray(result.students) && result.students.length > 1) {
+    state.students = result.students.slice(1).map(r => ({
+      id: r[0], first_name: r[1], last_name: r[2],
+      year_level: r[3], date_added: r[4]
+    })).filter(s => s.id);
+  }
+
+  // Progress
+  if (Array.isArray(result.progress) && result.progress.length > 1) {
+    state.progress = result.progress.slice(1).map(r => ({
+      id: r[0], student_id: r[1], code: r[2],
+      mastery: r[3], date: r[4], notes: r[5] || '', evidence: r[6] || ''
+    })).filter(p => p.id);
+  }
+
+  // TaughtLog
+  if (Array.isArray(result.taughtLog) && result.taughtLog.length > 1) {
+    state.taughtLog = result.taughtLog.slice(1).map(r => ({
+      id: r[0], date: r[1], student_id: r[2], code: r[3], notes: r[4] || ''
+    })).filter(t => t.id);
+  }
+
+  // Standards Judgments
+  if (Array.isArray(result.standardsJudgments) && result.standardsJudgments.length > 1) {
+    state.standardsJudgments = result.standardsJudgments.slice(1).map(r => ({
+      id: r[0], student_id: r[1], standard_id: r[2],
+      judgment: r[3], locked: r[4] === true || r[4] === 'TRUE',
+      date: r[5], notes: r[6] || '', period: r[7] || ''
+    })).filter(j => j.id);
+  }
+
+  // Progression Placements
+  if (Array.isArray(result.progressionPlacements) && result.progressionPlacements.length > 1) {
+    state.progressionPlacements = result.progressionPlacements.slice(1).map(r => ({
+      id: r[0], student_id: r[1], element: r[2], sub_element: r[3],
+      level: r[4], date: r[5], notes: r[6] || '',
+      ext_label: r[7] || '', ext_value: r[8] || ''
+    })).filter(p => p.id);
+  }
+}
+
+// Keep individual loaders as fallbacks (used by older scripts)
 async function loadStudents() {
   try {
     const rows = await apiCall('getStudents');
@@ -134,10 +181,7 @@ async function loadTaughtLog() {
         id: r[0], date: r[1], student_id: r[2], code: r[3], notes: r[4] || ''
       })).filter(t => t.id);
     }
-  } catch(e) {
-    // TaughtLog sheet may not exist yet — that's fine
-    console.warn('TaughtLog not loaded (sheet may not exist yet):', e);
-  }
+  } catch(e) { console.warn('TaughtLog not loaded:', e); }
 }
 
 async function loadStandardsJudgments() {
@@ -4532,7 +4576,7 @@ function renderDailyLog(main) {
 
 // ── Apps Script additions needed ──
 console.info(
-  '%cClassTracker v1.3.3 — Apps Script update needed\n\n' +
+  '%cClassTracker v1.3.4 — Apps Script update needed\n\n' +
   'Add these sheets to your Google Spreadsheet:\n' +
   '  StandardsJudgments — A:id B:student_id C:standard_id D:judgment E:locked F:date G:notes H:period\n' +
   '  ProgressionPlacements — A:id B:student_id C:element D:sub_element E:level F:date G:notes H:ext_label I:ext_value\n\n' +
@@ -4543,41 +4587,42 @@ console.info(
 async function init() {
   const verEl = document.getElementById('sidebar-version');
   if (verEl) verEl.textContent = APP_VERSION;
-
-  // Use allSettled so a single failure (e.g. TaughtLog sheet not yet created)
-  // doesn't block the whole app from rendering
   loadAssessmentScale();
-  const results = await Promise.allSettled([
-    loadStudents(),
-    loadProgress(),
-    loadTaughtLog(),
-    loadStandardsJudgments(),
-    loadProgressionPlacements(),
+
+  // Run Sheets fetch and CSV fetch in parallel.
+  // Try the fast batched getAll first; fall back to individual calls
+  // if the Apps Script hasn't been updated yet.
+  const sheetsLoad = (async () => {
+    try {
+      await loadAll();
+    } catch(e) {
+      console.warn('getAll not available, falling back to individual calls:', e);
+      await Promise.allSettled([
+        loadStudents(), loadProgress(), loadTaughtLog(),
+        loadStandardsJudgments(), loadProgressionPlacements()
+      ]);
+    }
+  })();
+
+  const [sheetsResult, csvResult] = await Promise.allSettled([
+    sheetsLoad,
     fetchAllCSVs()
   ]);
 
-  // Log any failures but don't block render
-  results.forEach((r, i) => {
-    if (r.status === 'rejected') {
-      const names = ['loadStudents','loadProgress','loadTaughtLog','fetchAllCSVs'];
-      console.warn(`Init: ${names[i]} failed:`, r.reason);
-    }
-  });
+  if (sheetsResult.status === 'rejected') console.warn('Sheets load failed:', sheetsResult.reason);
+  if (csvResult.status   === 'rejected') console.warn('CSV load failed:',    csvResult.reason);
 
   state.loading = false;
   renderView();
   checkDailyLogBadge();
   checkAdminMenuState();
 
-  // Show daily log popup if nothing logged today
   const today = new Date().toISOString().split('T')[0];
   const loggedToday = state.taughtLog.some(t => t.date === today);
-  // Never auto-open the wizard — just show the badge and a gentle toast
   if (!loggedToday && state.students.length > 0) {
     setTimeout(() => toast('✦ Nothing logged today — tap Log Today when ready', 'info'), 2000);
   }
 
-  // Warn if Sheets data didn't load
   if (state.students.length === 0) {
     toast('Could not load student data — check your Sheets connection', 'error');
   }

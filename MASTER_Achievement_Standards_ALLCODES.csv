@@ -1,0 +1,416 @@
+Achievement Standard ID,Year Level,Subject,Standard Text,Codes,Category,Linked Content Descriptor Codes
+P-HS-AS-01,Foundation,HASS,"Students identify significant people and events in their own lives, and how significant events are celebrated or commemorated.","AC9HSFK01, AC9HSFK02",,"AC9HSFK01, AC9HSFK02"
+P-HS-AS-02,Foundation,HASS,"Students pose questions, and sort and record information from observations and provided sources.","AC9HSFS01, AC9HSFS02",,"AC9HSFS01, AC9HSFS02"
+P-HS-AS-03,Foundation,HASS,"Students recognise the features of familiar places, why some places are special to people and the ways they can care for them.","AC9HSFK03, AC9HSFK04",,"AC9HSFK03, AC9HSFK04"
+P-HS-AS-04,Foundation,HASS,Students use sources and terms to share observations about places and the past.,AC9HSFS05,,AC9HSFS05
+P-HS-AS-05,Foundation,HASS,They share a perspective and draw conclusions.,"AC9HSFS03, AC9HSFS04",,"AC9HSFS03, AC9HSFS04"
+Y1-HS-AS-01,Year 1,HASS,"Students develop questions and collect, sort and record information and data from observations and provided sources.","AC9HS1S01, AC9HS1S02",,"AC9HS1S01, AC9HS1S02"
+Y1-HS-AS-02,Year 1,HASS,"Students identify continuity and change in family structures, roles and significant aspects of daily life.","AC9HS1K01, AC9HS1K02",,"AC9HS1K01, AC9HS1K02"
+Y1-HS-AS-03,Year 1,HASS,"Students share narratives and observations about people, places and the past, drawing on sources and incorporating subject-specific terms.",AC9HS1S06,,AC9HS1S06
+Y1-HS-AS-04,Year 1,HASS,They draw conclusions and make proposals.,AC9HS1S05,,AC9HS1S05
+Y1-HS-AS-05,Year 1,HASS,"They identify the location and nature of the natural, managed and constructed features of local places, the ways places change, and how they can be cared for by people.","AC9HS1K03, AC9HS1K04",,"AC9HS1K03, AC9HS1K04"
+Y1-HS-AS-06,Year 1,HASS,They interpret information and discuss perspectives.,"AC9HS1S03, AC9HS1S04",,"AC9HS1S03, AC9HS1S04"
+Y2-HS-AS-01,Year 2,HASS,"Students develop questions, and collect, sort and record related information and data from observations and provided sources.","AC9HS2S01, AC9HS2S02",,"AC9HS2S01, AC9HS2S02"
+Y2-HS-AS-02,Year 2,HASS,Students identify that places can be spatially represented in different geographical divisions.,AC9HS2K03,,AC9HS2K03
+Y2-HS-AS-03,Year 2,HASS,"Students identify the significance of a local person, group, place and/or building.",AC9HS2K01,,AC9HS2K01
+Y2-HS-AS-04,Year 2,HASS,Students use interpretations to draw conclusions and make proposals.,AC9HS2S05,,AC9HS2S05
+Y2-HS-AS-05,Year 2,HASS,"Students use sources, and subject-specific terms to present narratives and observations about the past, people and places at different scales.",AC9HS2S06,,AC9HS2S06
+Y2-HS-AS-06,Year 2,HASS,They identify how people and places are interconnected both at local and broader scales.,AC9HS2K04,,AC9HS2K04
+Y2-HS-AS-07,Year 2,HASS,They identify the effects of changes in technologies on people’s lives.,AC9HS2K02,,AC9HS2K02
+Y2-HS-AS-08,Year 2,HASS,"They interpret information and data, and identify and discuss perspectives.","AC9HS2S03, AC9HS2S04",,"AC9HS2S03, AC9HS2S04"
+Y3-HS-AS-01,Year 3,HASS,"Students describe the causes, effects and contributions of people to change.",AC9HS3K01,,AC9HS3K01
+Y3-HS-AS-02,Year 3,HASS,Students describe the importance of rules and people’s contributions to communities.,"AC9HS3K06, AC9HS3K07",,"AC9HS3K06, AC9HS3K07"
+Y3-HS-AS-03,Year 3,HASS,"Students develop questions and locate, collect and record information and data from different sources.","AC9HS3S01, AC9HS3S02",,"AC9HS3S01, AC9HS3S02"
+Y3-HS-AS-04,Year 3,HASS,Students propose actions or responses.,AC9HS3S06,,AC9HS3S06
+Y3-HS-AS-05,Year 3,HASS,"Students use ideas from sources, and subject-specific terms to present descriptions and explanations.",AC9HS3S07,,AC9HS3S07
+Y3-HS-AS-06,Year 3,HASS,They analyse information and data to identify perspectives and they draw conclusions.,"AC9HS3S04, AC9HS3S05",,"AC9HS3S04, AC9HS3S05"
+Y3-HS-AS-07,Year 3,HASS,They describe the representation of places within and near Australia.,AC9HS3K03,,AC9HS3K03
+Y3-HS-AS-08,Year 3,HASS,"They identify the significance of events, symbols and emblems to Australia’s identity and diversity.",AC9HS3K01,,AC9HS3K01
+Y3-HS-AS-09,Year 3,HASS,"They identify the similarities, differences and connections of people to places across those scales.","AC9HS3K04, AC9HS3K05",,"AC9HS3K04, AC9HS3K05"
+Y3-HS-AS-10,Year 3,HASS,They interpret information and data in different formats.,AC9HS3S03,,AC9HS3S03
+Y4-HS-AS-01,Year 4,HASS,Students describe the diversity of experiences of people in Australia prior to and following 1788.,"AC9HS4K01, AC9HS4K03",,"AC9HS4K01, AC9HS4K03"
+Y4-HS-AS-02,Year 4,HASS,"Students describe the importance of environments, and sustainable allocation and management of resources.","AC9HS4K05, AC9HS4K06",,"AC9HS4K05, AC9HS4K06"
+Y4-HS-AS-03,Year 4,HASS,"Students develop questions and locate, collect and record information and data from a range of sources and formats.","AC9HS4S01, AC9HS4S02",,"AC9HS4S01, AC9HS4S02"
+Y4-HS-AS-04,Year 4,HASS,Students propose considered actions or responses.,AC9HS4S06,,AC9HS4S06
+Y4-HS-AS-05,Year 4,HASS,Students use ideas from sources and relevant subject-specific terms to present descriptions and explanations.,AC9HS4S07,,AC9HS4S07
+Y4-HS-AS-06,Year 4,HASS,They describe the effects of colonisation on people and environments.,AC9HS4K04,,AC9HS4K04
+Y4-HS-AS-07,Year 4,HASS,They describe the events and causes of the establishment of the first British colony in Australia.,AC9HS4K02,,AC9HS4K02
+Y4-HS-AS-08,Year 4,HASS,"They describe the importance and role of local government, community members and laws, and the cultural and social factors that shape identity.","AC9HS4K07, AC9HS4K08, AC9HS4K09",,"AC9HS4K07, AC9HS4K08, AC9HS4K09"
+Y4-HS-AS-09,Year 4,HASS,"They interpret and analyse information and data to identify perspectives, and draw conclusions.","AC9HS4S03, AC9HS4S04, AC9HS4S05",,"AC9HS4S03, AC9HS4S04, AC9HS4S05"
+Y5-HS-AS-01,Year 5,HASS,Students consider criteria in proposing actions or responses.,AC9HS5S06,,AC9HS5S06
+Y5-HS-AS-02,Year 5,HASS,"Students develop questions and locate, collect and organise information and data from primary and secondary sources.","AC9HS5S01, AC9HS5S02",,"AC9HS5S01, AC9HS5S02"
+Y5-HS-AS-03,Year 5,HASS,Students evaluate information and data to identify and describe patterns or trends.,AC9HS5S03,,AC9HS5S03
+Y5-HS-AS-04,Year 5,HASS,Students explain the causes of the establishment of British colonies in Australia after 1800.,AC9HS5K01,,AC9HS5K01
+Y5-HS-AS-05,Year 5,HASS,Students explain the key values and features of Australia’s democracy and how people achieve civic goals.,"AC9HS5K06, AC9HS5K07",,"AC9HS5K06, AC9HS5K07"
+Y5-HS-AS-06,Year 5,HASS,"Students select ideas and findings from sources and use relevant terms and conventions, to present descriptions and explanations.",AC9HS5S07,,AC9HS5S07
+Y5-HS-AS-07,Year 5,HASS,They evaluate sources to determine origin and perspectives.,AC9HS5S04,,AC9HS5S04
+Y5-HS-AS-08,Year 5,HASS,They explain the influence of people on the characteristics of places and in the management of spaces.,"AC9HS5K04, AC9HS5K05",,"AC9HS5K04, AC9HS5K05"
+Y5-HS-AS-09,Year 5,HASS,"They explain the nature of resources, and how they meet needs and wants.",AC9HS5K08,,AC9HS5K08
+Y5-HS-AS-10,Year 5,HASS,They explain the roles of significant individuals or groups in the development of an Australian colony and the impact of those developments.,"AC9HS5K02, AC9HS5K03",,"AC9HS5K02, AC9HS5K03"
+Y5-HS-AS-11,Year 5,HASS,They suggest conclusions based on evidence.,AC9HS5S05,,AC9HS5S05
+Y6-HS-AS-01,Year 6,HASS,"Students develop questions, and locate, collect and organise information and data from a range of primary and secondary sources.","AC9HS6S01, AC9HS6S02",,"AC9HS6S01, AC9HS6S02"
+Y6-HS-AS-02,Year 6,HASS,"Students evaluate a range of information and data formats to identify and describe patterns, trends or inferred relationships.",AC9HS6S03,,AC9HS6S03
+Y6-HS-AS-03,Year 6,HASS,"Students explain the key institutions, roles and responsibilities of Australia’s levels of government, and democratic values and beliefs.","AC9HS6K06, AC9HS6K07",,"AC9HS6K06, AC9HS6K07"
+Y6-HS-AS-04,Year 6,HASS,"Students explain the roles of significant people, events and ideas that led to Australian Federation, democracy and citizenship.","AC9HS6K01, AC9HS6K02",,"AC9HS6K01, AC9HS6K02"
+Y6-HS-AS-05,Year 6,HASS,Students propose actions or responses and use criteria to assess the possible effects.,AC9HS6S06,,AC9HS6S06
+Y6-HS-AS-06,Year 6,HASS,"Students select and organise ideas and findings from sources, and use a range of relevant terms and conventions, to present descriptions and explanations.",AC9HS6S07,,AC9HS6S07
+Y6-HS-AS-07,Year 6,HASS,They evaluate evidence to draw conclusions.,AC9HS6S05,,AC9HS6S05
+Y6-HS-AS-08,Year 6,HASS,"They evaluate sources to determine origin, purpose and perspectives.",AC9HS6S04,,AC9HS6S04
+Y6-HS-AS-09,Year 6,HASS,They explain influences on consumers and strategies for informed consumer and financial choices.,AC9HS6K08,,AC9HS6K08
+Y6-HS-AS-10,Year 6,HASS,They explain the causes and effects of migration to Australia since Federation.,AC9HS6K03,,AC9HS6K03
+Y6-HS-AS-11,Year 6,HASS,They explain the geographical diversity of places and the effects of interconnections with other countries.,"AC9HS6K04, AC9HS6K05",,"AC9HS6K04, AC9HS6K05"
+P-HP-AS-01,Foundation,HPE,Students apply fundamental movement skills to manipulate objects and space in a range of movement situations.,"AC9HPFM01, AC9HPFM02",,"AC9HPFM01, AC9HPFM02"
+P-HP-AS-02,Foundation,HPE,"Students describe similarities and differences between themselves and others, and different emotions people experience.","AC9HPFP01, AC9HPFP03",,"AC9HPFP01, AC9HPFP03"
+P-HP-AS-03,Foundation,HPE,Students identify how health information can be used in their lives.,AC9HPFP06,,AC9HPFP06
+P-HP-AS-04,Foundation,HPE,Students identify the benefits of being physically active and how rules make play fair and inclusive.,"AC9HPFM03, AC9HPFM04",,"AC9HPFM03, AC9HPFM04"
+P-HP-AS-05,Foundation,HPE,They demonstrate personal and social skills to interact respectfully with others.,AC9HPFP02,,AC9HPFP02
+P-HP-AS-06,Foundation,HPE,They identify and demonstrate protective behaviours and help-seeking strategies to keep themselves safe.,"AC9HPFP04, AC9HPFP05",,"AC9HPFP04, AC9HPFP05"
+Y1-HP-AS-01,Year 1,HPE,Students explain how personal qualities contribute to identities.,AC9HP2P01,,AC9HP2P01
+Y2-HP-AS-01,Year 2,HPE,Students explain how personal qualities contribute to identities.,AC9HP2P01,,AC9HP2P01
+Y3-HP-AS-01,Year 3,HPE,"Students identify influences that strengthen identities and describe strategies to manage emotions, changes and transitions.","AC9HP4P01, AC9HP4P02, AC9HP4P06",,"AC9HP4P01, AC9HP4P02, AC9HP4P06"
+Y4-HP-AS-01,Year 4,HPE,"Students identify influences that strengthen identities and describe strategies to manage emotions, changes and transitions.","AC9HP4P01, AC9HP4P02, AC9HP4P06",,"AC9HP4P01, AC9HP4P02, AC9HP4P06"
+Y5-HP-AS-01,Year 5,HPE,"Students explain how communication skills, protective behaviours and
+help-seeking strategies keep themselves and others safe online and offline.","AC9HP6P07, AC9HP6P08",,"AC9HP6P07, AC9HP6P08"
+Y5-HP-AS-02,Year 5,HPE,Students explain how different factors influence identities.,AC9HP6P01,,AC9HP6P01
+Y5-HP-AS-03,Year 5,HPE,"Students propose strategies to promote physical activity participation that enhance health, fitness and wellbeing.","AC9HP6M04, AC9HP6M05, AC9HP6M06",,"AC9HP6M04, AC9HP6M05, AC9HP6M06"
+Y5-HP-AS-04,Year 5,HPE,Students refine and modify movement skills and apply movement concepts across a range of situations.,"AC9HP6M01, AC9HP6M03",,"AC9HP6M01, AC9HP6M03"
+Y5-HP-AS-05,Year 5,HPE,"They analyse health information to refine strategies to enhance their own and others’ health, safety, relationships and wellbeing.","AC9HP6P09, AC9HP6P10",,"AC9HP6P09, AC9HP6P10"
+Y5-HP-AS-06,Year 5,HPE,They describe contributions they can make as a group and team member to support fair play and inclusion across a range of movement contexts.,"AC9HP6M08, AC9HP6M09",,"AC9HP6M08, AC9HP6M09"
+Y5-HP-AS-07,Year 5,HPE,They explain how stereotypes influence roles and responsibilities.,AC9HP6P03,,AC9HP6P03
+Y5-HP-AS-08,Year 5,HPE,"They propose strategies to demonstrate respect, empathy and inclusion.","AC9HP6P04, AC9HP6P05",,"AC9HP6P04, AC9HP6P05"
+Y5-HP-AS-09,Year 5,HPE,"They propose strategies to manage emotions, developmental changes and transitions.","AC9HP6P02, AC9HP6P06",,"AC9HP6P02, AC9HP6P06"
+Y5-HP-AS-10,Year 5,HPE,They transfer movement strategies between situations and evaluate the impact on movement outcomes.,"AC9HP6M02, AC9HP6M07",,"AC9HP6M02, AC9HP6M07"
+Y6-HP-AS-01,Year 6,HPE,"Students explain how communication skills, protective behaviours and
+help-seeking strategies keep themselves and others safe online and offline.","AC9HP6P07, AC9HP6P08",,"AC9HP6P07, AC9HP6P08"
+Y6-HP-AS-02,Year 6,HPE,Students explain how different factors influence identities.,AC9HP6P01,,AC9HP6P01
+Y6-HP-AS-03,Year 6,HPE,"Students propose strategies to promote physical activity participation that enhance health, fitness and wellbeing.","AC9HP6M04, AC9HP6M05, AC9HP6M06",,"AC9HP6M04, AC9HP6M05, AC9HP6M06"
+Y6-HP-AS-04,Year 6,HPE,Students refine and modify movement skills and apply movement concepts across a range of situations.,"AC9HP6M01, AC9HP6M03",,"AC9HP6M01, AC9HP6M03"
+Y6-HP-AS-05,Year 6,HPE,"They analyse health information to refine strategies to enhance their own and others’ health, safety, relationships and wellbeing.","AC9HP6P09, AC9HP6P10",,"AC9HP6P09, AC9HP6P10"
+Y6-HP-AS-06,Year 6,HPE,They describe contributions they can make as a group and team member to support fair play and inclusion across a range of movement contexts.,"AC9HP6M08, AC9HP6M09",,"AC9HP6M08, AC9HP6M09"
+Y6-HP-AS-07,Year 6,HPE,They explain how stereotypes influence roles and responsibilities.,AC9HP6P03,,AC9HP6P03
+Y6-HP-AS-08,Year 6,HPE,"They propose strategies to demonstrate respect, empathy and inclusion.","AC9HP6P04, AC9HP6P05",,"AC9HP6P04, AC9HP6P05"
+Y6-HP-AS-09,Year 6,HPE,"They propose strategies to manage emotions, developmental changes and transitions.","AC9HP6P02, AC9HP6P06",,"AC9HP6P02, AC9HP6P06"
+Y6-HP-AS-10,Year 6,HPE,They transfer movement strategies between situations and evaluate the impact on movement outcomes.,"AC9HP6M02, AC9HP6M07",,"AC9HP6M02, AC9HP6M07"
+P-AS-01,Foundation,Maths,"Students make connections between number names, numerals and position in the sequence of numbers from zero to at least 20.",AC9MFN01,Number,AC9MFN01
+P-AS-02,Foundation,Maths,"They collect, sort and compare data in response to questions in familiar contexts.","AC9MFN03, AC9MFST01",Number,"AC9MFN03, AC9MFST01"
+P-AS-03,Foundation,Maths,They compare the size of collections to at least 20.,AC9MFN03,Number,AC9MFN03
+P-AS-04,Foundation,Maths,They copy and continue repeating patterns.,AC9MFA01,Algebra,AC9MFA01
+P-AS-05,Foundation,Maths,They describe the position and the location of themselves and objects in relation to other objects and people within a familiar space.,AC9MFSP02,Space,AC9MFSP02
+P-AS-06,Foundation,Maths,"They identify the attributes of mass, capacity, length and duration, and use direct comparison strategies to compare objects and events.",AC9MFM01,Measurement,AC9MFM01
+P-AS-07,Foundation,Maths,"They name, create and sort familiar shapes and give their reasoning.",AC9MFSP01,Space,AC9MFSP01
+P-AS-08,Foundation,Maths,"They partition and combine collections up to 10 in different ways, representing these with numbers.","AC9MFN02, AC9MFN04",Number,"AC9MFN02, AC9MFN04"
+P-AS-09,Foundation,Maths,"They represent practical situations that involve quantifying, equal sharing, adding to and taking away from collections to at least 10.","AC9MFN03, AC9MFN05, AC9MFN06",Number,"AC9MFN03, AC9MFN05, AC9MFN06"
+P-AS-10,Foundation,Maths,They sequence and connect familiar events to the time of day.,AC9MFM02,Measurement,AC9MFM02
+P-AS-11,Foundation,Maths,They use subitising and counting strategies to quantify collections.,"AC9MFN02, AC9MFN03, AC9MFN04, AC9MFN05",Number,"AC9MFN02, AC9MFN03, AC9MFN04, AC9MFN05"
+Y1-AS-01,Year 1,Maths,"Students connect number names, numerals and quantities, and order numbers to at least 120.",AC9M1N01,Number,AC9M1N01
+Y1-AS-02,Year 1,Maths,"They collect and record categorical data, create one-to-one displays, and compare and discuss the data using frequencies.","AC9M1ST01, AC9M1ST02",Statistics,"AC9M1ST01, AC9M1ST02"
+Y1-AS-03,Year 1,Maths,"They compare and order objects and events based on the attributes of length, mass, capacity and duration, communicating reasoning.","AC9M1M01, AC9M1M03",Measurement,"AC9M1M01, AC9M1M03"
+Y1-AS-04,Year 1,Maths,They demonstrate how one- and two-digit numbers can be partitioned in different ways and that two-digit numbers can be partitioned into tens and ones.,"AC9M1N02, AC9M1N04",Number,"AC9M1N02, AC9M1N04"
+Y1-AS-05,Year 1,Maths,They give and follow directions to move people and objects within a space.,AC9M1SP02,Space,AC9M1SP02
+Y1-AS-06,Year 1,Maths,"They make, compare and classify shapes and objects using obvious features.",AC9M1SP01,Space,AC9M1SP01
+Y1-AS-07,Year 1,Maths,They measure the length of shapes and objects using uniform informal units.,AC9M1M02,Measurement,AC9M1M02
+Y1-AS-08,Year 1,Maths,"They partition collections into equal groups and skip count in twos, fives or tens to quantify collections to at least 120.",AC9M1N03,Number,AC9M1N03
+Y1-AS-09,Year 1,Maths,"They solve problems involving addition and subtraction of numbers to 20 and use mathematical modelling to solve practical problems involving addition, subtraction, equal sharing and grouping, using calculation strategies.","AC9M1N04, AC9M1N05, AC9M1N06",Number,"AC9M1N04, AC9M1N05, AC9M1N06"
+Y1-AS-10,Year 1,Maths,"They use numbers, symbols and objects to create skip counting and repeating patterns, identifying the repeating unit.","AC9M1A01, AC9M1A02",Algebra,"AC9M1A01, AC9M1A02"
+Y2-AS-01,Year 2,Maths,"Students order and represent numbers to at least 1000, apply knowledge of place value to partition, rearrange and rename two- and three-digit numbers in terms of their parts, and regroup partitioned numbers to assist in.","AC9M2N01, AC9M2N02, AC9M2N04, AC9M2N05",Number,"AC9M2N01, AC9M2N02, AC9M2N04, AC9M2N05"
+Y2-AS-02,Year 2,Maths,"They compare and classify shapes, describing features using formal spatial term.",AC9M2SP01,Space,AC9M2SP01
+Y2-AS-03,Year 2,Maths,They describe and continue patterns that increase and decrease additively by a constant amount and identify missing elements in the pattern.,AC9M2A01,Algebra,AC9M2A01
+Y2-AS-04,Year 2,Maths,"They determine the number of days between events using a calendar and read time on an analog clock to the hour, half hour and quarter hour.",AC9M2M04,Measurement,AC9M2M04
+Y2-AS-05,Year 2,Maths,"They identify and represent part-whole relationships of halves, quarters and eighths in measurement contexts.","AC9M2M02, AC9M2M04, AC9M2M05, AC9M2N03",Measurement,"AC9M2M02, AC9M2M04, AC9M2M05, AC9M2N03"
+Y2-AS-06,Year 2,Maths,They locate and identify positions of features in two-dimensional representations and move position by following directions and pathways.,AC9M2SP02,Space,AC9M2SP02
+Y2-AS-07,Year 2,Maths,They recall and demonstrate proficiency with addition and subtraction facts within 20 and multiplication facts for twos.,"AC9M2A02, AC9M2A03, AC9M2N04",Algebra,"AC9M2A02, AC9M2A03, AC9M2N04"
+Y2-AS-08,Year 2,Maths,"They use a range of methods to collect, record, represent and interpret categorical data in response to questions.",AC9M2ST01AC9M2ST02,Statistics,AC9M2ST01AC9M2ST02
+Y2-AS-09,Year 2,Maths,"They use mathematical modelling to solve practical additive and multiplicative problems, including money transactions, representing the situation and choosing calculation strategies.","AC9M2N04, AC9M2N05, AC9M2N06",Number,"AC9M2N04, AC9M2N05, AC9M2N06"
+Y2-AS-10,Year 2,Maths,They use uniform informal units to measure and compare shapes and objects.,AC9M2M01,Measurement,AC9M2M01
+Y3-AS-01,Year 3,Maths,Students order and represent natural numbers beyond 10 000.,AC9M3N01,Number,AC9M3N01
+Y3-AS-02,Year 3,Maths,"They conduct guided statistical investigations involving categorical and discrete numerical data, and interpret their results in terms of the context.","AC9M3ST01, AC9M3ST02, AC9M3ST03",Statistics,"AC9M3ST01, AC9M3ST02, AC9M3ST03"
+Y3-AS-03,Year 3,Maths,They conduct repeated chance experiments and discuss variation in results.,AC9M3P02,Probability,AC9M3P02
+Y3-AS-04,Year 3,Maths,They create algorithms to investigate numbers and explore simple patterns.,AC9M3N07,Number,AC9M3N07
+Y3-AS-05,Year 3,Maths,They estimate and compare measures of duration using formal units of time.,"AC9M3M03, AC9M3M04",Measurement,"AC9M3M03, AC9M3M04"
+Y3-AS-06,Year 3,Maths,They extend and use single-digit addition and related subtraction facts and apply additive strategies to model and solve problems involving two- and three-digit numbers.,"AC9M3A02, AC9M3N03, AC9M3N06",Algebra,"AC9M3A02, AC9M3N03, AC9M3N06"
+Y3-AS-07,Year 3,Maths,They identify angles as measures of turn and compare them to right angles.,AC9M3M05,Measurement,AC9M3M05
+Y3-AS-08,Year 3,Maths,They interpret and create two-dimensional representations of familiar environments.,AC9M3SP02,Space,AC9M3SP02
+Y3-AS-09,Year 3,Maths,They make estimates and determine the reasonableness of financial and other calculations.,"AC9M3M01, AC9M3M06, AC9M3N05, AC9M3N06",Measurement,"AC9M3M01, AC9M3M06, AC9M3N05, AC9M3N06"
+Y3-AS-10,Year 3,Maths,"They make, compare and classify objects using key features.",AC9M3SP01,Space,AC9M3SP01
+Y3-AS-11,Year 3,Maths,"They partition, rearrange and regroup two- and three-digit numbers in different ways to assist in calculations.","AC9M3A01, AC9M3M06, AC9M3N03",Algebra,"AC9M3A01, AC9M3M06, AC9M3N03"
+Y3-AS-12,Year 3,Maths,"They record, represent and compare data they have collected.","AC9M3ST01, AC9M3ST02",Statistics,"AC9M3ST01, AC9M3ST02"
+Y3-AS-13,Year 3,Maths,They represent money values in different ways.,AC9M3M06,Measurement,AC9M3M06
+Y3-AS-14,Year 3,Maths,They represent unit fractions and their multiples in different ways.,AC9M3N02,Number,AC9M3N02
+Y3-AS-15,Year 3,Maths,"They use familiar metric units when estimating, comparing and measuring the attributes of objects and events.","AC9M3M01, AC9M3M02, AC9M3M03",Measurement,"AC9M3M01, AC9M3M02, AC9M3M03"
+Y3-AS-16,Year 3,Maths,"They use mathematical modelling to solve practical problems involving single-digit multiplication and division, recalling multiplication facts for twos, threes, fours, fives and tens, and using a range of strategies.","AC9M3A03, AC9M3N04, AC9M3N06",Algebra,"AC9M3A03, AC9M3N04, AC9M3N06"
+Y3-AS-17,Year 3,Maths,"They use practical activities, observation or experiment to identify and describe outcomes and the likelihood of everyday events explaining reasoning.","AC9M3P01, AC9M3P02",Probability,"AC9M3P01, AC9M3P02"
+Y4-AS-01,Year 4,Maths,Students use their understanding of place value to represent tenths and hundredths in decimal form and to multiply natural numbers by multiples of 10.,"AC9M4N01, AC9M4N05",Number,"AC9M4N01, AC9M4N05"
+Y4-AS-02,Year 4,Maths,They choose rounding and estimation strategies to determine whether results of calculations are reasonable.,AC9M4N07,Number,AC9M4N07
+Y4-AS-03,Year 4,Maths,They compare angles relative to a right angle using angle names.,AC9M4M04,Measurement,AC9M4M04
+Y4-AS-04,Year 4,Maths,They conduct repeated chance experiments and describe the variation in results.,AC9M4P02,Probability,AC9M4P02
+Y4-AS-05,Year 4,Maths,They convert between units of time when solving problems involving duration.,AC9M4M03,Measurement,AC9M4M03
+Y4-AS-06,Year 4,Maths,They count and represent fractions on a number line.,AC9M4N04,Number,AC9M4N04
+Y4-AS-07,Year 4,Maths,They create and interpret grid references.,AC9M4SP02,Space,AC9M4SP02
+Y4-AS-08,Year 4,Maths,"They create many-to-one data displays, assess the suitability of displays for representing data and discuss the shape of distributions and variation in data.","AC9M4ST01, AC9M4ST02",Statistics,"AC9M4ST01, AC9M4ST02"
+Y4-AS-09,Year 4,Maths,They find unknown values in numerical equations involving addition and subtraction.,AC9M4A01,Algebra,AC9M4A01
+Y4-AS-10,Year 4,Maths,They identify line and rotational symmetry in plane shapes and create symmetrical patterns.,AC9M4SP03,Space,AC9M4SP03
+Y4-AS-11,Year 4,Maths,They measure and approximate perimeters and areas.,AC9M4M02,Measurement,AC9M4M02
+Y4-AS-12,Year 4,Maths,They order events or the outcomes of chance experiments in terms of likelihood and identify whether events are independent or dependent.,AC9M4P01,Probability,AC9M4P01
+Y4-AS-13,Year 4,Maths,They recognise equivalent fractions and make connections between fraction and decimal notations.,"AC9M4N01, AC9M4N03",Number,"AC9M4N01, AC9M4N03"
+Y4-AS-14,Year 4,Maths,They represent and approximate shapes and objects in the environment.,AC9M4SP01,Space,AC9M4SP01
+Y4-AS-15,Year 4,Maths,"They use mathematical modelling to solve financial and other practical problems, formulating the problem using number sentences, solving the problem choosing efficient strategies and interpreting results in terms of the situation.","AC9M4N06, AC9M4N08",Number,"AC9M4N06, AC9M4N08"
+Y4-AS-16,Year 4,Maths,"They use scaled instruments and appropriate units to measure length, mass, capacity and temperature.",AC9M4M01,Measurement,AC9M4M01
+Y4-AS-17,Year 4,Maths,They use surveys and digital tools to generate categorical or discrete numerical data in statistical investigations and communicate their findings in context.,"AC9M4ST01, AC9M4ST03",Statistics,"AC9M4ST01, AC9M4ST03"
+Y4-AS-18,Year 4,Maths,They use the properties of odd and even numbers.,AC9M4N02,Number,AC9M4N02
+Y4-AS-19,Year 4,Maths,"They use their proficiency with addition and multiplication facts to add and subtract, multiply and divide numbers efficiently.","AC9M4A02, AC9M4N06, AC9M4N08",Algebra,"AC9M4A02, AC9M4N06, AC9M4N08"
+Y5-AS-01,Year 5,Maths,Students use place value to write and order decimals including decimals greater than one.,AC9M5N01,Number,AC9M5N01
+Y5-AS-02,Year 5,Maths,They apply properties of numbers and operations to find unknown values in numerical equations involving multiplication and division.,"AC9M5A01, AC9M5A02",Algebra,"AC9M5A01, AC9M5A02"
+Y5-AS-03,Year 5,Maths,They check the reasonableness of their calculations using estimation.,AC9M5N08,Number,AC9M5N08
+Y5-AS-04,Year 5,Maths,"They choose and use appropriate metric units to measure the attributes of length, mass and capacity, and to solve problems involving perimeter and area.",AC9M5M02,Measurement,AC9M5M02
+Y5-AS-05,Year 5,Maths,"They conduct repeated chance experiments, list the possible outcomes, estimate likelihoods and make comparisons between those with and without equally likely outcomes.","AC9M5P01, AC9M5P02",Probability,"AC9M5P01, AC9M5P02"
+Y5-AS-06,Year 5,Maths,They connect objects to their two-dimensional nets.,AC9M5SP01,Space,AC9M5SP01
+Y5-AS-07,Year 5,Maths,They convert between 12- and 24-hour time.,AC9M5M03,Measurement,AC9M5M03
+Y5-AS-08,Year 5,Maths,They create and use algorithms to identify and explain patterns in the factors and multiples of numbers.,AC9M5N010,Number,AC9M5N010
+Y5-AS-09,Year 5,Maths,"They estimate, construct and measure angles in degrees.",AC9M5M04,Measurement,AC9M5M04
+Y5-AS-10,Year 5,Maths,They express natural numbers as products of factors and identify multiples.,AC9M5N02,Number,AC9M5N02
+Y5-AS-11,Year 5,Maths,They identify the mode and interpret the shape of distributions of data in context.,AC9M5ST01,Statistics,AC9M5ST01
+Y5-AS-12,Year 5,Maths,They interpret and compare data represented in line graphs.,AC9M5ST02,Statistics,AC9M5ST02
+Y5-AS-13,Year 5,Maths,"They order and represent, add and subtract fractions with the same or related denominators.","AC9M5N03, AC9M5N05",Number,"AC9M5N03, AC9M5N05"
+Y5-AS-14,Year 5,Maths,They perform and describe the results of transformations and identify any symmetries.,AC9M5SP03,Space,AC9M5SP03
+Y5-AS-15,Year 5,Maths,They plan and conduct statistical investigations that collect nominal and ordinal categorical and discrete numerical data using digital tools.,"AC9M5ST01, AC9M5ST03",Statistics,"AC9M5ST01, AC9M5ST03"
+Y5-AS-16,Year 5,Maths,They represent common percentages and connect them to their fraction and decimal equivalents.,AC9M5N04,Number,AC9M5N04
+Y5-AS-17,Year 5,Maths,They use grid coordinates to locate and move positions.,AC9M5SP02,Space,AC9M5SP02
+Y5-AS-18,Year 5,Maths,"They use mathematical modelling to solve financial and other practical problems, formulating and solving problems, choosing arithmetic operations and interpreting results in terms of the situation.","AC9M5N07, AC9M5N09",Number,"AC9M5N07, AC9M5N09"
+Y5-AS-19,Year 5,Maths,They use their proficiency with multiplication facts and efficient calculation strategies to multiply large numbers by one- and two-digit numbers and divide by single-digit numbers.,"AC9M5A01, AC9M5N06, AC9M5N07",Algebra,"AC9M5A01, AC9M5N06, AC9M5N07"
+Y6-AS-01,Year 6,Maths,Students use integers to represent points on a number line and in the Cartesian plane.,"AC9M6N01, AC9M6SP02",Number,"AC9M6N01, AC9M6SP02"
+Y6-AS-02,Year 6,Maths,"They assign probabilities using common fractions, decimal and percentages.",AC9M6P01,Probability,AC9M6P01
+Y6-AS-03,Year 6,Maths,"They compare distributions of discrete and continuous numerical and ordinal categorical data sets as part of their statistical investigations, using digital tools.","AC9M6ST01, AC9M6ST03",Statistics,"AC9M6ST01, AC9M6ST03"
+Y6-AS-04,Year 6,Maths,They compare observed frequencies to the expected frequencies of the outcomes of chance experiments.,AC9M6P02,Probability,AC9M6P02
+Y6-AS-05,Year 6,Maths,"They conduct simulations using digital tools, to generate and record the outcomes from many trials of a chance experiment.",AC9M6P02,Probability,AC9M6P02
+Y6-AS-06,Year 6,Maths,"They convert between common units of length, mass and capacity.",AC9M6M01,Measurement,AC9M6M01
+Y6-AS-07,Year 6,Maths,"They create and use algorithms to generate sets of numbers, using a rule.",AC9M6A03,Algebra,AC9M6A03
+Y6-AS-08,Year 6,Maths,They create tessellating patterns using combinations of transformations.,AC9M6SP03,Space,AC9M6SP03
+Y6-AS-09,Year 6,Maths,They critique arguments presented in the media based on statistics.,AC9M6ST02,Statistics,AC9M6ST02
+Y6-AS-10,Year 6,Maths,They identify and explain rules used to create growing patterns.,AC9M6A01,Algebra,AC9M6A01
+Y6-AS-11,Year 6,Maths,They identify the parallel cross-section for right prisms.,AC9M6SP01,Space,AC9M6SP01
+Y6-AS-12,Year 6,Maths,They interpret and use timetables.,AC9M6M03,Measurement,AC9M6M03
+Y6-AS-13,Year 6,Maths,They locate an ordered pair in any one of the 4 quadrants on the Cartesian plane.,"AC9M6N01, AC9M6SP02",Number,"AC9M6N01, AC9M6SP02"
+Y6-AS-14,Year 6,Maths,"They order common fractions, giving reasons, and add and subtract fractions with related denominators.","AC9M6N03, AC9M6N05",Number,"AC9M6N03, AC9M6N05"
+Y6-AS-15,Year 6,Maths,"They solve problems involving finding a fraction, decimal or percentage of a quantity and use estimation to find approximate solutions to problems involving rational numbers and percentages.","AC9M6N04, AC9M6N06, AC9M6N07, AC9M6N08",Number,"AC9M6N04, AC9M6N06, AC9M6N07, AC9M6N08"
+Y6-AS-16,Year 6,Maths,"They solve problems using the properties of prime, composite and square numbers.",AC9M6N02,Number,AC9M6N02
+Y6-AS-17,Year 6,Maths,They use all 4 operations with decimals and connect decimal representations of measurements to the metric system.,"AC9M6M01, AC9M6N04, AC9M6N06",Measurement,"AC9M6M01, AC9M6N04, AC9M6N06"
+Y6-AS-18,Year 6,Maths,"They use mathematical modelling to solve financial and other practical problems involving percentages and rational numbers, formulating and solving the problem, and justifying choices.",AC9M6N09,Number,AC9M6N09
+Y6-AS-19,Year 6,Maths,They use the formula for the area of a rectangle and angle properties to solve problems.,"AC9M6M02, AC9M6M04",Measurement,"AC9M6M02, AC9M6M04"
+PFD-SCI-AS-01,Foundation,Science,Students group plants and animals based on external features.,AC9SFU01,SU-Biological,AC9SFU01
+PFD-SCI-AS-02,Foundation,Science,Students pose questions and make predictions based on their experiences.,AC9SFI01,SI-Questioning,AC9SFI01
+PFD-SCI-AS-03,Foundation,Science,They describe the observable properties of the materials that make up objects.,AC9SFU03,SU-Chemical,AC9SFU03
+PFD-SCI-AS-04,Foundation,Science,They engage in investigations and make observations safely.,AC9SFI02,SI-Inquiry,AC9SFI02
+PFD-SCI-AS-05,Foundation,Science,They identify examples of people using observation and questioning to learn about the natural world.,AC9SFH01,SHE-ScienceUse,AC9SFH01
+PFD-SCI-AS-06,Foundation,Science,They identify factors that influence the movement of objects.,AC9SFU02,SU-Chemical,AC9SFU02
+PFD-SCI-AS-07,Foundation,Science,"They share questions, predictions, observations and ideas about their experiences with others.",AC9SFI05,SI-Questioning,AC9SFI05
+PFD-SCI-AS-08,Foundation,Science,"With guidance, they compare their observations with their predictions.",AC9SFI04,SI-Predicting,AC9SFI04
+PFD-SCI-AS-09,Foundation,Science,"With guidance, they represent observations and identify patterns.",AC9SFI03,SI-IdentifyingPatterns,AC9SFI03
+Y1-SCI-AS-01,Year 1,Science,Students identify how living things meet their needs in the places they live.,AC9S1U01,SU-Biological,AC9S1U01
+Y1-SCI-AS-02,Year 1,Science,Students pose questions to explore observations and make predictions based on experiences.,AC9S1I01,SI-Questioning,AC9S1I01
+Y1-SCI-AS-03,Year 1,Science,They describe how different pushes and pulls change the motion and shape of objects.,AC9S1U03,SU-Physical,AC9S1U03
+Y1-SCI-AS-04,Year 1,Science,They describe situations where they use science in their daily lives and identify examples of people making scientific predictions.,AC9S1H01,SHE-ScientificKnowledge,AC9S1H01
+Y1-SCI-AS-05,Year 1,Science,They follow safe procedures to make and record observations.,"AC9S1I02, AC9S1I03",SI-Questioning,"AC9S1I02, AC9S1I03"
+Y1-SCI-AS-06,Year 1,Science,They identify daily and seasonal changes and describe ways these changes affect their everyday life.,AC9S1U02,SU-Biological,AC9S1U02
+Y1-SCI-AS-07,Year 1,Science,"They use everyday vocabulary to communicate observations, findings and ideas.",AC9S1I06,SI-Communicating,AC9S1I06
+Y1-SCI-AS-08,Year 1,Science,"They use provided tables and organisers to sort and order data and information and, with guidance, represent patterns.",AC9S1I04,SI-IdentifyingPatterns,AC9S1I04
+Y1-SCI-AS-09,Year 1,Science,"With guidance, they compare observations with predictions and identify further questions.",AC9S1I05,SI-Questioning,AC9S1I05
+Y2-SCI-AS-01,Year 2,Science,Students identify celestial objects and describe patterns they observe in the sky.,AC9S2U01,SU-EarthSpace,AC9S2U01
+Y2-SCI-AS-02,Year 2,Science,Students pose questions to explore observed patterns or relationships and make predictions based on experience.,AC9S2I01,SI-Questioning,AC9S2I01
+Y2-SCI-AS-03,Year 2,Science,They demonstrate how different sounds can be produced and describe the effect of sound energy on object.,AC9S2U02,SU-Physical,AC9S2U02
+Y2-SCI-AS-04,Year 2,Science,They describe how people use science in their daily lives and how people use patterns to make scientific predictions.,AC9S2H01,SHE-ScientificKnowledge,AC9S2H01
+Y2-SCI-AS-05,Year 2,Science,They identify ways to change materials without changing their material composition.,AC9S2U03,SU-Chemical,AC9S2U03
+Y2-SCI-AS-06,Year 2,Science,They suggest steps to be followed in an investigation and follow safe procedures to make and record observations.,"AC9S2I02, AC9S2I03",SI-Questioning,"AC9S2I02, AC9S2I03"
+Y2-SCI-AS-07,Year 2,Science,"They use everyday and scientific vocabulary to communicate observations, findings and ideas.",AC9S2I06,SI-Communicating,AC9S2I06
+Y2-SCI-AS-08,Year 2,Science,They use provided tables and organisers to sort and order data and represent patterns in data.,AC9S2I04,SI-IdentifyingPatterns,AC9S2I04
+Y2-SCI-AS-09,Year 2,Science,"With guidance, they compare their observations with those of others, identify whether their investigation was fair and identify further questions.",AC9S2I05,SI-Questioning,AC9S2I05
+Y3-SCI-AS-01,Year 3,Science,Students classify and compare living and non-living things and different life cycles.,AC9S3U01,SU-Biological,AC9S3U01
+Y3-SCI-AS-02,Year 3,Science,Students pose questions to explore patterns and relationships and make predictions based on observations.,AC9S3I01,SI-Questioning,AC9S3I01
+Y3-SCI-AS-03,Year 3,Science,They classify solids and liquids based on observable properties and describe how to cause a change of state.,AC9S3U04,SU-Physical,AC9S3U04
+Y3-SCI-AS-04,Year 3,Science,"They communicate ideas and findings for an identified purpose, including using scientific vocabulary when appropriate.",AC9S3I06,SI-Communicating,AC9S3I06
+Y3-SCI-AS-05,Year 3,Science,"They compare their findings with those of others, explain how they kept their investigation fair, identify further questions and draw conclusions.",AC9S3I05,SI-Questioning,AC9S3I05
+Y3-SCI-AS-06,Year 3,Science,They describe how people use data to develop explanations.,AC9S3H01,SHE-DataUse,AC9S3H01
+Y3-SCI-AS-07,Year 3,Science,"They describe the observable properties of soils, rocks and minerals and describe their importance as resources.",AC9S3U02,SU-EarthSpace,AC9S3U02
+Y3-SCI-AS-08,Year 3,Science,They identify solutions that use scientific explanations.,AC9S3H02,SHE-ScienceUse,AC9S3H02
+Y3-SCI-AS-09,Year 3,Science,They identify sources of heat energy and examples of heat transfer and explain changes in the temperature of objects.,AC9S3U03,SU-Physical,AC9S3U03
+Y3-SCI-AS-10,Year 3,Science,They organise data and information using provided scaffolds and identify patterns and relationships.,AC9S3I04,SI-IdentifyingPatterns,AC9S3I04
+Y3-SCI-AS-11,Year 3,Science,They use familiar classroom instruments to make measurements.,AC9S3I03,SI-Measuring,AC9S3I03
+Y3-SCI-AS-12,Year 3,Science,They use scaffolds to plan safe investigations and fair tests.,AC9S3I02,SI-Questioning,AC9S3I02
+Y4-SCI-AS-01,Year 4,Science,Students identify the roles of organisms in a habitat and construct food chains.,AC9S4U01,SU-Physical,AC9S4U01
+Y4-SCI-AS-02,Year 4,Science,"They communicate ideas and findings for an identified audience and purpose, including using scientific vocabulary when appropriate.",AC9S4I06,SI-Communicating,AC9S4I06
+Y4-SCI-AS-03,Year 4,Science,"They compare their findings with those of others, assess the fairness of their investigation, identify further questions for investigation and draw conclusions.",AC9S4I05,SI-Questioning,AC9S4I05
+Y4-SCI-AS-04,Year 4,Science,They construct representations to organise data and information and identify patterns and relationships.,AC9S4I04,SI-IdentifyingPatterns,AC9S4I04
+Y4-SCI-AS-05,Year 4,Science,They explain the role of data in science inquiry.,AC9S4H01,SHE-DataUse,AC9S4H01
+Y4-SCI-AS-06,Year 4,Science,They identify forces acting on objects and describe their effect.,AC9S4U03,SU-Physical,AC9S4U03
+Y4-SCI-AS-07,Year 4,Science,They identify key processes in the water cycle and describe how water cycles through the environment.,AC9S4U02,SU-Physical,AC9S4U02
+Y4-SCI-AS-08,Year 4,Science,They identify solutions based on scientific explanations and describe the needs these meet.,AC9S4H02,SHE-ScienceUse,AC9S4H02
+Y4-SCI-AS-09,Year 4,Science,"They plan investigations using planning scaffolds, identify key elements of fair tests and describe how they conduct investigations safely.",AC9S4I02,SI-Questioning,AC9S4I02
+Y4-SCI-AS-10,Year 4,Science,They pose questions to identify patterns and relationships and make predictions based on observations.,AC9S4I01,SI-Questioning,AC9S4I01
+Y4-SCI-AS-11,Year 4,Science,They relate the uses of materials to their properties.,AC9S4U04,SU-Chemical,AC9S4U04
+Y4-SCI-AS-12,Year 4,Science,They use simple procedures to make accurate formal measurements.,AC9S4I03,SI-Measuring,AC9S4I03
+Y5-SCI-AS-01,Year 5,Science,Students explain how the form and behaviour of living things enables survival.,AC9S5U01,SU-Biological,AC9S5U01
+Y5-SCI-AS-02,Year 5,Science,Students plan safe investigations to identify patterns and relationships and make reasoned predictions.,"AC9S5I01, AC9S5I02",SI-Questioning,"AC9S5I01, AC9S5I02"
+Y5-SCI-AS-03,Year 5,Science,"They compare their methods and findings to those of others, identify possible sources of error in their investigation, pose questions for further investigation and draw reasoned conclusions.",AC9S5I05,SI-Questioning,AC9S5I05
+Y5-SCI-AS-04,Year 5,Science,"They construct representations to organise data and information and describe patterns, trends and relationships.",AC9S5I04,SI-IdentifyingPatterns,AC9S5I04
+Y5-SCI-AS-05,Year 5,Science,"They describe examples of collaboration leading to advances in science, and scientific knowledge that has changed over time.",AC9S5H01,SHE-ScientificKnowledge,AC9S5H01
+Y5-SCI-AS-06,Year 5,Science,They describe key processes that change Earth’s surface.,AC9S5U02,SU-EarthSpace,AC9S5U02
+Y5-SCI-AS-07,Year 5,Science,They identify examples where scientific knowledge informs the actions of individuals and communities.,AC9S5H02,SHE-ScientificKnowledge,AC9S5H02
+Y5-SCI-AS-08,Year 5,Science,They identify risks associated with investigations and key intercultural considerations when planning field work.,AC9S5I02,SI-Questioning,AC9S5I02
+Y5-SCI-AS-09,Year 5,Science,They identify sources of light and model the transfer of light to explain observed phenomena.,AC9S5U03,SU-Physical,AC9S5U03
+Y5-SCI-AS-10,Year 5,Science,They identify variables to be changed and measured.,AC9S5I02,SI-Questioning,AC9S5I02
+Y5-SCI-AS-11,Year 5,Science,"They relate the particulate arrangement of solids, liquids and gases to their observable properties.",AC9S5U04,SU-Physical,AC9S5U04
+Y5-SCI-AS-12,Year 5,Science,They use equipment to generate data with appropriate precision.,AC9S5I03,SI-Observing,AC9S5I03
+Y6-SCI-AS-01,Year 6,Science,Students explain how changes in physical conditions affect living things.,AC9S6U01,SU-Biological,AC9S6U01
+Y6-SCI-AS-02,Year 6,Science,"Students plan safe, repeatable investigations to identify patterns and test relationships and make reasoned predictions.","AC9S6I01, AC9S6I02",SI-Questioning,"AC9S6I01, AC9S6I02"
+Y6-SCI-AS-03,Year 6,Science,They classify and compare reversible and irreversible changes to substances.,AC9S6U04,SU-Chemical,AC9S6U04
+Y6-SCI-AS-04,Year 6,Science,"They construct representations to organise and process data and information and describe patterns, trends and relationships.",AC9S6I04,SI-IdentifyingPatterns,AC9S6I04
+Y6-SCI-AS-05,Year 6,Science,They describe how individuals and communities use scientific knowledge.,AC9S6H02,SHE-ScientificKnowledge,AC9S6H02
+Y6-SCI-AS-06,Year 6,Science,They describe risks associated with investigations and key intercultural considerations when planning field work.,AC9S6I02,SI-Questioning,AC9S6I02
+Y6-SCI-AS-07,Year 6,Science,They explain why science is often collaborative and describe different individuals’ contributions to scientific knowledge.,AC9S6H01,SHE-ScientificKnowledge,AC9S6H01
+Y6-SCI-AS-08,Year 6,Science,They identify the role of circuit components in the transfer and transformation of electrical energy.,AC9S6U03,SU-Physical,AC9S6U03
+Y6-SCI-AS-09,Year 6,Science,"They identify variables to be changed, measured and controlled.",AC9S6I02,SI-Questioning,AC9S6I02
+Y6-SCI-AS-10,Year 6,Science,They model the relationship between the sun and planets of the solar system and explain how the relative positions of Earth and the sun relate to observed phenomena on Earth.,AC9S6U02,SU-EarthSpace,AC9S6U02
+Y6-SCI-AS-11,Year 6,Science,They select and use language features effectively for their purpose and audience when communicating their ideas and findings.,AC9S6I06,SI-Communicating,AC9S6I06
+Y6-SCI-AS-12,Year 6,Science,They use equipment to generate and record data with appropriate precision.,AC9S6I03,SI-Observing,AC9S6I03
+PFD-TEC-AS-01,Foundation,Technologies,"By the end of Foundation students identify familiar products, services and environments and develop familiarity with digital systems, using them for a purpose.","AC9TDEFK01, AC9TDIFK01",DnT-Sustainability,"AC9TDEFK01, AC9TDIFK01"
+PFD-TEC-AS-02,Foundation,Technologies,Students follow steps and use materials and equipment to safely make a designed solution for a school-selected context.,AC9TDEFP01,DnT-DesignIdeas,AC9TDEFP01
+PFD-TEC-AS-03,Foundation,Technologies,"They create, communicate and choose design ideas.",AC9TDEFP01,DnT-DesignIdeas,AC9TDEFP01
+PFD-TEC-AS-04,Foundation,Technologies,"They show how to represent data using objects, pictures and symbols and identify examples of data that is owned by them.","AC9TDIFK02, AC9TDIFP01",DigT-DataRep,"AC9TDIFK02, AC9TDIFP01"
+Y1-TEC-AS-01,Year 1,Technologies,For each of the 2 prescribed technologies contexts they identify the features and uses of technologies and create designed solutions.,"AC9TDE2K02, AC9TDE2K03, AC9TDE2K04",DnT-Materials,"AC9TDE2K02, AC9TDE2K03, AC9TDE2K04"
+Y1-TEC-AS-02,Year 1,Technologies,"Students describe the purpose of familiar products, services and environments, including digital systems.","AC9TDE2K01, AC9TDI2K01",DnT-Sustainability,"AC9TDE2K01, AC9TDI2K01"
+Y1-TEC-AS-03,Year 1,Technologies,Students safely produce designed or digital solutions and recognise that digital tools may store their personal data online.,"AC9TDE2P02, AC9TDE2P04, AC9TDI2P07",DnT-Processes,"AC9TDE2P02, AC9TDE2P04, AC9TDI2P07"
+Y1-TEC-AS-04,Year 1,Technologies,Students select design ideas based on their personal preferences.,AC9TDE2P03,DnT-DesignIdeas,AC9TDE2P03
+Y1-TEC-AS-05,Year 1,Technologies,"They access and use the basic features of common digital tools to create, locate and share content, and collaborate and communicate design ideas using models and drawings.","AC9TDE2P01, AC9TDI2P04, AC9TDI2P05, AC9TDI2P06",DnT-DesignIdeas,"AC9TDE2P01, AC9TDI2P04, AC9TDI2P05, AC9TDI2P06"
+Y1-TEC-AS-06,Year 1,Technologies,They represent and process data in different ways and follow and describe basic algorithms involving a sequence of steps and branching to show how simple digital solutions meet a need for known users.,"AC9TDI2K02, AC9TDI2P02, AC9TDI2P03",DigT-DataRep,"AC9TDI2K02, AC9TDI2P02, AC9TDI2P03"
+Y2-TEC-AS-01,Year 2,Technologies,For each of the 2 prescribed technologies contexts they identify the features and uses of technologies and create designed solutions.,"AC9TDE2K02, AC9TDE2K03, AC9TDE2K04",DnT-Materials,"AC9TDE2K02, AC9TDE2K03, AC9TDE2K04"
+Y2-TEC-AS-02,Year 2,Technologies,"Students describe the purpose of familiar products, services and environments, including digital systems.","AC9TDE2K01, AC9TDI2K01",DnT-Sustainability,"AC9TDE2K01, AC9TDI2K01"
+Y2-TEC-AS-03,Year 2,Technologies,Students safely produce designed or digital solutions and recognise that digital tools may store their personal data online.,"AC9TDE2P02, AC9TDE2P04, AC9TDI2P07",DnT-Processes,"AC9TDE2P02, AC9TDE2P04, AC9TDI2P07"
+Y2-TEC-AS-04,Year 2,Technologies,Students select design ideas based on their personal preferences.,AC9TDE2P03,DnT-DesignIdeas,AC9TDE2P03
+Y2-TEC-AS-05,Year 2,Technologies,"They access and use the basic features of common digital tools to create, locate and share content, and collaborate and communicate design ideas using models and drawings.","AC9TDE2P01, AC9TDI2P04, AC9TDI2P05, AC9TDI2P06",DnT-DesignIdeas,"AC9TDE2P01, AC9TDI2P04, AC9TDI2P05, AC9TDI2P06"
+Y2-TEC-AS-06,Year 2,Technologies,They represent and process data in different ways and follow and describe basic algorithms involving a sequence of steps and branching to show how simple digital solutions meet a need for known users.,"AC9TDI2K02, AC9TDI2P02, AC9TDI2P03",DigT-DataRep,"AC9TDI2K02, AC9TDI2P02, AC9TDI2P03"
+Y3-TEC-AS-01,Year 3,Technologies,For each of the 2 prescribed technologies contexts they describe the features and uses of technologies and create designed solutions.,"AC9TDE4K02, AC9TDE4K03, AC9TDE4K04, AC9TDE4P01",DnT-Materials,"AC9TDE4K02, AC9TDE4K03, AC9TDE4K04, AC9TDE4P01"
+Y3-TEC-AS-02,Year 3,Technologies,"Students describe how people design products, services and environments to meet the needs of people, including sustainability.",AC9TDE4K01,DnT-Sustainability,AC9TDE4K01
+Y3-TEC-AS-03,Year 3,Technologies,Students identify their personal data stored online and its risks.,AC9TDI4P09,DigT-Programming,AC9TDI4P09
+Y3-TEC-AS-04,Year 3,Technologies,Students plan and sequence steps and use technologies and techniques to safely produce designed solutions.,"AC9TDE4P03, AC9TDE4P05",DnT-Processes,"AC9TDE4P03, AC9TDE4P05"
+Y3-TEC-AS-05,Year 3,Technologies,"Students securely access and use digital systems and their peripherals for a range of purposes, including transmitting data.","AC9TDI4K01, AC9TDI4K02, AC9TDI4P08",DigT-Systems,"AC9TDI4K01, AC9TDI4K02, AC9TDI4P08"
+Y3-TEC-AS-06,Year 3,Technologies,Students select design ideas against design criteria.,"AC9TDE4P04, AC9TDI4P01, AC9TDI4P05",DnT-DesignIdeas,"AC9TDE4P04, AC9TDI4P01, AC9TDI4P05"
+Y3-TEC-AS-07,Year 3,Technologies,They communicate design ideas using models and drawings including annotations and symbols.,"AC9TDE4P02, AC9TDI4P03",DnT-DesignIdeas,"AC9TDE4P02, AC9TDI4P03"
+Y3-TEC-AS-08,Year 3,Technologies,"They process and represent data for different purposes, follow and describe simple algorithms involving branching and iteration, and implement them as visual programs.","AC9TDI4K03, AC9TDI4P02, AC9TDI4P04",DigT-DataRep,"AC9TDI4K03, AC9TDI4P02, AC9TDI4P04"
+Y3-TEC-AS-09,Year 3,Technologies,"They use the core features of common digital tools to plan, create, locate and share content, and to collaborate, following agreed behaviours.","AC9TDI4P06, AC9TDI4P07",DigT-InfoCreate,"AC9TDI4P06, AC9TDI4P07"
+Y4-TEC-AS-01,Year 4,Technologies,For each of the 2 prescribed technologies contexts they describe the features and uses of technologies and create designed solutions.,"AC9TDE4K02, AC9TDE4K03, AC9TDE4K04, AC9TDE4P01",DnT-Materials,"AC9TDE4K02, AC9TDE4K03, AC9TDE4K04, AC9TDE4P01"
+Y4-TEC-AS-02,Year 4,Technologies,"Students describe how people design products, services and environments to meet the needs of people, including sustainability.",AC9TDE4K01,DnT-Sustainability,AC9TDE4K01
+Y4-TEC-AS-03,Year 4,Technologies,Students identify their personal data stored online and its risks.,AC9TDI4P09,DigT-Programming,AC9TDI4P09
+Y4-TEC-AS-04,Year 4,Technologies,Students plan and sequence steps and use technologies and techniques to safely produce designed solutions.,"AC9TDE4P03, AC9TDE4P05",DnT-Processes,"AC9TDE4P03, AC9TDE4P05"
+Y4-TEC-AS-05,Year 4,Technologies,"Students securely access and use digital systems and their peripherals for a range of purposes, including transmitting data.","AC9TDI4K01, AC9TDI4K02, AC9TDI4P08",DigT-Systems,"AC9TDI4K01, AC9TDI4K02, AC9TDI4P08"
+Y4-TEC-AS-06,Year 4,Technologies,Students select design ideas against design criteria.,"AC9TDE4P04, AC9TDI4P01, AC9TDI4P05",DnT-DesignIdeas,"AC9TDE4P04, AC9TDI4P01, AC9TDI4P05"
+Y4-TEC-AS-07,Year 4,Technologies,They communicate design ideas using models and drawings including annotations and symbols.,"AC9TDE4P02, AC9TDI4P03",DnT-DesignIdeas,"AC9TDE4P02, AC9TDI4P03"
+Y4-TEC-AS-08,Year 4,Technologies,"They process and represent data for different purposes, follow and describe simple algorithms involving branching and iteration, and implement them as visual programs.","AC9TDI4K03, AC9TDI4P02, AC9TDI4P04",DigT-DataRep,"AC9TDI4K03, AC9TDI4P02, AC9TDI4P04"
+Y4-TEC-AS-09,Year 4,Technologies,"They use the core features of common digital tools to plan, create, locate and share content, and to collaborate, following agreed behaviours.","AC9TDI4P06, AC9TDI4P07",DigT-InfoCreate,"AC9TDI4P06, AC9TDI4P07"
+Y5-TEC-AS-01,Year 5,Technologies,For each of the 3 prescribed technologies contexts students explain how the features of technologies impact on design decisions and they create designed solutions.,"AC9TDE6K02, AC9TDE6K03, AC9TDE6K04, AC9TDE6K05, AC9TDE6P01",DnT-Materials,"AC9TDE6K02, AC9TDE6K03, AC9TDE6K04, AC9TDE6K05, AC9TDE6P01"
+Y5-TEC-AS-02,Year 5,Technologies,"Students explain how people design products, services and environments to meet the needs of communities, including sustainability",AC9TDEFK01,DnT-Sustainability,AC9TDEFK01
+Y5-TEC-AS-03,Year 5,Technologies,Students securely access and use multiple digital systems and describe their components and how they interact to process and transmit data.,"AC9TDI6K01, AC9TDI6K02, AC9TDI6P09",DigT-Systems,"AC9TDI6K01, AC9TDI6K02, AC9TDI6P09"
+Y5-TEC-AS-04,Year 5,Technologies,"Students share and communicate ideas or content to an audience using technical terms, graphical representation techniques and appropriate digital tools.","AC9TDE6P02, AC9TDI6P04, AC9TDI6P07, AC9TDI6P08",DnT-DesignIdeas,"AC9TDE6P02, AC9TDI6P04, AC9TDI6P07, AC9TDI6P08"
+Y5-TEC-AS-05,Year 5,Technologies,"They develop project plans, including production processes, and select technologies and techniques to safely produce designed or digital solutions.","AC9TDE6P05, AC9TDI6P07, AC9TDI6P08",DnT-Processes,"AC9TDE6P05, AC9TDI6P07, AC9TDI6P08"
+Y5-TEC-AS-06,Year 5,Technologies,They identify their digital footprint and recognise its permanence.,AC9TDI6P10,DigT-Safety,AC9TDI6P10
+Y5-TEC-AS-07,Year 5,Technologies,"They process data and show how digital systems represent data, design algorithms involving complex branching and iteration, and implement them as visual programs including variables.","AC9TDI6K03, AC9TDI6K04, AC9TDI6P02, AC9TDI6P05",DigT-Systems,"AC9TDI6K03, AC9TDI6K04, AC9TDI6P02, AC9TDI6P05"
+Y5-TEC-AS-08,Year 5,Technologies,They select and justify design ideas and solutions against design criteria.,"AC9TDE6P04, AC9TDI6P01, AC9TDI6P03, AC9TDI6P06",DnT-DesignIdeas,"AC9TDE6P04, AC9TDI6P01, AC9TDI6P03, AC9TDI6P06"
+Y6-TEC-AS-01,Year 6,Technologies,For each of the 3 prescribed technologies contexts students explain how the features of technologies impact on design decisions and they create designed solutions.,"AC9TDE6K02, AC9TDE6K03, AC9TDE6K04, AC9TDE6K05, AC9TDE6P01",DnT-Materials,"AC9TDE6K02, AC9TDE6K03, AC9TDE6K04, AC9TDE6K05, AC9TDE6P01"
+Y6-TEC-AS-02,Year 6,Technologies,"Students explain how people design products, services and environments to meet the needs of communities, including sustainability",AC9TDEFK01,DnT-Sustainability,AC9TDEFK01
+Y6-TEC-AS-03,Year 6,Technologies,Students securely access and use multiple digital systems and describe their components and how they interact to process and transmit data.,"AC9TDI6K01, AC9TDI6K02, AC9TDI6P09",DigT-Systems,"AC9TDI6K01, AC9TDI6K02, AC9TDI6P09"
+Y6-TEC-AS-04,Year 6,Technologies,"Students share and communicate ideas or content to an audience using technical terms, graphical representation techniques and appropriate digital tools.","AC9TDE6P02, AC9TDI6P04, AC9TDI6P07, AC9TDI6P08",DnT-DesignIdeas,"AC9TDE6P02, AC9TDI6P04, AC9TDI6P07, AC9TDI6P08"
+Y6-TEC-AS-05,Year 6,Technologies,"They develop project plans, including production processes, and select technologies and techniques to safely produce designed or digital solutions.","AC9TDE6P05, AC9TDI6P07, AC9TDI6P08",DnT-Processes,"AC9TDE6P05, AC9TDI6P07, AC9TDI6P08"
+Y6-TEC-AS-06,Year 6,Technologies,They identify their digital footprint and recognise its permanence.,AC9TDI6P10,DigT-Safety,AC9TDI6P10
+Y6-TEC-AS-07,Year 6,Technologies,"They process data and show how digital systems represent data, design algorithms involving complex branching and iteration, and implement them as visual programs including variables.","AC9TDI6K03, AC9TDI6K04, AC9TDI6P02, AC9TDI6P05",DigT-Systems,"AC9TDI6K03, AC9TDI6K04, AC9TDI6P02, AC9TDI6P05"
+Y6-TEC-AS-08,Year 6,Technologies,They select and justify design ideas and solutions against design criteria.,"AC9TDE6P04, AC9TDI6P01, AC9TDI6P03, AC9TDI6P06",DnT-DesignIdeas,"AC9TDE6P04, AC9TDI6P01, AC9TDI6P03, AC9TDI6P06"
+Prep-AS-4617,Foundation,English,"Students listen to texts, interact with others and create short spoken texts, including retelling stories.","AC9EFLA01, AC9EFLE05, AC9EFLY02, AC9EFLY05, AC9EFLY07",,"AC9EFLA01, AC9EFLE05, AC9EFLY02, AC9EFLY05, AC9EFLY07"
+Prep-AS-1020,Foundation,English,"They create short written texts, including retelling stories using words and images where appropriate.","AC9EFLA04, AC9EFLA05, AC9EFLA06, AC9EFLA07, AC9EFLE05, AC9EFLY06",,"AC9EFLA04, AC9EFLA05, AC9EFLA06, AC9EFLA07, AC9EFLE05, AC9EFLY06"
+Prep-AS-4505,Foundation,English,"They form letters, spell most consonant–vowel–consonant words and experiment with capital letters and full stops.","AC9EFLA09, AC9EFLY06, AC9EFLY08, AC9EFLY12, AC9EFLY13, AC9EFLY14",,"AC9EFLA09, AC9EFLY06, AC9EFLY08, AC9EFLY12, AC9EFLY13, AC9EFLY14"
+Prep-AS-9779,Foundation,English,They identify the language features of texts including connections between print and images.,"AC9EFLA03, AC9EFLA04, AC9EFLA05, AC9EFLA06, AC9EFLA07, AC9EFLA08, AC9EFLA09, AC9EFLE03, AC9EFLY01, AC9EFLY03",,"AC9EFLA03, AC9EFLA04, AC9EFLA05, AC9EFLA06, AC9EFLA07, AC9EFLA08, AC9EFLA09, AC9EFLE03, AC9EFLY01, AC9EFLY03"
+Prep-AS-3220,Foundation,English,"They listen for and identify rhymes, letter patterns and sounds (phonemes) in words.","AC9EFLE04, AC9EFLY09",,"AC9EFLE04, AC9EFLY09"
+Prep-AS-4930,Foundation,English,They name the letters of the English alphabet and know and use the most common sounds (phonemes) represented by these letters (graphs).,"AC9EFLY11, AC9EFLY13",,"AC9EFLY11, AC9EFLY13"
+Prep-AS-857,Foundation,English,They orally blend and segment phonemes in single-syllable words.,AC9EFLY10,,AC9EFLY10
+Prep-AS-132,Foundation,English,They read words including consonant–vowel–consonant words and some high-frequency words.,"AC9EFLY12, AC9EFLY14, AC9EFLY15",,"AC9EFLY12, AC9EFLY14, AC9EFLY15"
+Prep-AS-8043,Foundation,English,"They read, view and comprehend texts, making connections between characters, settings and events, and to personal experiences.","AC9EFLA07, AC9EFLA08, AC9EFLE01, AC9EFLE02, AC9EFLE03, AC9EFLY01, AC9EFLY03, AC9EFLY04, AC9EFLY05",,"AC9EFLA07, AC9EFLA08, AC9EFLE01, AC9EFLE02, AC9EFLE03, AC9EFLY01, AC9EFLY03, AC9EFLY04, AC9EFLY05"
+Prep-AS-4200,Foundation,English,"They retell, report information and state their thoughts, feelings and key ideas.","AC9EFLA05, AC9EFLA06, AC9EFLA07, AC9EFLE02, AC9EFLE05, AC9EFLY06",,"AC9EFLA05, AC9EFLA06, AC9EFLA07, AC9EFLE02, AC9EFLE05, AC9EFLY06"
+Prep-AS-6759,Foundation,English,"They share thoughts and preferences, retell events and report information or key ideas to an audience.","AC9EFLA02, AC9EFLE01, AC9EFLE02, AC9EFLY02, AC9EFLY07",,"AC9EFLA02, AC9EFLE01, AC9EFLE02, AC9EFLY02, AC9EFLY07"
+Prep-AS-6288,Foundation,English,They use language features including words and phrases from learning and texts.,"AC9EFLA02, AC9EFLA08, AC9EFLE04, AC9EFLY09",,"AC9EFLA02, AC9EFLA08, AC9EFLE04, AC9EFLY09"
+Prep-AS-1683,Foundation,English,They use words and phrases from learning and texts.,"AC9EFLA08, AC9EFLY06",,"AC9EFLA08, AC9EFLY06"
+Year1-AS-1357,Year 1,English,"Ideas in their texts may be informative or imaginative and include a small number of details from learnt topics, topics of interest or texts.","AC9E1LE01, AC9E1LY06",,"AC9E1LE01, AC9E1LY06"
+Year1-AS-4833,Year 1,English,"Students interact with others, and listen to and create short spoken texts including recounts of stories.","AC9E1LA01, AC9E1LE02, AC9E1LE04, AC9E1LE05, AC9E1LY02, AC9E1LY05, AC9E1LY07",,"AC9E1LA01, AC9E1LE02, AC9E1LE04, AC9E1LE05, AC9E1LY02, AC9E1LY05, AC9E1LY07"
+Year1-AS-2951,Year 1,English,"They blend short vowels, common long vowels, consonants and digraphs to read one-syllable words.","AC9E1LY04, AC9E1LY10, AC9E1LY11",,"AC9E1LY04, AC9E1LY10, AC9E1LY11"
+Year1-AS-2,Year 1,English,They create short written and/or multimodal texts including recounts of stories with events and characters.,"AC9E1LA05, AC9E1LE03, AC9E1LE05, AC9E1LY06",,"AC9E1LA05, AC9E1LE03, AC9E1LE05, AC9E1LY06"
+Year1-AS-721,Year 1,English,"They identify the text structures of familiar narrative and informative texts, and their language features and visual features.","AC9E1LA03, AC9E1LA04, AC9E1LA05, AC9E1LA06, AC9E1LA07, AC9E1LA08, AC9E1LA09, AC9E1LA10, AC9E1LE01, AC9E1LE03, AC9E1LY01, AC9E1LY03",,"AC9E1LA03, AC9E1LA04, AC9E1LA05, AC9E1LA06, AC9E1LA07, AC9E1LA08, AC9E1LA09, AC9E1LA10, AC9E1LE01, AC9E1LE03, AC9E1LY01, AC9E1LY03"
+Year1-AS-4399,Year 1,English,"They read one- and two- syllable words with common letter patterns, and an increasing number of high-frequency words.","AC9E1LY04, AC9E1LY09, AC9E1LY10, AC9E1LY11, AC9E1LY12, AC9E1LY14",,"AC9E1LY04, AC9E1LY09, AC9E1LY10, AC9E1LY11, AC9E1LY12, AC9E1LY14"
+Year1-AS-9965,Year 1,English,"They read, view and comprehend texts, monitoring meaning and making connections between the depiction of characters, setting and events, and to personal experiences.","AC9E1LA08, AC9E1LA09, AC9E1LE01, AC9E1LE02, AC9E1LE03, AC9E1LY03, AC9E1LY04, AC9E1LY05",,"AC9E1LA08, AC9E1LA09, AC9E1LE01, AC9E1LE02, AC9E1LE03, AC9E1LY03, AC9E1LY04, AC9E1LY05"
+Year1-AS-9042,Year 1,English,"They report information and experiences, and express opinions.","AC9E1LA03, AC9E1LE02, AC9E1LY06",,"AC9E1LA03, AC9E1LE02, AC9E1LY06"
+Year1-AS-8445,Year 1,English,They sequence ideas and use language features including topic-specific vocabulary and features of voice.,"AC9E1LA02, AC9E1LA09, AC9E1LE05, AC9E1LY07",,"AC9E1LA02, AC9E1LA09, AC9E1LE05, AC9E1LY07"
+Year1-AS-8680,Year 1,English,"They share ideas and retell or adapt familiar stories, recount or report on events or experiences, and express opinions using a small number of details from learnt topics, topics of interest or texts.","AC9E1LA02, AC9E1LE01, AC9E1LE02, AC9E1LE04, AC9E1LE05, AC9E1LY02, AC9E1LY07",,"AC9E1LA02, AC9E1LE01, AC9E1LE02, AC9E1LE04, AC9E1LE05, AC9E1LY02, AC9E1LY07"
+Year1-AS-93,Year 1,English,"They spell most one- and two- syllable words with common letter patterns and common grammatical morphemes, and an increasing number of high-frequency words.","AC9E1LY06, AC9E1LY11, AC9E1LY12, AC9E1LY13, AC9E1LY14, AC9E1LY15",,"AC9E1LY06, AC9E1LY11, AC9E1LY12, AC9E1LY13, AC9E1LY14, AC9E1LY15"
+Year1-AS-4903,Year 1,English,They use sentence boundary punctuation to read with developing phrasing and fluency.,"AC9E1LA10, AC9E1LY04",,"AC9E1LA10, AC9E1LY04"
+Year1-AS-5660,Year 1,English,They use topic-specific vocabulary.,"AC9E1LA09, AC9E1LE05, AC9E1LY06",,"AC9E1LA09, AC9E1LE05, AC9E1LY06"
+Year1-AS-6800,Year 1,English,They write simple sentences with sentence boundary punctuation and capital letters for proper nouns.,"AC9E1LA06, AC9E1LA07, AC9E1LA10, AC9E1LY06",,"AC9E1LA06, AC9E1LA07, AC9E1LA10, AC9E1LY06"
+Year1-AS-8735,Year 1,English,They write words using unjoined upper-case and lower-case letters.,AC9E1LY08,,AC9E1LY08
+Year2-AS-8822,Year 2,English,"Students interact with others, and listen to and create spoken texts including stories.","AC9E2LA01, AC9E2LE03, AC9E2LE05, AC9E2LY02, AC9E2LY05, AC9E2LY07",,"AC9E2LA01, AC9E2LE03, AC9E2LE05, AC9E2LY02, AC9E2LY05, AC9E2LY07"
+Year2-AS-1132,Year 2,English,"They create written and/or multimodal texts including stories to inform, express an opinion, adapt an idea or narrate for audiences.","AC9E2LA02, AC9E2LA08, AC9E2LE01, AC9E2LE02, AC9E2LE05, AC9E2LY06",,"AC9E2LA02, AC9E2LA08, AC9E2LE01, AC9E2LE02, AC9E2LE05, AC9E2LY06"
+Year2-AS-8841,Year 2,English,"They describe how similar topics and information are presented through the structure of narrative and informative texts, and identify their language features and visual features.","AC9E2LA03, AC9E2LA04, AC9E2LA05, AC9E2LA06, AC9E2LA07, AC9E2LA08, AC9E2LA10, AC9E2LE01, AC9E2LE03, AC9E2LY01, AC9E2LY03",,"AC9E2LA03, AC9E2LA04, AC9E2LA05, AC9E2LA06, AC9E2LA07, AC9E2LA08, AC9E2LA10, AC9E2LE01, AC9E2LE03, AC9E2LY01, AC9E2LY03"
+Year2-AS-1724,Year 2,English,"They organise and link ideas, and use language features including topic-specific vocabulary and features of voice.","AC9E2LA02, AC9E2LA03, AC9E2LA09, AC9E2LE04, AC9E2LE05, AC9E2LY07",,"AC9E2LA02, AC9E2LA03, AC9E2LA09, AC9E2LE04, AC9E2LE05, AC9E2LY07"
+Year2-AS-4307,Year 2,English,They punctuate simple and compound sentences.,"AC9E2LA06, AC9E2LA07, AC9E2LA10, AC9E2LY06",,"AC9E2LA06, AC9E2LA07, AC9E2LA10, AC9E2LY06"
+Year2-AS-7457,Year 2,English,"They read, view and comprehend texts, identifying literal and inferred meaning, and how ideas are presented through characters and events.","AC9E2LA05, AC9E2LA06, AC9E2LA07, AC9E2LA08, AC9E2LE01, AC9E2LE03, AC9E2LY01, AC9E2LY03, AC9E2LY04, AC9E2LY05",,"AC9E2LA05, AC9E2LA06, AC9E2LA07, AC9E2LA08, AC9E2LE01, AC9E2LE03, AC9E2LY01, AC9E2LY03, AC9E2LY04, AC9E2LY05"
+Year2-AS-9971,Year 2,English,"They share ideas, topic knowledge and appreciation of texts when they recount, inform or express an opinion, including details from learnt topics, topics of interest or texts.","AC9E2LA02, AC9E2LE01, AC9E2LE02, AC9E2LE03, AC9E2LY02, AC9E2LY07",,"AC9E2LA02, AC9E2LE01, AC9E2LE02, AC9E2LE03, AC9E2LY02, AC9E2LY07"
+Year2-AS-4559,Year 2,English,"They spell words with regular spelling patterns, and use phonic and morphemic knowledge to attempt to spell words with less common patterns.","AC9E2LY06, AC9E2LY09, AC9E2LY10, AC9E2LY11, AC9E2LY12",,"AC9E2LY06, AC9E2LY09, AC9E2LY10, AC9E2LY11, AC9E2LY12"
+Year2-AS-2591,Year 2,English,"They use phonic and morphemic knowledge, and grammatical patterns to read unfamiliar words and most high-frequency words.","AC9E2LY04, AC9E2LY09, AC9E2LY10, AC9E2LY11, AC9E2LY12",,"AC9E2LY04, AC9E2LY09, AC9E2LY10, AC9E2LY11, AC9E2LY12"
+Year2-AS-5330,Year 2,English,They use punctuation for phrasing and fluency.,"AC9E2LA10, AC9E2LY04",,"AC9E2LA10, AC9E2LY04"
+Year2-AS-6476,Year 2,English,They use text structures to organise and link ideas for a purpose.,"AC9E2LA03, AC9E2LA04, AC9E2LE05, AC9E2LY06",,"AC9E2LA03, AC9E2LA04, AC9E2LE05, AC9E2LY06"
+Year2-AS-5660,Year 2,English,They use topic-specific vocabulary.,"AC9E2LA09, AC9E2LY06",,"AC9E2LA09, AC9E2LY06"
+Year2-AS-2218,Year 2,English,They write words using consistently legible unjoined letters.,AC9E2LY08,,AC9E2LY08
+Year3-AS-9767,Year 3,English,"Students interact with others, and listen to and create spoken and/or multimodal texts including stories.","AC9E3LA01, AC9E3LE02, AC9E3LE05, AC9E3LY02, AC9E3LY05, AC9E3LY07, AC9E4LA01",,"AC9E3LA01, AC9E3LE02, AC9E3LE05, AC9E3LY02, AC9E3LY05, AC9E3LY07, AC9E4LA01"
+Year3-AS-7849,Year 3,English,"They create written and/or multimodal texts including stories to inform, narrate, explain or argue for audiences, relating ideas including relevant details from learnt topics, topics of interest or texts.","AC9E3LE02, AC9E3LE05, AC9E3LY06",,"AC9E3LE02, AC9E3LE05, AC9E3LY06"
+Year3-AS-6612,Year 3,English,They describe how stories are developed through characters and/or events.,"AC9E3LA09, AC9E3LE03, AC9E3LY01, AC9E3LY03",,"AC9E3LA09, AC9E3LE03, AC9E3LY01, AC9E3LY03"
+Year3-AS-4698,Year 3,English,They describe how texts are structured and presented.,"AC9E3LA03, AC9E3LA04, AC9E3LA05, AC9E3LY01, AC9E3LY05",,"AC9E3LA03, AC9E3LA04, AC9E3LA05, AC9E3LY01, AC9E3LY05"
+Year3-AS-7796,Year 3,English,"They describe the language features of texts including topic-specific vocabulary and literary devices, and how visual features extend meaning.","AC9E3LA02, AC9E3LA03, AC9E3LA06, AC9E3LA07, AC9E3LA08, AC9E3LA09, AC9E3LA10, AC9E3LA11, AC9E3LE01, AC9E3LE03, AC9E3LE04, AC9E3LY01, AC9E3LY03",,"AC9E3LA02, AC9E3LA03, AC9E3LA06, AC9E3LA07, AC9E3LA08, AC9E3LA09, AC9E3LA10, AC9E3LA11, AC9E3LE01, AC9E3LE03, AC9E3LE04, AC9E3LY01, AC9E3LY03"
+Year3-AS-77,Year 3,English,"They group, logically sequence and link ideas.","AC9E3LA03, AC9E3LA04, AC9E3LE05, AC9E3LY07",,"AC9E3LA03, AC9E3LA04, AC9E3LE05, AC9E3LY07"
+Year3-AS-7034,Year 3,English,They identify literal meaning and explain inferred meaning.,"AC9E3LA09, AC9E3LE01, AC9E3LY05",,"AC9E3LA09, AC9E3LE01, AC9E3LY05"
+Year3-AS-1436,Year 3,English,"They read fluently, using phonic, morphemic and grammatical knowledge to read multisyllabic words with more complex letter patterns.","AC9E3LY04, AC9E3LY09, AC9E3LY10, AC9EFLY11",,"AC9E3LY04, AC9E3LY09, AC9E3LY10, AC9EFLY11"
+Year3-AS-3926,Year 3,English,"They read, view and comprehend texts, recognising their purpose and audience.","AC9E3LA03, AC9E3LA04, AC9E3LA05, AC9E3LA09, AC9E3LE01, AC9E3LE03, AC9E3LE04, AC9E3LY01, AC9E3LY03, AC9E3LY04, AC9E3LY05",,"AC9E3LA03, AC9E3LA04, AC9E3LA05, AC9E3LA09, AC9E3LE01, AC9E3LE03, AC9E3LE04, AC9E3LY01, AC9E3LY03, AC9E3LY04, AC9E3LY05"
+Year3-AS-5312,Year 3,English,"They relate ideas; express opinion, preferences and appreciation of texts; and include relevant details from learnt topics, topics of interest or texts.","AC9E3LA02, AC9E3LA07, AC9E3LE01, AC9E3LE02, AC9E3LE03, AC9E3LE04, AC9E3LY02, AC9E3LY07",,"AC9E3LA02, AC9E3LA07, AC9E3LE01, AC9E3LE02, AC9E3LE03, AC9E3LE04, AC9E3LY02, AC9E3LY07"
+Year3-AS-1942,Year 3,English,"They spell multisyllabic words using phonic and morphemic knowledge, and high-frequency words.","AC9E3LY06, AC9E3LY09, AC9E3LY11, AC9E3LY12",,"AC9E3LY06, AC9E3LY09, AC9E3LY11, AC9E3LY12"
+Year3-AS-4477,Year 3,English,"They use language features including topic-specific vocabulary, and/or visual features and features of voice.","AC9E3LA02, AC9E3LA03, AC9E3LA09, AC9E3LA10, AC9E3LE05, AC9E3LY07",,"AC9E3LA02, AC9E3LA03, AC9E3LA09, AC9E3LA10, AC9E3LE05, AC9E3LY07"
+Year3-AS-994,Year 3,English,"They use text structures including paragraphs, and language features including compound sentences, topic-specific vocabulary and literary devices, and/or visual features.","AC9E3LA02, AC9E3LA03, AC9E3LA04, AC9E3LA05, AC9E3LA06, AC9E3LA07, AC9E3LA08, AC9E3LA09, AC9E3LA10, AC9E3LA11, AC9E3LE05, AC9E3LY06",,"AC9E3LA02, AC9E3LA03, AC9E3LA04, AC9E3LA05, AC9E3LA06, AC9E3LA07, AC9E3LA08, AC9E3LA09, AC9E3LA10, AC9E3LA11, AC9E3LE05, AC9E3LY06"
+Year3-AS-3749,Year 3,English,They write texts using letters that are accurately formed and consistent in size.,AC9E3LY08,,AC9E3LY08
+Year4-AS-9767,Year 4,English,"Students interact with others, and listen to and create spoken and/or multimodal texts including stories.","AC9E3LA01, AC9E3LY02, AC9E4LA01, AC9E4LE04, AC9E4LE05, AC9E4LY02, AC9E4LY05, AC9E4LY07",,"AC9E3LA01, AC9E3LY02, AC9E4LA01, AC9E4LE04, AC9E4LE05, AC9E4LY02, AC9E4LY05, AC9E4LY07"
+Year4-AS-8934,Year 4,English,"They create written and/or multimodal texts including stories for purposes and audiences, where they develop ideas using details from learnt topics, topics of interest or texts.","AC9E4LA03, AC9E4LA04, AC9E4LA06, AC9E4LA07, AC9E4LA08, AC9E4LA10, AC9E4LE05, AC9E4LY06",,"AC9E4LA03, AC9E4LA04, AC9E4LA06, AC9E4LA07, AC9E4LA08, AC9E4LA10, AC9E4LE05, AC9E4LY06"
+Year4-AS-3318,Year 4,English,"They describe how ideas are developed including through characters and events, and how texts reflect contexts.","AC9E4LA03, AC9E4LA04, AC9E4LA06, AC9E4LA07, AC9E4LA08, AC9E4LE01, AC9E4LE03, AC9E4LY01, AC9E4LY03",,"AC9E4LA03, AC9E4LA04, AC9E4LA06, AC9E4LA07, AC9E4LA08, AC9E4LE01, AC9E4LE03, AC9E4LY01, AC9E4LY03"
+Year4-AS-4170,Year 4,English,"They describe how language features including literary devices, and visual features shape meaning.","AC9E4LA02, AC9E4LA03, AC9E4LA06, AC9E4LA07, AC9E4LA08, AC9E4LA09, AC9E4LA10, AC9E4LA11, AC9E4LA12, AC9E4LE03, AC9E4LE04, AC9E4LY03",,"AC9E4LA02, AC9E4LA03, AC9E4LA06, AC9E4LA07, AC9E4LA08, AC9E4LA09, AC9E4LA10, AC9E4LA11, AC9E4LA12, AC9E4LE03, AC9E4LE04, AC9E4LY03"
+Year4-AS-2446,Year 4,English,They describe the characteristic features of different text structures.,"AC9E4LA03, AC9E4LA04, AC9E4LA05, AC9E4LY03",,"AC9E4LA03, AC9E4LA04, AC9E4LA05, AC9E4LY03"
+Year4-AS-5193,Year 4,English,"They read fluently and accurately, integrating phonic, morphemic, grammatical and punctuation knowledge.","AC9E4LA12, AC9E4LY04, AC9E4LY09, AC9E4LY11",,"AC9E4LA12, AC9E4LY04, AC9E4LY09, AC9E4LY11"
+Year4-AS-1871,Year 4,English,"They read, view and comprehend texts created to inform, influence and/or engage audiences.","AC9E4LA05, AC9E4LA07, AC9E4LA10, AC9E4LA11, AC9E4LE01, AC9E4LE03, AC9E4LE04, AC9E4LY01, AC9E4LY03, AC9E4LY04, AC9E4LY05",,"AC9E4LA05, AC9E4LA07, AC9E4LA10, AC9E4LA11, AC9E4LE01, AC9E4LE03, AC9E4LE04, AC9E4LY01, AC9E4LY03, AC9E4LY04, AC9E4LY05"
+Year4-AS-928,Year 4,English,"They share and extend ideas, opinions and information with audiences, using relevant details from learnt topics, topics of interest or texts.","AC9E4LA02, AC9E4LE02, AC9E4LE03, AC9E4LE04, AC9E4LY02, AC9E4LY07",,"AC9E4LA02, AC9E4LE02, AC9E4LE03, AC9E4LE04, AC9E4LY02, AC9E4LY07"
+Year4-AS-4250,Year 4,English,"They spell words including multisyllabic and multimorphemic words with irregular spelling patterns, using phonic, morphemic and grammatical knowledge.","AC9E4LA09, AC9E4LY06, AC9E4LY09, AC9E4LY10, AC9E4LY11",,"AC9E4LA09, AC9E4LY06, AC9E4LY09, AC9E4LY10, AC9E4LY11"
+Year4-AS-5067,Year 4,English,"They use language features including complex sentences, topic-specific vocabulary and literary devices, and/or visual features.","AC9E4LA03, AC9E4LA06, AC9E4LA07, AC9E4LA08, AC9E4LA09, AC9E4LA10, AC9E4LA11, AC9E4LA12, AC9E4LE05, AC9E4LY06",,"AC9E4LA03, AC9E4LA06, AC9E4LA07, AC9E4LA08, AC9E4LA09, AC9E4LA10, AC9E4LA11, AC9E4LA12, AC9E4LE05, AC9E4LY06"
+Year4-AS-5015,Year 4,English,"They use language features including subjective and objective language, topic-specific vocabulary and literary devices, and/or visual features and features of voice.","AC9E4LA02, AC9E4LA03, AC9E4LA11, AC9E4LE04, AC9E4LY07",,"AC9E4LA02, AC9E4LA03, AC9E4LA11, AC9E4LE04, AC9E4LY07"
+Year4-AS-9414,Year 4,English,They use paragraphs to organise and link ideas.,"AC9E4LA03, AC9E4LA04, AC9E4LE05, AC9E4LY06",,"AC9E4LA03, AC9E4LA04, AC9E4LE05, AC9E4LY06"
+Year4-AS-60,Year 4,English,They use text structures to organise and link ideas.,"AC9E4LA03, AC9E4LA04, AC9E4LE05, AC9E4LY07",,"AC9E4LA03, AC9E4LA04, AC9E4LE05, AC9E4LY07"
+Year4-AS-6723,Year 4,English,They write texts using clearly formed letters with developing fluency.,AC9E4LY08,,AC9E4LY08
+Year5-AS-5732,Year 5,English,"For particular purposes and audiences, they share, develop and expand on ideas and opinions, using supporting details from topics or texts.","AC9E5LA02, AC9E5LA07, AC9E5LE02, AC9E5LE04, AC9E5LY02, AC9E5LY07",,"AC9E5LA02, AC9E5LA07, AC9E5LE02, AC9E5LE04, AC9E5LY02, AC9E5LY07"
+Year5-AS-4583,Year 5,English,"Students interact with others, and listen to and create spoken and/or multimodal texts including literary texts.","AC9E5LA01, AC9E5LA07, AC9E5LA08, AC9E5LE02, AC9E5LE05, AC9E5LY02, AC9E5LY05, AC9E5LY07",,"AC9E5LA01, AC9E5LA07, AC9E5LA08, AC9E5LE02, AC9E5LE05, AC9E5LY02, AC9E5LY05, AC9E5LY07"
+Year5-AS-3971,Year 5,English,"They create written and/or multimodal texts, including literary texts, for particular purposes and audiences, developing and expanding on ideas with supporting details from topics or texts.","AC9E5LA02, AC9E5LA03, AC9E5LA04, AC9E5LA05, AC9E5LA06, AC9E5LA07, AC9E5LE02, AC9E5LE05, AC9E5LY06",,"AC9E5LA02, AC9E5LA03, AC9E5LA04, AC9E5LA05, AC9E5LA06, AC9E5LA07, AC9E5LE02, AC9E5LE05, AC9E5LY06"
+Year5-AS-7048,Year 5,English,They explain how characteristic text structures support the purpose of texts.,"AC9E5LA03, AC9E5LA04, AC9E5LY03, AC9E5LY04",,"AC9E5LA03, AC9E5LA04, AC9E5LY03, AC9E5LY04"
+Year5-AS-3623,Year 5,English,"They explain how ideas are developed including through characters, settings and/or events, and how texts reflect contexts.","AC9E5LA02, AC9E5LA03, AC9E5LA04, AC9E5LA05, AC9E5LA06, AC9E5LA07, AC9E5LE01, AC9E5LE03, AC9E5LY01, AC9E5LY03",,"AC9E5LA02, AC9E5LA03, AC9E5LA04, AC9E5LA05, AC9E5LA06, AC9E5LA07, AC9E5LE01, AC9E5LE03, AC9E5LY01, AC9E5LY03"
+Year5-AS-9228,Year 5,English,"They explain how language features including literary devices, and visual features contribute to the effect and meaning of a text.","AC9E5LA03, AC9E5LA05, AC9E5LA06, AC9E5LA07, AC9E5LA08, AC9E5LA09, AC9E5LE03, AC9E5LE04, AC9E5LY01, AC9E5LY03",,"AC9E5LA03, AC9E5LA05, AC9E5LA06, AC9E5LA07, AC9E5LA08, AC9E5LA09, AC9E5LE03, AC9E5LE04, AC9E5LY01, AC9E5LY03"
+Year5-AS-1871,Year 5,English,"They read, view and comprehend texts created to inform, influence and/or engage audiences.","AC9E5LA07, AC9E5LA08, AC9E5LE01, AC9E5LE03, AC9E5LE04, AC9E5LY04, AC9E5LY05, AC9E5LY08",,"AC9E5LA07, AC9E5LA08, AC9E5LE01, AC9E5LE03, AC9E5LE04, AC9E5LY04, AC9E5LY05, AC9E5LY08"
+Year5-AS-1765,Year 5,English,"They spell using phonic, morphemic and grammatical knowledge.","AC9E5LY08, AC9E5LY09, AC9E5LY10, AC9E6LY09",,"AC9E5LY08, AC9E5LY09, AC9E5LY10, AC9E6LY09"
+Year5-AS-3608,Year 5,English,"They use different text structures to organise, develop and link ideas.","AC9E5LA03, AC9E5LE05, AC9E5LY07",,"AC9E5LA03, AC9E5LE05, AC9E5LY07"
+Year5-AS-1457,Year 5,English,"They use language features including complex sentences, tenses, topic-specific vocabulary and literary devices, and/or multimodal features.","AC9E5LA03, AC9E5LA05, AC9E5LA06, AC9E5LA07, AC9E5LA08, AC9E5LA09, AC9E5LE05, AC9E5LY06",,"AC9E5LA03, AC9E5LA05, AC9E5LA06, AC9E5LA07, AC9E5LA08, AC9E5LA09, AC9E5LE05, AC9E5LY06"
+Year5-AS-8790,Year 5,English,"They use language features including topic-specific vocabulary and literary devices, and/or multimodal features and features of voice.","AC9E5LA03, AC9E5LA07, AC9E5LA08, AC9E5LE04, AC9E5LE05, AC9E5LY07",,"AC9E5LA03, AC9E5LA07, AC9E5LA08, AC9E5LE04, AC9E5LE05, AC9E5LY07"
+Year5-AS-5159,Year 5,English,"They use paragraphs to organise, develop and link ideas.","AC9E5LA03, AC9E5LA04, AC9E5LE05, AC9E5LY06",,"AC9E5LA03, AC9E5LA04, AC9E5LE05, AC9E5LY06"
+Year6-AS-7963,Year 6,English,"For particular purposes and audiences, they share, develop, explain and elaborate on ideas from topics or texts.","AC9E6LA02, AC9E6LA06, AC9E6LA07, AC9E6LE02, AC9E6LE03, AC9E6LE04, AC9E6LY02, AC9E6LY07",,"AC9E6LA02, AC9E6LA06, AC9E6LA07, AC9E6LE02, AC9E6LE03, AC9E6LE04, AC9E6LY02, AC9E6LY07"
+Year6-AS-4583,Year 6,English,"Students interact with others, and listen to and create spoken and/or multimodal texts including literary texts.","AC9E5LA01, AC9E6LA01, AC9E6LA07, AC9E6LA08, AC9E6LE04, AC9E6LE05, AC9E6LY02, AC9E6LY05, AC9E6LY07",,"AC9E5LA01, AC9E6LA01, AC9E6LA07, AC9E6LA08, AC9E6LE04, AC9E6LE05, AC9E6LY02, AC9E6LY05, AC9E6LY07"
+Year6-AS-6237,Year 6,English,"They create written and/or multimodal texts, including literary texts, for particular purposes and audiences, developing, explaining and elaborating on relevant ideas from topics or texts.","AC9E6LA05, AC9E6LA06, AC9E6LA07, AC9E6LA08, AC9E6LA09, AC9E6LE05, AC9E6LY06",,"AC9E6LA05, AC9E6LA06, AC9E6LA07, AC9E6LA08, AC9E6LA09, AC9E6LE05, AC9E6LY06"
+Year6-AS-3385,Year 6,English,"They explain how language features including literary devices, and visual features influence audiences.","AC9E6LA02, AC9E6LA03, AC9E6LA05, AC9E6LA06, AC9E6LA07, AC9E6LA08, AC9E6LA09, AC9E6LE02, AC9E6LE03, AC9E6LE04, AC9E6LY01, AC9E6LY03",,"AC9E6LA02, AC9E6LA03, AC9E6LA05, AC9E6LA06, AC9E6LA07, AC9E6LA08, AC9E6LA09, AC9E6LE02, AC9E6LE03, AC9E6LE04, AC9E6LY01, AC9E6LY03"
+Year6-AS-71,Year 6,English,They identify how texts have similar and different text structures to reflect purpose.,"AC9E6LA03, AC9E6LA04, AC9E6LE02, AC9E6LE03, AC9E6LY01, AC9E6LY03, AC9E6LY04",,"AC9E6LA03, AC9E6LA04, AC9E6LE02, AC9E6LE03, AC9E6LY01, AC9E6LY03, AC9E6LY04"
+Year6-AS-3144,Year 6,English,"They identify similarities and differences in how ideas are presented and developed including through characters, settings and/or events, and how texts reflect contexts.","AC9E6LA03, AC9E6LA05, AC9E6LA06, AC9E6LA07, AC9E6LE01, AC9E6LE02, AC9E6LE03, AC9E6LY01, AC9E6LY03",,"AC9E6LA03, AC9E6LA05, AC9E6LA06, AC9E6LA07, AC9E6LE01, AC9E6LE02, AC9E6LE03, AC9E6LY01, AC9E6LY03"
+Year6-AS-8515,Year 6,English,"They read, view and comprehend different texts created to inform, influence and/or engage audiences.","AC9E6LA03, AC9E6LA07, AC9E6LA08, AC9E6LE01, AC9E6LE02, AC9E6LE03, AC9E6LE04, AC9E6LY01, AC9E6LY03, AC9E6LY04, AC9E6LY05, AC9E6LY08",,"AC9E6LA03, AC9E6LA07, AC9E6LA08, AC9E6LE01, AC9E6LE02, AC9E6LE03, AC9E6LE04, AC9E6LY01, AC9E6LY03, AC9E6LY04, AC9E6LY05, AC9E6LY08"
+Year6-AS-1765,Year 6,English,"They spell using phonic, morphemic and grammatical knowledge.","AC9E5LY09, AC9E5LY10, AC9E6LY08, AC9E6LY09",,"AC9E5LY09, AC9E5LY10, AC9E6LY08, AC9E6LY09"
+Year6-AS-3548,Year 6,English,"They use and vary language features including sentence structures, topic-specific vocabulary and literary devices, and/or multimodal features.","AC9E6LA03, AC9E6LA05, AC9E6LA06, AC9E6LA07, AC9E6LA08, AC9E6LA09, AC9E6LE05, AC9E6LY06",,"AC9E6LA03, AC9E6LA05, AC9E6LA06, AC9E6LA07, AC9E6LA08, AC9E6LA09, AC9E6LE05, AC9E6LY06"
+Year6-AS-9842,Year 6,English,"They use and vary language features including topic-specific vocabulary-and literary devices, and/or multimodal features and features of voice.","AC9E6LA01, AC9E6LA02, AC9E6LA03, AC9E6LA07, AC9E6LA08, AC9E6LE04, AC9E6LE05, AC9E6LY07",,"AC9E6LA01, AC9E6LA02, AC9E6LA03, AC9E6LA07, AC9E6LA08, AC9E6LE04, AC9E6LE05, AC9E6LY07"
+Year6-AS-9142,Year 6,English,"They use and vary text structures to organise, develop and link ideas.","AC9E6LA03, AC9E6LA04, AC9E6LE05, AC9E6LY07",,"AC9E6LA03, AC9E6LA04, AC9E6LE05, AC9E6LY07"
+Year6-AS-828,Year 6,English,"They use text structures and vary paragraphs to organise, develop and link ideas.","AC9E6LA03, AC9E6LA04, AC9E6LE05, AC9E6LY06",,"AC9E6LA03, AC9E6LA04, AC9E6LE05, AC9E6LY06"

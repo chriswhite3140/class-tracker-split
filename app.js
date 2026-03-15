@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.3.1
+ * THIS FILE IS VERSION: v1.3.2
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.3.1 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.3.2 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.3.1';
+const APP_VERSION = 'v1.3.2';
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -913,9 +913,123 @@ function renderStudentDetail(main) {
         <button class="btn btn-primary" onclick="openBulkAssess('${s.id}')">+ Record Assessment</button>
       </div>
     </div>
+  `;
 
-    <div class="content">
-      <div class="mastery-tabs" style="flex-wrap:wrap">
+  const section = state.detailSection || 'curriculum';
+
+  // ── Section: Coverage (personal heatmap by strand) ──
+  function buildCoverageSection() {
+    const subjectCodes = state.curriculumCodes.filter(c => {
+      if (c.Subject !== subjectFilter) return false;
+      if (!yearFilter || yearFilter === 'all') return true;
+      const csvYear = yearLevelMap[yearFilter] || yearFilter;
+      return (c['Year Level']||'').trim() === csvYear;
+    });
+    const strands = [...new Set(subjectCodes.map(c => c.Strand).filter(Boolean))].sort();
+
+    if (!subjectCodes.length) return `<div class="empty-state" style="padding:40px"><div class="empty-icon">◈</div><div class="empty-title">No codes loaded for this selection</div></div>`;
+
+    return `<div class="card">
+      ${strands.map(strand => {
+        const sCodes = subjectCodes.filter(c => c.Strand === strand);
+        const taughtHere   = sCodes.filter(c => wasCodeTaughtToStudent(s.id, c.Code)).length;
+        const achievedHere = sCodes.filter(c => getMasteryForCode(s.id, c.Code) === 'Achieved').length;
+        const pct = Math.round(taughtHere / sCodes.length * 100);
+
+        return `<div style="padding:10px 16px;border-bottom:1px solid var(--border)">
+          <!-- Strand header -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:600;color:var(--text);flex:1">${strand}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:${activeCol}">${taughtHere}/${sCodes.length} taught</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--green)">${achievedHere} achieved</div>
+            <div style="width:80px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${activeCol};border-radius:2px"></div>
+            </div>
+          </div>
+          <!-- Code chips -->
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            ${sCodes.map(c => {
+              const mastery = getMasteryForCode(s.id, c.Code);
+              const taught  = wasCodeTaughtToStudent(s.id, c.Code);
+              const dates   = getTaughtDatesForCode(s.id, c.Code);
+              let bg, col2, dot;
+              if      (mastery==='Achieved')   { bg='var(--green)';    col2='#0f1117'; dot='●'; }
+              else if (mastery==='Developing') { bg='var(--gold)';     col2='#0f1117'; dot='◐'; }
+              else if (mastery==='Emerging')   { bg='var(--rust)';     col2='#0f1117'; dot='○'; }
+              else if (taught)                 { bg='var(--blue-dim)'; col2='var(--blue)'; dot='·'; }
+              else                             { bg='var(--surface2)'; col2='var(--text3)'; dot=' '; }
+              const tip = mastery !== 'Not taught' ? mastery : taught ? 'Taught '+dates[0] : 'Not taught yet';
+              return `<div onclick="openCodeDetail('${c.Code}','${s.id}')"
+                title="${c.Code} · ${tip}"
+                style="padding:3px 8px;border-radius:4px;background:${bg};color:${col2};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;display:flex;align-items:center;gap:4px">
+                <span style="font-size:10px">${dot}</span>${c.Code}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // ── Section: Progressions (personal placement + next steps) ──
+  function buildProgressionsSection() {
+    const litProgs  = state.progressions;
+    const numProgs  = state.numeracyProgressions;
+    const bothEmpty = !litProgs.length && !numProgs.length;
+    if (bothEmpty) return `<div class="empty-state" style="padding:40px"><div class="empty-icon">⟡</div><div class="empty-title">No progressions loaded</div></div>`;
+
+    function buildProgTable(progs, type, colour) {
+      if (!progs.length) return '';
+      const elements = [...new Set(progs.map(p => p.Element).filter(Boolean))];
+      return `<div class="card" style="margin-bottom:16px">
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px;color:${colour};text-transform:uppercase;letter-spacing:0.1em">
+          ${type === 'literacy' ? '✦ Literacy' : '∑ Numeracy'} Progressions
+        </div>
+        ${elements.map(element => {
+          const subEls = [...new Set(progs.filter(p => p.Element === element).map(p => p['Sub-element']).filter(Boolean))].sort();
+          return `<div style="padding:8px 16px;border-bottom:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">${element}</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              ${subEls.map(subEl => {
+                const items = progs.filter(p => p.Element === element && p['Sub-element'] === subEl);
+                const levels = [...new Set(items.map(p => String(p['Progression level'])).filter(Boolean))].sort((a,b)=>Number(a)-Number(b));
+                const placement = getPlacementForStudent(s.id, element, subEl);
+                const curLevel  = placement ? String(placement.level) : null;
+                const curIdx    = curLevel ? levels.indexOf(curLevel) : -1;
+                const nextLevel = curIdx >= 0 && curIdx < levels.length-1 ? levels[curIdx+1] : null;
+                const nextItem  = nextLevel ? items.find(i => String(i['Progression level']) === nextLevel) : null;
+                const extLabel  = placement?.ext_value ? `${placement.ext_label||''} ${placement.ext_value}`.trim() : null;
+
+                return `<div style="display:grid;grid-template-columns:160px 80px 1fr;gap:10px;align-items:start;padding:6px 8px;border-radius:6px;background:var(--surface2)">
+                  <div style="font-size:11px;color:var(--text2)">${subEl}</div>
+                  <div style="text-align:center">
+                    <button data-pp-open="${s.id}" data-pp-element="${element.replace(/"/g,'&quot;')}" data-pp-subelement="${subEl.replace(/"/g,'&quot;')}"
+                      style="padding:3px 10px;border-radius:4px;border:1px solid ${curLevel?colour:'var(--border2)'};background:${curLevel?colour+'22':'none'};color:${curLevel?colour:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;font-weight:700">
+                      ${curLevel ? 'L'+curLevel : '— Set'}
+                    </button>
+                    ${extLabel ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--gold);margin-top:2px">${extLabel}</div>` : ''}
+                  </div>
+                  <div style="font-size:11px;color:var(--text2);line-height:1.4">
+                    ${nextItem
+                      ? `<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);background:var(--teal-dim);padding:1px 5px;border-radius:3px;margin-right:5px">L${nextLevel} ›</span>${nextItem['Indicator text (no examples)']||nextItem['Indicator text (verbatim)']||''}`
+                      : curLevel
+                        ? `<span style="color:var(--green);font-size:10px">✓ At highest level</span>`
+                        : `<span style="color:var(--text3);font-size:10px">Set a level to see next step</span>`}
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    return buildProgTable(litProgs,'literacy','var(--blue)') + buildProgTable(numProgs,'numeracy','var(--green)');
+  }
+
+  // ── Section: Curriculum (original mastery table) ──
+  function buildCurriculumSection() {
+    return `<div class="mastery-tabs" style="flex-wrap:wrap">
         <button class="mastery-tab t-all ${filter==='all'?'active':''}" onclick="setDetailFilter('all')">All <span class="tab-count">${codes.length}</span></button>
         <button class="mastery-tab t-achieved ${filter==='achieved'?'active':''}" onclick="setDetailFilter('achieved')">● Achieved <span class="tab-count">${stats.achieved}</span></button>
         <button class="mastery-tab t-developing ${filter==='developing'?'active':''}" onclick="setDetailFilter('developing')">◐ Developing <span class="tab-count">${stats.developing}</span></button>
@@ -931,7 +1045,6 @@ function renderStudentDetail(main) {
           ✗ Not taught yet <span class="tab-count">${notTaughtCount}</span>
         </button>
       </div>
-
       <div class="card">
         ${filteredCodes.length === 0
           ? `<div class="empty-state" style="padding:40px"><div class="empty-icon">◈</div><div class="empty-title">No codes in this filter</div>${codes.length === 0 ? '<div class="empty-sub">No '+subjectFilter+' codes loaded for this year level</div>' : ''}</div>`
@@ -963,12 +1076,31 @@ function renderStudentDetail(main) {
                 }).join('')}
               </tbody>
             </table>`}
+      </div>`;
+  }
+
+  main.innerHTML = main.innerHTML + `
+    <div class="content">
+      <!-- Section switcher -->
+      <div style="display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:0">
+        ${[
+          { id:'curriculum',   label:'⊞ Curriculum',   desc:'Code mastery table' },
+          { id:'coverage',     label:'⬡ Coverage',      desc:'Visual coverage map' },
+          { id:'progressions', label:'⟡ Progressions',  desc:'Placement & next steps' },
+        ].map(tab => `<button onclick="setDetailSection('${tab.id}')"
+          style="padding:8px 16px;border:none;border-bottom:2px solid ${section===tab.id?activeCol:'transparent'};background:none;color:${section===tab.id?activeCol:'var(--text3)'};font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:${section===tab.id?'600':'400'};cursor:pointer;transition:all 0.15s">
+          ${tab.label}
+        </button>`).join('')}
       </div>
+      ${section === 'curriculum'   ? buildCurriculumSection()   : ''}
+      ${section === 'coverage'     ? buildCoverageSection()     : ''}
+      ${section === 'progressions' ? buildProgressionsSection() : ''}
     </div>
   `;
 }
 
-function setDetailFilter(f) { state.detailFilter = f; renderView(); }
+function setDetailFilter(f)   { state.detailFilter = f; renderView(); }
+function setDetailSection(sec){ state.detailSection = sec; renderView(); }
 
 // ── CURRICULUM CODES VIEW ──
 let cdFilters = { subject: 'English', year: 'all', strand: 'all', sort: 'code', search: '' };
@@ -4196,7 +4328,7 @@ function renderDailyLog(main) {
 
 // ── Apps Script additions needed ──
 console.info(
-  '%cClassTracker v1.3.1 — Apps Script update needed\n\n' +
+  '%cClassTracker v1.3.2 — Apps Script update needed\n\n' +
   'Add these sheets to your Google Spreadsheet:\n' +
   '  StandardsJudgments — A:id B:student_id C:standard_id D:judgment E:locked F:date G:notes H:period\n' +
   '  ProgressionPlacements — A:id B:student_id C:element D:sub_element E:level F:date G:notes H:ext_label I:ext_value\n\n' +

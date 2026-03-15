@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.2.1
+ * THIS FILE IS VERSION: v1.2.2
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.2.1 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.2.2 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.2.1';
+const APP_VERSION = 'v1.2.2';
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -2069,9 +2069,6 @@ function renderCoverage(main) {
   };
   const subjectShort = s => s==='Health and Physical Education'?'HPE':s==='Design and Technologies'?'D&T':s==='Digital Technologies'?'DigiTech':s;
   const availSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
-  const availStrands  = ['all', ...new Set(
-    state.curriculumCodes.filter(c => cf.subject==='all'||c.Subject===cf.subject).map(c=>c.Strand).filter(Boolean)
-  )].sort();
   const col = subjectColours[cf.subject] || 'var(--blue)';
 
   // Filter codes
@@ -2211,10 +2208,15 @@ function renderCoverage(main) {
     </div>`;
   }
 
+  // Strands for the selected subject
+  const availStrands = cf.subject !== 'all'
+    ? [...new Set(state.curriculumCodes.filter(c => c.Subject === cf.subject).map(c => c.Strand).filter(Boolean))].sort()
+    : [];
+
   main.innerHTML = `
     <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:12px 20px">
       <div class="topbar-title">Coverage Gaps</div>
-      <!-- Summary pills -->
+      <!-- Summary stats -->
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span style="font-size:12px;color:var(--text3)">
           <span style="color:${col};font-weight:700">${taughtCells}</span>/${totalCells} taught
@@ -2224,7 +2226,7 @@ function renderCoverage(main) {
           <span style="color:var(--rust);font-weight:700">${gapCodes.length}</span> codes never taught
         </span>
       </div>
-      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:2px">
         <!-- Subject -->
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">SUBJECT</span>
         ${availSubjects.map(s => fBtn(subjectShort(s), cf.subject===s, `state.coverageFilter.subject='${s}';state.coverageFilter.strand='all';showView('coverage')`)).join('')}
@@ -2234,9 +2236,16 @@ function renderCoverage(main) {
         ${['all','F','1','2','3','4','5','6'].map(y => fBtn(y==='all'?'All':'Yr '+y, cf.year===y, `state.coverageFilter.year='${y}';showView('coverage')`)).join('')}
         <div style="width:1px;height:18px;background:var(--border2)"></div>
         <!-- Mode -->
-        ${fBtn('All codes',       cf.mode==='all',        "state.coverageFilter.mode='all';showView('coverage')")}
-        ${fBtn('⚠ Gaps only',    cf.mode==='not-taught', "state.coverageFilter.mode='not-taught';showView('coverage')")}
+        ${fBtn('All codes',    cf.mode==='all',        "state.coverageFilter.mode='all';showView('coverage')")}
+        ${fBtn('⚠ Gaps only', cf.mode==='not-taught', "state.coverageFilter.mode='not-taught';showView('coverage')")}
       </div>
+      <!-- Strand filter row — only shown when a subject is selected -->
+      ${availStrands.length > 0 ? `
+      <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:6px;border-top:1px solid var(--border)">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">STRAND</span>
+        ${fBtn('All strands', cf.strand==='all', "state.coverageFilter.strand='all';showView('coverage')")}
+        ${availStrands.map(st => fBtn(st, cf.strand===st, `state.coverageFilter.strand='${st.replace(/'/g,"\\'")}';showView('coverage')`)).join('')}
+      </div>` : ''}
     </div>
     <div style="padding:0">
       <div class="card" style="border-radius:0;border-left:none;border-right:none;border-top:none">

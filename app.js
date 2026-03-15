@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.2.4
+ * THIS FILE IS VERSION: v1.3.0
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.2.4 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.3.0 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.2.4';
+const APP_VERSION = 'v1.3.0';
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -35,7 +35,9 @@ const CSV_FILES = {
 let state = {
   students: [],
   progress: [],
-  taughtLog: [],           // { id, date, student_id, code, notes }
+  taughtLog: [],              // { id, date, student_id, code, notes }
+  standardsJudgments: [],     // { id, student_id, standard_id, judgment, locked, date, notes, period }
+  progressionPlacements: [],  // { id, student_id, element, sub_element, level, date, notes, ext_label, ext_value }
   curriculumCodes: [],
   standards: [],
   progressions: [],
@@ -46,6 +48,11 @@ let state = {
   loading: true,
   syncing: false,
   detailSubjectFilter: null,
+
+  // ── ASSESSMENT SCALE (configurable) ──
+  // Each item: { id, label, colour, description }
+  // Stored in localStorage so it persists across sessions
+  assessmentScale: null, // loaded in init
 };
 
 // ── GOOGLE SHEETS API ──
@@ -103,6 +110,87 @@ async function loadTaughtLog() {
     // TaughtLog sheet may not exist yet — that's fine
     console.warn('TaughtLog not loaded (sheet may not exist yet):', e);
   }
+}
+
+async function loadStandardsJudgments() {
+  try {
+    const rows = await apiCall('getStandardsJudgments');
+    if (Array.isArray(rows) && rows.length > 1) {
+      state.standardsJudgments = rows.slice(1).map(r => ({
+        id: r[0], student_id: r[1], standard_id: r[2],
+        judgment: r[3], locked: r[4] === true || r[4] === 'TRUE',
+        date: r[5], notes: r[6] || '', period: r[7] || ''
+      })).filter(j => j.id);
+    }
+  } catch(e) { console.warn('StandardsJudgments not loaded:', e); }
+}
+
+async function loadProgressionPlacements() {
+  try {
+    const rows = await apiCall('getProgressionPlacements');
+    if (Array.isArray(rows) && rows.length > 1) {
+      state.progressionPlacements = rows.slice(1).map(r => ({
+        id: r[0], student_id: r[1], element: r[2], sub_element: r[3],
+        level: r[4], date: r[5], notes: r[6] || '',
+        ext_label: r[7] || '', ext_value: r[8] || ''
+      })).filter(p => p.id);
+    }
+  } catch(e) { console.warn('ProgressionPlacements not loaded:', e); }
+}
+
+async function saveStandardsJudgment(data) {
+  const existing = state.standardsJudgments.find(
+    j => j.student_id === data.student_id && j.standard_id === data.standard_id
+  );
+  let result;
+  if (existing) {
+    result = await apiCall('updateStandardsJudgment', { ...data, judgment_id: existing.id });
+    if (result.success) {
+      existing.judgment = data.judgment;
+      existing.locked   = data.locked || false;
+      existing.date     = data.date;
+      existing.notes    = data.notes || '';
+      existing.period   = data.period || '';
+    }
+  } else {
+    result = await apiCall('saveStandardsJudgment', data);
+    if (result.success) {
+      state.standardsJudgments.push({
+        id: result.judgment_id, student_id: data.student_id,
+        standard_id: data.standard_id, judgment: data.judgment,
+        locked: data.locked || false, date: data.date,
+        notes: data.notes || '', period: data.period || ''
+      });
+    }
+  }
+  return result;
+}
+
+async function saveProgressionPlacement(data) {
+  const existing = state.progressionPlacements.find(
+    p => p.student_id === data.student_id &&
+         p.element === data.element &&
+         p.sub_element === data.sub_element
+  );
+  let result;
+  if (existing) {
+    result = await apiCall('updateProgressionPlacement', { ...data, placement_id: existing.id });
+    if (result.success) {
+      existing.level     = data.level;
+      existing.date      = data.date;
+      existing.notes     = data.notes || '';
+      existing.ext_label = data.ext_label || '';
+      existing.ext_value = data.ext_value || '';
+    }
+  } else {
+    result = await apiCall('saveProgressionPlacement', data);
+    if (result.success) {
+      state.progressionPlacements.push({
+        id: result.placement_id, ...data
+      });
+    }
+  }
+  return result;
 }
 
 async function addStudent(data) {
@@ -207,6 +295,62 @@ function getProgressStats(sid) {
 }
 
 // ── PARSE CSV ──
+// ── ASSESSMENT SCALE ──
+const DEFAULT_ASSESSMENT_SCALE = [
+  { id: 'not-evident',     label: 'Not Evident',     colour: 'var(--text3)',   bg: 'var(--surface2)',  description: 'No evidence of understanding yet' },
+  { id: 'developing',      label: 'Developing',      colour: 'var(--rust)',    bg: 'var(--rust-dim)',  description: 'Beginning to show understanding with support' },
+  { id: 'competent',       label: 'Competent',       colour: 'var(--gold)',    bg: 'var(--gold-dim)',  description: 'Demonstrates understanding at year level' },
+  { id: 'highly-competent',label: 'Highly Competent',colour: 'var(--blue)',    bg: 'var(--blue-dim)',  description: 'Demonstrates thorough understanding at year level' },
+  { id: 'outstanding',     label: 'Outstanding',     colour: 'var(--green)',   bg: 'var(--green-dim)', description: 'Demonstrates exceptional understanding, well above year level' },
+];
+
+function getScale() {
+  return state.assessmentScale || DEFAULT_ASSESSMENT_SCALE;
+}
+
+function loadAssessmentScale() {
+  try {
+    const saved = localStorage.getItem('ct_assessment_scale');
+    if (saved) state.assessmentScale = JSON.parse(saved);
+  } catch(e) { /* use default */ }
+}
+
+function saveAssessmentScale(scale) {
+  state.assessmentScale = scale;
+  try { localStorage.setItem('ct_assessment_scale', JSON.stringify(scale)); } catch(e) {}
+}
+
+function getScaleItem(judgmentId) {
+  return getScale().find(s => s.id === judgmentId) || null;
+}
+
+function getJudgmentForStudent(studentId, standardId) {
+  return state.standardsJudgments.find(
+    j => j.student_id === studentId && j.standard_id === standardId
+  ) || null;
+}
+
+function getPlacementForStudent(studentId, element, subElement) {
+  return state.progressionPlacements.find(
+    p => p.student_id === studentId && p.element === element && p.sub_element === subElement
+  ) || null;
+}
+
+// How many linked codes for a standard have been taught to a student
+function getStandardReadiness(studentId, standardId) {
+  const linkedCodes = state.curriculumCodes.filter(c =>
+    (c['Linked Achievement IDs'] || '').split(',').map(x=>x.trim()).includes(standardId)
+  );
+  if (!linkedCodes.length) return { taught: 0, total: 0, pct: 0, masterySpread: {} };
+  const taught = linkedCodes.filter(c => wasCodeTaughtToStudent(studentId, c.Code)).length;
+  const masterySpread = { Achieved:0, Developing:0, Emerging:0, 'Not taught':0 };
+  linkedCodes.forEach(c => {
+    const m = getMasteryForCode(studentId, c.Code);
+    masterySpread[m] = (masterySpread[m] || 0) + 1;
+  });
+  return { taught, total: linkedCodes.length, pct: Math.round(taught/linkedCodes.length*100), masterySpread, codes: linkedCodes };
+}
+
 function normaliseYear(val) {
   if (!val) return '';
   const v = val.toString().trim();
@@ -250,17 +394,20 @@ function showView(v) {
 function renderView() {
   const main = document.getElementById('main-content');
   switch(state.currentView) {
-    case 'dashboard':      renderDashboard(main); break;
-    case 'students':       renderStudents(main); break;
-    case 'student-detail': renderStudentDetail(main); break;
-    case 'overview':       renderClassOverview(main); break;
-    case 'bulk-assess':    renderBulkAssess(main); break;
-    case 'daily-log':      renderDailyLog(main); break;
-    case 'coverage':       renderCoverage(main); break;
-    case 'curriculum':     renderCurriculum(main); break;
-    case 'standards':      renderStandards(main); break;
-    case 'progressions':   renderProgressions(main); break;
-    default:               renderDashboard(main);
+    case 'dashboard':               renderDashboard(main); break;
+    case 'students':                renderStudents(main); break;
+    case 'student-detail':          renderStudentDetail(main); break;
+    case 'overview':                renderClassOverview(main); break;
+    case 'bulk-assess':             renderBulkAssess(main); break;
+    case 'daily-log':               renderDailyLog(main); break;
+    case 'coverage':                renderCoverage(main); break;
+    case 'standards-judgments':     renderStandardsJudgments(main); break;
+    case 'progression-placement':   renderProgressionPlacement(main); break;
+    case 'admin':                   renderAdmin(main); break;
+    case 'curriculum':              renderCurriculum(main); break;
+    case 'standards':               renderStandards(main); break;
+    case 'progressions':            renderProgressions(main); break;
+    default:                        renderDashboard(main);
   }
 }
 
@@ -1379,6 +1526,26 @@ function applyMasteryToAll(code, mastery) {
 function discardBulkChanges() { state.bulkAssess.pendingChanges={}; renderBulkAssess(document.getElementById('main-content')); }
 
 document.addEventListener('click', function(e) {
+  // ── Standards Judgments filter buttons ──
+  const sjEl = e.target.closest('[data-sj-action]');
+  if (sjEl) {
+    if (!state.sjFilter) state.sjFilter = { subject:'English', year:'all', period:'' };
+    const action = sjEl.dataset.sjAction;
+    const value  = sjEl.dataset.sjValue;
+    if (action === 'subject') state.sjFilter.subject = value;
+    else if (action === 'year') state.sjFilter.year = value;
+    showView('standards-judgments');
+    return;
+  }
+
+  // ── Standards Judgment open picker ──
+  const sjOpen = e.target.closest('[data-sj-open]');
+  if (sjOpen) {
+    const [studentId, standardId] = sjOpen.dataset.sjOpen.split('|');
+    openJudgmentPicker(studentId, standardId);
+    return;
+  }
+
   // ── Coverage filter buttons ──
   const cvEl = e.target.closest('[data-cv-action]');
   if (cvEl) {
@@ -2336,6 +2503,601 @@ function renderCoverage(main) {
       </div>
     </div>
   `;
+}
+
+
+
+// ════════════════════════════════════════════════════
+// ── STANDARDS JUDGMENTS VIEW ──
+// Rate students against achievement standards using
+// the school's configurable assessment scale
+// ════════════════════════════════════════════════════
+
+function renderStandardsJudgments(main) {
+  if (!state.sjFilter) state.sjFilter = { subject: 'English', year: 'all', period: '' };
+  const sf = state.sjFilter;
+  const scale = getScale();
+
+  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
+  const subjectColours = { 'English':'var(--blue)','Mathematics':'var(--green)','Science':'var(--teal)','HASS':'var(--gold)','Health and Physical Education':'var(--rust)','Design and Technologies':'var(--purple)','Digital Technologies':'var(--purple)' };
+  const subjectShort = s => s==='Health and Physical Education'?'HPE':s==='Design and Technologies'?'D&T':s==='Digital Technologies'?'DigiTech':s;
+  const availSubjects = [...new Set(state.standards.map(s => s.Subject).filter(Boolean))].sort();
+  const col = subjectColours[sf.subject] || 'var(--blue)';
+
+  // Filter standards to selected subject + year
+  let visibleStandards = state.standards.filter(s => {
+    if (sf.subject !== 'all' && s.Subject !== sf.subject) return false;
+    if (sf.year !== 'all' && (s['Year Level']||'') !== (YLM[sf.year]||sf.year)) return false;
+    return true;
+  });
+
+  // Filter students
+  const students = state.students
+    .filter(s => sf.year === 'all' || normaliseYear(s.year_level) === sf.year)
+    .sort((a,b) => a.last_name.localeCompare(b.last_name));
+
+  function fBtn(label, active, action, value) {
+    return `<button data-sj-action="${action}" data-sj-value="${value}"
+      style="padding:4px 10px;border-radius:4px;border:1px solid ${active?col:'var(--border2)'};background:${active?col+'22':'none'};color:${active?col:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
+  }
+
+  // Build the judgment grid
+  function buildGrid() {
+    if (!visibleStandards.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">◇</div><div class="empty-title">No standards match this filter</div><div class="empty-sub">Load your standards CSV and select a subject/year</div></div>`;
+    if (!students.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">◎</div><div class="empty-title">No students in this year level</div></div>`;
+
+    const stdHeaders = visibleStandards.map(std => {
+      const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
+      // Count how many students are ready to assess for this standard
+      const readyCount = students.filter(s => getStandardReadiness(s.id, sid).pct >= 60).length;
+      return `<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);min-width:160px;max-width:200px;vertical-align:bottom;border-left:1px solid var(--border)">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:${col};margin-bottom:3px">${sid}</div>
+        <div style="font-size:9px;color:var(--text2);line-height:1.3;margin-bottom:4px">${(std['Standard Text']||'').slice(0,80)}${(std['Standard Text']||'').length>80?'…':''}</div>
+        ${readyCount > 0 ? `<div style="font-size:9px;color:var(--gold)">⚡ ${readyCount} student${readyCount>1?'s':''} ready to assess</div>` : ''}
+      </th>`;
+    }).join('');
+
+    const rows = students.map((s, si) => {
+      const cells = visibleStandards.map(std => {
+        const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
+        const j = getJudgmentForStudent(s.id, sid);
+        const readiness = getStandardReadiness(s.id, sid);
+        const scaleItem = j ? getScaleItem(j.judgment) : null;
+
+        return `<td style="padding:4px 6px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);vertical-align:top">
+          <!-- Readiness bar -->
+          <div style="height:3px;background:var(--surface2);border-radius:2px;margin-bottom:4px;overflow:hidden">
+            <div style="height:100%;width:${readiness.pct}%;background:${readiness.pct>=60?'var(--gold)':'var(--border2)'};border-radius:2px"></div>
+          </div>
+          <!-- Judgment button -->
+          <button data-sj-open="${s.id}|${sid}"
+            style="width:100%;padding:4px 6px;border-radius:4px;border:1px solid ${scaleItem?scaleItem.colour:'var(--border2)'};background:${scaleItem?scaleItem.bg:'none'};color:${scaleItem?scaleItem.colour:'var(--text3)'};font-size:9px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:4px">
+            ${j?.locked ? '<span style="font-size:8px">🔒</span>' : ''}
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${scaleItem ? scaleItem.label : '— Rate'}</span>
+          </button>
+          ${j?.date ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);margin-top:2px">${j.date}</div>` : ''}
+        </td>`;
+      }).join('');
+
+      return `<tr style="${si%2===1?'background:rgba(255,255,255,0.02)':''}">
+        <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${si%2===1?'#1c2030':'var(--surface)'};min-width:160px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0">${getInitials(s)}</div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text)">${s.first_name} ${s.last_name}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">Yr ${s.year_level}</div>
+            </div>
+          </div>
+        </td>
+        ${cells}
+      </tr>`;
+    }).join('');
+
+    return `<div style="overflow:auto;max-height:calc(100vh - 200px)">
+      <table style="border-collapse:collapse;min-width:${180+visibleStandards.length*170}px">
+        <thead style="position:sticky;top:0;z-index:5;background:var(--surface)">
+          <tr style="background:var(--surface2)">
+            <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface2);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
+            ${stdHeaders}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <!-- Scale legend -->
+    <div style="display:flex;gap:10px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center">
+      <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em">Scale</span>
+      ${scale.map(s => `<div style="display:flex;align-items:center;gap:5px">
+        <div style="width:10px;height:10px;border-radius:2px;background:${s.bg};border:1px solid ${s.colour}"></div>
+        <span style="font-size:10px;color:${s.colour}">${s.label}</span>
+      </div>`).join('')}
+      <div style="margin-left:auto;font-size:10px;color:var(--text3)">⚡ = ≥60% of linked codes taught · 🔒 = locked for reporting</div>
+    </div>`;
+  }
+
+  main.innerHTML = `
+    <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:12px 20px">
+      <div class="topbar-title">Standards Judgments</div>
+      <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">SUBJECT</span>
+        ${availSubjects.map(s => fBtn(subjectShort(s), sf.subject===s, 'subject', s)).join('')}
+        <div style="width:1px;height:18px;background:var(--border2)"></div>
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">YEAR</span>
+        ${['all','F','1','2','3','4','5','6'].map(y => fBtn(y==='all'?'All':'Yr '+y, sf.year===y, 'year', y)).join('')}
+        <div style="width:1px;height:18px;background:var(--border2)"></div>
+        <button onclick="showView('admin')" style="padding:4px 10px;border-radius:4px;border:1px solid var(--border2);background:none;color:var(--text3);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">⚙ Configure Scale</button>
+      </div>
+    </div>
+    <div class="card" style="border-radius:0;border-left:none;border-right:none;border-top:none">
+      ${state.standards.length === 0
+        ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">◇</div><div class="empty-title">Standards not loaded</div><div class="empty-sub">Load your Achievement Standards CSV from the Admin menu</div></div>`
+        : buildGrid()}
+    </div>
+  `;
+}
+
+// ── JUDGMENT PICKER MODAL ──
+function openJudgmentPicker(studentId, standardId) {
+  const s    = state.students.find(x => x.id === studentId);
+  const std  = state.standards.find(x => (x['Achievement Standard ID']||x['Aspect ID']||'') === standardId);
+  const j    = getJudgmentForStudent(studentId, standardId);
+  const scale = getScale();
+  const readiness = getStandardReadiness(studentId, standardId);
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal" style="width:580px;max-width:95vw">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">${s ? s.first_name+' '+s.last_name : ''}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);margin-top:3px">${standardId}</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Standard text -->
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--gold)">
+          ${std ? std['Standard Text'] : 'Standard text not available'}
+        </div>
+
+        <!-- Evidence panel: linked codes -->
+        <div style="margin-bottom:14px">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">
+            Evidence — ${readiness.taught}/${readiness.total} linked codes taught
+            <span style="margin-left:8px;color:${readiness.pct>=60?'var(--gold)':'var(--text3)'}">${readiness.pct}% coverage</span>
+          </div>
+          <!-- Readiness bar -->
+          <div style="height:6px;background:var(--surface2);border-radius:3px;margin-bottom:8px;overflow:hidden">
+            <div style="height:100%;width:${readiness.pct}%;background:${readiness.pct>=60?'var(--gold)':'var(--border2)'};border-radius:3px;transition:width 0.3s"></div>
+          </div>
+          <!-- Code mastery breakdown -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${(readiness.codes||[]).map(c => {
+              const m = getMasteryForCode(studentId, c.Code);
+              const t = wasCodeTaughtToStudent(studentId, c.Code);
+              const col = m==='Achieved'?'var(--green)':m==='Developing'?'var(--gold)':m==='Emerging'?'var(--rust)':t?'var(--blue)':'var(--text3)';
+              const bg  = m==='Achieved'?'var(--green-dim)':m==='Developing'?'var(--gold-dim)':m==='Emerging'?'var(--rust-dim)':t?'var(--blue-dim)':'var(--surface2)';
+              return `<div style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:${bg};color:${col}" title="${m}">${c.Code}</div>`;
+            }).join('')}
+            ${!readiness.codes?.length ? '<span style="font-size:11px;color:var(--text3)">No linked codes found</span>' : ''}
+          </div>
+        </div>
+
+        <!-- Scale picker -->
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Judgment</div>
+        <div style="display:flex;flex-direction:column;gap:6px" id="judgment-scale">
+          ${scale.map(item => {
+            const active = j && j.judgment === item.id;
+            return `<button onclick="selectJudgment('${item.id}')"
+              id="jscale-${item.id}"
+              style="padding:10px 14px;border-radius:6px;border:2px solid ${active?item.colour:'var(--border2)'};background:${active?item.bg:'none'};
+              text-align:left;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:10px">
+              <div style="width:12px;height:12px;border-radius:50%;background:${active?item.colour:'var(--border2)'};flex-shrink:0"></div>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:${active?item.colour:'var(--text2)'}">${item.label}</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:1px">${item.description}</div>
+              </div>
+            </button>`;
+          }).join('')}
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Date assessed</label>
+            <input class="form-input" type="date" id="j-date" value="${j?.date || new Date().toISOString().split('T')[0]}">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Reporting period (optional)</label>
+            <input class="form-input" id="j-period" placeholder="e.g. Semester 1 2026" value="${j?.period||''}">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:12px;margin-bottom:0">
+          <label class="form-label">Notes (optional)</label>
+          <textarea class="form-textarea" id="j-notes" placeholder="Teacher observations, evidence notes…" style="min-height:60px">${j?.notes||''}</textarea>
+        </div>
+      </div>
+      <div class="modal-foot" style="justify-content:space-between">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2)">
+          <input type="checkbox" id="j-locked" ${j?.locked?'checked':''} style="accent-color:var(--gold)">
+          🔒 Lock for reporting
+        </label>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitJudgment('${studentId}','${standardId}')">Save Judgment</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function selectJudgment(itemId) {
+  document.querySelectorAll('[id^="jscale-"]').forEach(btn => {
+    const scale = getScale();
+    const item = scale.find(s => `jscale-${s.id}` === btn.id);
+    if (!item) return;
+    const active = item.id === itemId;
+    btn.style.borderColor  = active ? item.colour : 'var(--border2)';
+    btn.style.background   = active ? item.bg : 'none';
+    const dot = btn.querySelector('div');
+    if (dot) dot.style.background = active ? item.colour : 'var(--border2)';
+    const label = btn.querySelectorAll('div')[1]?.querySelector('div');
+    if (label) label.style.color = active ? item.colour : 'var(--text2)';
+    btn.dataset.selected = active ? 'true' : '';
+  });
+  document.getElementById('judgment-scale').dataset.selected = itemId;
+}
+
+async function submitJudgment(studentId, standardId) {
+  const selected = document.getElementById('judgment-scale')?.dataset.selected;
+  if (!selected) { toast('Please select a judgment', 'error'); return; }
+  const date   = document.getElementById('j-date')?.value || new Date().toISOString().split('T')[0];
+  const notes  = document.getElementById('j-notes')?.value || '';
+  const period = document.getElementById('j-period')?.value || '';
+  const locked = document.getElementById('j-locked')?.checked || false;
+  closeModal();
+  setSyncing(true);
+  const result = await saveStandardsJudgment({ student_id:studentId, standard_id:standardId, judgment:selected, date, notes, period, locked });
+  setSyncing(false);
+  if (result?.success) {
+    toast('Judgment saved', 'success');
+    renderView();
+  } else {
+    toast('Could not save judgment', 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════
+// ── PROGRESSION PLACEMENT VIEW ──
+// ════════════════════════════════════════════════════
+
+function renderProgressionPlacement(main) {
+  if (!state.ppFilter) state.ppFilter = { type: 'literacy', element: '', student: null };
+  const ppf = state.ppFilter;
+  const progs = ppf.type === 'numeracy' ? state.numeracyProgressions : state.progressions;
+  const elements = [...new Set(progs.map(p => p.Element).filter(Boolean))];
+  const activeElement = ppf.element || elements[0] || '';
+  const subElements = [...new Set(progs.filter(p => p.Element === activeElement).map(p => p['Sub-element']).filter(Boolean))].sort();
+
+  const students = [...state.students].sort((a,b) => a.last_name.localeCompare(b.last_name));
+
+  function buildPlacementTable() {
+    if (!progs.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">${ppf.type === 'numeracy' ? 'Numeracy' : 'Literacy'} progressions not loaded</div></div>`;
+    if (!subElements.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">Select an element above</div></div>`;
+
+    return subElements.map(subEl => {
+      const items = progs.filter(p => p.Element === activeElement && p['Sub-element'] === subEl);
+      const levels = [...new Set(items.map(p => p['Progression level']).filter(Boolean))].sort((a,b) => Number(a)-Number(b));
+
+      const studentRows = students.map((s, si) => {
+        const placement = getPlacementForStudent(s.id, activeElement, subEl);
+        const currentLevel = placement ? placement.level : null;
+        const nextLevel = currentLevel
+          ? levels[levels.indexOf(String(currentLevel)) + 1] || null
+          : levels[0] || null;
+        const nextIndicator = nextLevel
+          ? items.find(i => String(i['Progression level']) === String(nextLevel))
+          : null;
+
+        return `<tr style="${si%2===1?'background:rgba(255,255,255,0.02)':''}">
+          <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${si%2===1?'#1c2030':'var(--surface)'}">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0">${getInitials(s)}</div>
+              <div style="font-size:12px;font-weight:600">${s.first_name} ${s.last_name}</div>
+            </div>
+          </td>
+          <!-- Current level -->
+          <td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">
+            <button onclick="openPlacementPicker('${s.id}','${activeElement.replace(/'/g,"\\'")}','${subEl.replace(/'/g,"\\'")}')"
+              style="padding:4px 12px;border-radius:4px;border:1px solid ${currentLevel?'var(--purple)':'var(--border2)'};background:${currentLevel?'var(--purple-dim)':'none'};color:${currentLevel?'var(--purple)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;font-weight:700">
+              ${currentLevel ? 'L'+currentLevel : '— Set'}
+            </button>
+            ${placement?.date ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);margin-top:2px">${placement.date}</div>` : ''}
+          </td>
+          <!-- Next step indicator -->
+          <td style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);line-height:1.4;max-width:300px">
+            ${nextIndicator
+              ? `<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);background:var(--teal-dim);padding:1px 5px;border-radius:3px;margin-right:5px">L${nextLevel} next</span>${nextIndicator['Indicator text (no examples)']||nextIndicator['Indicator text (verbatim)']||''}`
+              : currentLevel
+                ? `<span style="color:var(--green);font-size:10px">✓ At highest level</span>`
+                : `<span style="color:var(--text3);font-size:10px">No placement set</span>`
+            }
+          </td>
+          <!-- External level -->
+          <td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">
+            ${placement?.ext_value
+              ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold)">${placement.ext_label ? placement.ext_label+' ' : ''}${placement.ext_value}</span>`
+              : `<span style="color:var(--text3);font-size:10px">—</span>`}
+          </td>
+        </tr>`;
+      }).join('');
+
+      return `<div style="margin-bottom:20px">
+        <div style="padding:8px 14px;background:var(--surface2);font-family:'DM Mono',monospace;font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.1em;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span>${subEl} · ${levels.length} levels</span>
+          <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">Levels: ${levels.map(l=>'L'+l).join(' → ')}</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;min-width:600px">
+            <thead>
+              <tr style="background:var(--surface2)">
+                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;min-width:160px">Student</th>
+                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:100px">Current Level</th>
+                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Next Step</th>
+                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:120px">External Level</th>
+              </tr>
+            </thead>
+            <tbody>${studentRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  main.innerHTML = `
+    <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:12px 20px">
+      <div class="topbar-title">Progression Placement</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
+        <button onclick="state.ppFilter.type='literacy';state.ppFilter.element='';renderProgressionPlacement(document.getElementById('main-content'))"
+          style="padding:4px 12px;border-radius:4px;border:1px solid ${ppf.type==='literacy'?'var(--blue)':'var(--border2)'};background:${ppf.type==='literacy'?'var(--blue-dim)':'none'};color:${ppf.type==='literacy'?'var(--blue)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">✦ Literacy</button>
+        <button onclick="state.ppFilter.type='numeracy';state.ppFilter.element='';renderProgressionPlacement(document.getElementById('main-content'))"
+          style="padding:4px 12px;border-radius:4px;border:1px solid ${ppf.type==='numeracy'?'var(--green)':'var(--border2)'};background:${ppf.type==='numeracy'?'var(--green-dim)':'none'};color:${ppf.type==='numeracy'?'var(--green)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">∑ Numeracy</button>
+      </div>
+    </div>
+    <!-- Element tabs -->
+    <div style="padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;gap:6px;flex-wrap:wrap">
+      ${elements.map(el => `<button onclick="state.ppFilter.element='${el.replace(/'/g,"\\'")}';renderProgressionPlacement(document.getElementById('main-content'))"
+        style="padding:5px 12px;border-radius:4px;border:1px solid ${activeElement===el?'var(--purple)':'var(--border2)'};background:${activeElement===el?'var(--purple-dim)':'none'};color:${activeElement===el?'var(--purple)':'var(--text3)'};font-size:12px;cursor:pointer">
+        ${el}
+      </button>`).join('')}
+    </div>
+    <div class="content">
+      ${!progs.length
+        ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">No ${ppf.type} progressions loaded</div><div class="empty-sub">Load your progressions CSV from the Admin menu</div></div>`
+        : buildPlacementTable()}
+    </div>
+  `;
+}
+
+// ── PLACEMENT PICKER MODAL ──
+function openPlacementPicker(studentId, element, subElement) {
+  const s = state.students.find(x => x.id === studentId);
+  const progs = state.ppFilter?.type === 'numeracy' ? state.numeracyProgressions : state.progressions;
+  const items = progs.filter(p => p.Element === element && p['Sub-element'] === subElement);
+  const levels = [...new Set(items.map(p => p['Progression level']).filter(Boolean))].sort((a,b) => Number(a)-Number(b));
+  const placement = getPlacementForStudent(studentId, element, subElement);
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal" style="width:560px;max-width:95vw">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">${s ? s.first_name+' '+s.last_name : ''}</div>
+          <div style="font-size:11px;color:var(--purple);margin-top:2px">${element} · ${subElement}</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Select current progression level</div>
+        <div style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto" id="pp-levels">
+          ${levels.map(lvl => {
+            const indicator = items.find(i => String(i['Progression level']) === String(lvl));
+            const active = placement && String(placement.level) === String(lvl);
+            return `<button onclick="selectPlacementLevel('${lvl}')" id="pplvl-${lvl}"
+              style="padding:10px 12px;border-radius:6px;border:2px solid ${active?'var(--purple)':'var(--border2)'};background:${active?'var(--purple-dim)':'none'};text-align:left;cursor:pointer;transition:all 0.15s">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--purple);background:var(--purple-dim);padding:1px 7px;border-radius:3px;font-weight:700">L${lvl}</span>
+                <span style="font-size:9px;color:var(--text3)">${indicator?.['Indicator ID']||''}</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.4">${indicator?.['Indicator text (no examples)']||indicator?.['Indicator text (verbatim)']||'—'}</div>
+            </button>`;
+          }).join('')}
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">External level label</label>
+            <input class="form-input" id="pp-ext-label" placeholder="e.g. PM Level, PAT Score" value="${placement?.ext_label||''}">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">External level value</label>
+            <input class="form-input" id="pp-ext-value" placeholder="e.g. 18, 4A" value="${placement?.ext_value||''}">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Date assessed</label>
+            <input class="form-input" type="date" id="pp-date" value="${placement?.date||new Date().toISOString().split('T')[0]}">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Notes</label>
+            <input class="form-input" id="pp-notes" placeholder="Optional notes" value="${placement?.notes||''}">
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitPlacement('${studentId}','${element.replace(/'/g,"\\'")}','${subElement.replace(/'/g,"\\'")}')">Save Placement</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  // Store selected level
+  modal.dataset.selectedLevel = placement?.level || '';
+}
+
+function selectPlacementLevel(lvl) {
+  document.querySelectorAll('[id^="pplvl-"]').forEach(btn => {
+    const active = btn.id === `pplvl-${lvl}`;
+    btn.style.borderColor = active ? 'var(--purple)' : 'var(--border2)';
+    btn.style.background  = active ? 'var(--purple-dim)' : 'none';
+  });
+  const modal = document.getElementById('modal-overlay');
+  if (modal) modal.dataset.selectedLevel = lvl;
+}
+
+async function submitPlacement(studentId, element, subElement) {
+  const modal = document.getElementById('modal-overlay');
+  const level = modal?.dataset.selectedLevel;
+  if (!level) { toast('Please select a level', 'error'); return; }
+  const date      = document.getElementById('pp-date')?.value || new Date().toISOString().split('T')[0];
+  const notes     = document.getElementById('pp-notes')?.value || '';
+  const extLabel  = document.getElementById('pp-ext-label')?.value || '';
+  const extValue  = document.getElementById('pp-ext-value')?.value || '';
+  closeModal();
+  setSyncing(true);
+  const result = await saveProgressionPlacement({ student_id:studentId, element, sub_element:subElement, level, date, notes, ext_label:extLabel, ext_value:extValue });
+  setSyncing(false);
+  if (result?.success) {
+    toast('Placement saved', 'success');
+    renderView();
+  } else {
+    toast('Could not save placement', 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════
+// ── ADMIN VIEW ──
+// Configure assessment scale, view system info
+// ════════════════════════════════════════════════════
+
+function renderAdmin(main) {
+  const scale = getScale();
+
+  main.innerHTML = `
+    <div class="topbar">
+      <div class="topbar-title">Admin &amp; Settings</div>
+    </div>
+    <div class="content">
+
+      <!-- Assessment Scale configurator -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-head">
+          <div class="card-title">Assessment Scale</div>
+          <button class="btn" onclick="resetAssessmentScale()">↺ Reset to defaults</button>
+        </div>
+        <div style="padding:16px 18px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:16px">
+            Configure the scale used for Standards Judgments. Changes are saved locally in your browser.
+            Each level needs a unique ID (no spaces), a label, and a colour.
+          </div>
+          <div id="scale-editor">
+            ${buildScaleEditor(scale)}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn btn-primary" onclick="saveScaleFromEditor()">✓ Save Scale</button>
+            <button class="btn" onclick="addScaleItem()">+ Add Level</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CSV status -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-head"><div class="card-title">Data Status</div></div>
+        <div style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+          ${[
+            ['Content Descriptors', state.curriculumCodes.length],
+            ['Achievement Standards', state.standards.length],
+            ['Literacy Progressions', state.progressions.length],
+            ['Numeracy Progressions', state.numeracyProgressions.length],
+            ['Students', state.students.length],
+            ['Progress records', state.progress.length],
+            ['Taught log entries', state.taughtLog.length],
+            ['Standards judgments', state.standardsJudgments.length],
+            ['Progression placements', state.progressionPlacements.length],
+          ].map(([label, count]) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:6px">
+            <span style="font-size:12px;color:var(--text2)">${label}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${count>0?'var(--green)':'var(--text3)'}">${count}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Apps Script info -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">Google Sheets Setup</div></div>
+        <div style="padding:14px 18px;font-size:12px;color:var(--text3);line-height:1.6">
+          <p style="margin-bottom:8px">Make sure your Apps Script has been updated with the new <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">getStandardsJudgments</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">saveStandardsJudgment</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">getProgressionPlacements</code> and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">saveProgressionPlacement</code> functions.</p>
+          <p>Open your browser console (F12) for the complete Apps Script code to copy.</p>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+function buildScaleEditor(scale) {
+  const COLOURS = ['var(--text3)','var(--rust)','var(--gold)','var(--blue)','var(--green)','var(--teal)','var(--purple)'];
+  return scale.map((item, i) => `
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr 2fr auto;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:var(--surface2);border-radius:6px;border-left:3px solid ${item.colour}">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);width:20px;text-align:center">${i+1}</div>
+      <input class="form-input" value="${item.label}" id="scale-label-${i}" placeholder="Label" style="font-size:12px;padding:5px 8px">
+      <select class="form-input" id="scale-colour-${i}" style="font-size:12px;padding:5px 8px">
+        ${COLOURS.map(c => `<option value="${c}" ${item.colour===c?'selected':''}>${c.replace('var(--','').replace(')','')}</option>`).join('')}
+      </select>
+      <input class="form-input" value="${item.description}" id="scale-desc-${i}" placeholder="Description shown to teacher" style="font-size:12px;padding:5px 8px">
+      <button onclick="removeScaleItem(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px">✕</button>
+    </div>
+  `).join('');
+}
+
+function saveScaleFromEditor() {
+  const scale = getScale();
+  const newScale = scale.map((item, i) => ({
+    id: item.id,
+    label:       document.getElementById(`scale-label-${i}`)?.value || item.label,
+    colour:      document.getElementById(`scale-colour-${i}`)?.value || item.colour,
+    bg:          (document.getElementById(`scale-colour-${i}`)?.value || item.colour).replace(')', '-dim)').replace('var(--','var(--'),
+    description: document.getElementById(`scale-desc-${i}`)?.value || item.description,
+  }));
+  saveAssessmentScale(newScale);
+  toast('Scale saved', 'success');
+  renderAdmin(document.getElementById('main-content'));
+}
+
+function addScaleItem() {
+  const scale = getScale();
+  scale.push({ id: 'level-'+(scale.length+1), label: 'New Level', colour: 'var(--teal)', bg: 'var(--teal-dim)', description: 'Description' });
+  saveAssessmentScale(scale);
+  renderAdmin(document.getElementById('main-content'));
+}
+
+function removeScaleItem(index) {
+  const scale = getScale();
+  scale.splice(index, 1);
+  saveAssessmentScale(scale);
+  renderAdmin(document.getElementById('main-content'));
+}
+
+function resetAssessmentScale() {
+  saveAssessmentScale(null);
+  state.assessmentScale = null;
+  try { localStorage.removeItem('ct_assessment_scale'); } catch(e) {}
+  toast('Scale reset to defaults', 'success');
+  renderAdmin(document.getElementById('main-content'));
 }
 
 
@@ -3314,48 +4076,11 @@ function renderDailyLog(main) {
 
 // ── Apps Script additions needed ──
 console.info(
-  '%cClassTracker — Apps Script updates needed\n\n' +
-  '1. Add a sheet called "TaughtLog" with columns:\n' +
-  '   A: id  B: date  C: student_id  D: code  E: notes\n\n' +
-  '2. Add these functions to your Apps Script:\n\n' +
-  'function getTaughtLog() {\n' +
-  '  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("TaughtLog");\n' +
-  '  if (!sheet) return [[]];\n' +
-  '  return sheet.getDataRange().getValues();\n' +
-  '}\n\n' +
-  'function saveTaughtLog(data) {\n' +
-  '  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("TaughtLog");\n' +
-  '  if (!sheet) sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("TaughtLog");\n' +
-  '  var ids = [];\n' +
-  '  data.entries.forEach(function(e) {\n' +
-  '    var id = Utilities.getUuid();\n' +
-  '    sheet.appendRow([id, e.date, e.student_id, e.code, e.notes || ""]);\n' +
-  '    ids.push(id);\n' +
-  '  });\n' +
-  '  return { success: true, ids: ids };\n' +
-  '}\n\n' +
-  'function claudeSuggest(data) {\n' +
-  '  var API_KEY = "YOUR_ANTHROPIC_API_KEY_HERE";\n' +
-  '  var response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {\n' +
-  '    method: "post",\n' +
-  '    headers: {\n' +
-  '      "Content-Type": "application/json",\n' +
-  '      "x-api-key": API_KEY,\n' +
-  '      "anthropic-version": "2023-06-01"\n' +
-  '    },\n' +
-  '    payload: JSON.stringify({\n' +
-  '      model: "claude-haiku-4-5-20251001",\n' +
-  '      max_tokens: 400,\n' +
-  '      messages: [{ role: "user", content: data.prompt }]\n' +
-  '    }),\n' +
-  '    muteHttpExceptions: true\n' +
-  '  });\n' +
-  '  var result = JSON.parse(response.getContentText());\n' +
-  '  var text = result.content && result.content[0] ? result.content[0].text : "{}";\n' +
-  '  try { return JSON.parse(text.replace(/```json|```/g,"").trim()); }\n' +
-  '  catch(e) { return { codes: [], reasoning: "Parse error" }; }\n' +
-  '}\n\n' +
-  '3. Redeploy your web app after adding these functions.',
+  '%cClassTracker v1.3.0 — Apps Script update needed\n\n' +
+  'Add these sheets to your Google Spreadsheet:\n' +
+  '  StandardsJudgments — A:id B:student_id C:standard_id D:judgment E:locked F:date G:notes H:period\n' +
+  '  ProgressionPlacements — A:id B:student_id C:element D:sub_element E:level F:date G:notes H:ext_label I:ext_value\n\n' +
+  'Open browser console after deploying to see full Apps Script code.',
   'color:#60a5fa;font-family:monospace;font-size:11px'
 );
 
@@ -3365,10 +4090,13 @@ async function init() {
 
   // Use allSettled so a single failure (e.g. TaughtLog sheet not yet created)
   // doesn't block the whole app from rendering
+  loadAssessmentScale();
   const results = await Promise.allSettled([
     loadStudents(),
     loadProgress(),
     loadTaughtLog(),
+    loadStandardsJudgments(),
+    loadProgressionPlacements(),
     fetchAllCSVs()
   ]);
 

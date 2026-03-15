@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.2.0
+ * THIS FILE IS VERSION: v1.2.1
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.2.0 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.2.1 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.2.0';
+const APP_VERSION = 'v1.2.1';
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -1115,8 +1115,7 @@ function loadProgressionsCSV(input, type) {
     const parsed = parseCSV(e.target.result);
     if (progType === 'numeracy') {
       state.numeracyProgressions = parsed;
-      const icon = document.getElementById('icon-np');
-      if (icon) { icon.textContent = '●'; icon.style.color = 'var(--green)'; }
+      markLoaded('icon-np', 'nav-load-np');
       toast(`✓ Loaded ${parsed.length} numeracy progression indicators`, 'success');
     } else {
       state.progressions = parsed;
@@ -3294,6 +3293,7 @@ async function init() {
   state.loading = false;
   renderView();
   checkDailyLogBadge();
+  checkAdminMenuState();
 
   // Show daily log popup if nothing logged today
   const today = new Date().toISOString().split('T')[0];
@@ -3305,6 +3305,30 @@ async function init() {
   // Warn if Sheets data didn't load
   if (state.students.length === 0) {
     toast('Could not load student data — check your Sheets connection', 'error');
+  }
+}
+
+function toggleAdminMenu() {
+  const menu     = document.getElementById('admin-menu');
+  const chevron  = document.getElementById('admin-chevron');
+  const btn      = document.getElementById('nav-admin');
+  if (!menu) return;
+  const open = menu.style.display === 'flex';
+  menu.style.display  = open ? 'none' : 'flex';
+  if (chevron) chevron.textContent = open ? '▸' : '▾';
+  if (btn) btn.style.background = open ? '' : 'var(--surface2)';
+}
+
+// Auto-open admin menu if any CSV file hasn't loaded yet
+function checkAdminMenuState() {
+  const allLoaded = state.curriculumCodes.length > 0
+    && state.standards.length > 0
+    && state.progressions.length > 0;
+  if (!allLoaded) {
+    const menu    = document.getElementById('admin-menu');
+    const chevron = document.getElementById('admin-chevron');
+    if (menu)    menu.style.display = 'flex';
+    if (chevron) chevron.textContent = '▾';
   }
 }
 

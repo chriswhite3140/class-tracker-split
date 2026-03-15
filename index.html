@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!-- Version 1.1.0 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClassTracker</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-name">ClassTracker</div>
+      <div class="logo-sub">P–6 · All Subjects</div>
+      <div id="sidebar-version" style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);margin-top:4px;letter-spacing:0.1em">v1.1.0</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Views</div>
+      <button class="nav-btn active" onclick="showView('dashboard')" id="nav-dashboard">
+        <span class="nav-icon">◈</span> Dashboard
+      </button>
+      <button class="nav-btn" onclick="showView('students')" id="nav-students">
+        <span class="nav-icon">◎</span> Students
+      </button>
+      <button class="nav-btn" onclick="showView('overview')" id="nav-overview">
+        <span class="nav-icon">▦</span> Class Overview
+      </button>
+      <button class="nav-btn" onclick="showView('bulk-assess')" id="nav-bulk">
+        <span class="nav-icon">⊞</span> Bulk Assess
+      </button>
+      <button class="nav-btn" onclick="openDailyLogWizard()" id="nav-daily-log" style="position:relative">
+        <span class="nav-icon">✦</span> Log Today
+        <span id="daily-log-badge" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--gold);color:#0f1117;font-family:'DM Mono',monospace;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px">NEW</span>
+      </button>
+      <button class="nav-btn" onclick="showView('daily-log')" id="nav-daily-log-view">
+        <span class="nav-icon">◷</span> Session History
+      </button>
+      <div class="nav-section">Browse Data</div>
+      <button class="nav-btn" onclick="showView('curriculum')" id="nav-curriculum">
+        <span class="nav-icon">≡</span> Curriculum Codes
+      </button>
+      <button class="nav-btn" onclick="showView('standards')" id="nav-standards">
+        <span class="nav-icon">◇</span> Standards
+      </button>
+      <button class="nav-btn" onclick="showView('progressions')" id="nav-progressions">
+        <span class="nav-icon">⟡</span> Progressions
+      </button>
+      <div class="nav-section">Load CSV Files</div>
+      <label class="nav-btn" style="cursor:pointer" id="nav-load-cd">
+        <span class="nav-icon" id="icon-cd">○</span>
+        <span>Content Descriptors</span>
+        <input type="file" accept=".csv" style="display:none" onchange="loadCurriculumCSV(this)">
+      </label>
+      <label class="nav-btn" style="cursor:pointer" id="nav-load-st">
+        <span class="nav-icon" id="icon-st">○</span>
+        <span>Standards</span>
+        <input type="file" accept=".csv" style="display:none" onchange="loadStandardsCSV(this)">
+      </label>
+      <label class="nav-btn" style="cursor:pointer" id="nav-load-pr">
+        <span class="nav-icon" id="icon-pr">○</span>
+        <span>Literacy Progressions</span>
+        <input type="file" accept=".csv" style="display:none" onchange="loadProgressionsCSV(this,'literacy')">
+      </label>
+      <label class="nav-btn" style="cursor:pointer" id="nav-load-np">
+        <span class="nav-icon" id="icon-np">○</span>
+        <span>Numeracy Progressions</span>
+        <input type="file" accept=".csv" style="display:none" onchange="loadProgressionsCSV(this,'numeracy')">
+      </label>
+      <label class="nav-btn" style="cursor:pointer" id="nav-load-lk">
+        <span class="nav-icon" id="icon-lk">○</span>
+        <span>Aspect Links</span>
+        <input type="file" accept=".csv" style="display:none" onchange="loadLinksCSV(this)">
+      </label>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sync-status">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-label">Connected</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main-content">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>Loading your data…</div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

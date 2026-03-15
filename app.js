@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.2.2
+ * THIS FILE IS VERSION: v1.2.3
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.2.2 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.2.3 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.2.2';
+const APP_VERSION = 'v1.2.3';
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -1358,11 +1358,29 @@ function applyMasteryToAll(code, mastery) {
 function discardBulkChanges() { state.bulkAssess.pendingChanges={}; renderBulkAssess(document.getElementById('main-content')); }
 
 document.addEventListener('click', function(e) {
+  // ── Coverage filter buttons ──
+  const cvEl = e.target.closest('[data-cv-action]');
+  if (cvEl) {
+    if (!state.coverageFilter) state.coverageFilter = { subject:'English', year:'all', strand:'all', mode:'all' };
+    const action = cvEl.dataset.cvAction;
+    const value  = cvEl.dataset.cvValue;
+    if (action === 'subject') {
+      state.coverageFilter.subject = value;
+      state.coverageFilter.strand  = 'all'; // reset strand when subject changes
+    } else if (action === 'year')   { state.coverageFilter.year   = value; }
+    else if (action === 'strand')   { state.coverageFilter.strand = value; }
+    else if (action === 'mode')     { state.coverageFilter.mode   = value; }
+    showView('coverage');
+    return;
+  }
+
+  // ── Bulk assess data-ba-fn buttons ──
   const fnEl = e.target.closest('[data-ba-fn]');
   if (fnEl && state.bulkAssess) {
     try { new Function(fnEl.dataset.baFn)(); } catch(err) { console.warn('ba-fn error:', fnEl.dataset.baFn, err); }
     return;
   }
+  // ── Bulk assess data-ba-action buttons ──
   const el = e.target.closest('[data-ba-action]');
   if (!el || !state.bulkAssess) return;
   const action = el.dataset.baAction, val = el.dataset.baVal, key = el.dataset.baKey;
@@ -2049,6 +2067,35 @@ async function fetchAllCSVs() {
 }
 
 
+// ── COVERAGE TOOLTIP ──
+function showCoverageTooltip(event, code, descriptor, subject, strand) {
+  hideCoverageTooltip();
+  const tip = document.createElement('div');
+  tip.id = 'cv-tooltip';
+  const subjectColours = {'English':'var(--blue)','Mathematics':'var(--green)','Science':'var(--teal)','HASS':'var(--gold)','Health and Physical Education':'var(--rust)','Design and Technologies':'var(--purple)','Digital Technologies':'var(--purple)'};
+  const col = subjectColours[subject] || 'var(--blue)';
+  tip.style.cssText = `position:fixed;z-index:999;max-width:320px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,0.4);pointer-events:none;animation:fadeIn 0.1s ease`;
+  tip.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:${col}">${code}</span>
+      ${strand ? `<span style="font-size:9px;background:${col}22;color:${col};padding:1px 6px;border-radius:3px;font-family:'DM Mono',monospace">${strand}</span>` : ''}
+    </div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.5">${descriptor}</div>
+  `;
+  document.body.appendChild(tip);
+
+  // Position near cursor but keep on screen
+  const x = Math.min(event.clientX + 12, window.innerWidth  - 340);
+  const y = Math.min(event.clientY + 12, window.innerHeight - 120);
+  tip.style.left = x + 'px';
+  tip.style.top  = y + 'px';
+}
+
+function hideCoverageTooltip() {
+  const tip = document.getElementById('cv-tooltip');
+  if (tip) tip.remove();
+}
+
 // ════════════════════════════════════════════════════
 // ── COVERAGE GAPS VIEW ──
 // Heatmap: codes as rows, students as columns
@@ -2096,9 +2143,11 @@ function renderCoverage(main) {
   const achievedCells  = codes.reduce((n,c) => n + students.filter(s => getMasteryForCode(s.id,c.Code) === 'Achieved').length, 0);
   const gapCodes       = codes.filter(c => !students.some(s => wasCodeTaughtToStudent(s.id,c.Code)));
 
-  function fBtn(label, active, fn) {
-    const safeFn = fn.replace(/"/g,'&quot;');
-    return `<button data-ba-fn="${safeFn}" style="padding:4px 10px;border-radius:4px;border:1px solid ${active?col:'var(--border2)'};background:${active?col+'22':'none'};color:${active?col:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
+  function fBtn(label, active, action, value, extra) {
+    // Use data attributes + dedicated handler instead of data-ba-fn eval
+    const extraAttr = extra ? ` data-cv-extra="${extra}"` : '';
+    return `<button data-cv-action="${action}" data-cv-value="${value}"${extraAttr}
+      style="padding:4px 10px;border-radius:4px;border:1px solid ${active?col:'var(--border2)'};background:${active?col+'22':'none'};color:${active?col:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
   }
 
   // Build the grid
@@ -2147,29 +2196,31 @@ function renderCoverage(main) {
         </td>
       </tr>`;
       const codeRows = sCodes.map((c, ci) => {
-        const taughtCount   = students.filter(s => wasCodeTaughtToStudent(s.id, c.Code)).length;
-        const assessedCount = students.filter(s => getMasteryForCode(s.id, c.Code) !== 'Not taught').length;
+        const taughtCount = students.filter(s => wasCodeTaughtToStudent(s.id, c.Code)).length;
+        const gapCount    = students.length - taughtCount;
+        const fullDesc    = (c.Descriptor || c.Aspect || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
         const cells = students.map(s => {
-          const taught  = wasCodeTaughtToStudent(s.id, c.Code);
-          const mastery = getMasteryForCode(s.id, c.Code);
-          const dates   = getTaughtDatesForCode(s.id, c.Code);
-          const lastDate = dates[0] ? dates[0] : '';
-          let bg, title, dot;
-          if      (mastery === 'Achieved')   { bg='var(--green)';    title=`Achieved${lastDate?' · taught '+lastDate:''}`;    dot='●'; }
-          else if (mastery === 'Developing') { bg='var(--gold)';     title=`Developing${lastDate?' · taught '+lastDate:''}`;  dot='◐'; }
-          else if (mastery === 'Emerging')   { bg='var(--rust)';     title=`Emerging${lastDate?' · taught '+lastDate:''}`;    dot='○'; }
-          else if (taught)                   { bg='var(--blue-dim)'; title=`Taught ${lastDate} · not assessed`;               dot='·'; }
-          else                               { bg='transparent';     title='Not taught yet';                                  dot=' '; }
-          return `<td style="padding:2px;text-align:center;border-bottom:1px solid var(--border);border-right:1px solid var(--border)" title="${title}">
+          const taught   = wasCodeTaughtToStudent(s.id, c.Code);
+          const mastery  = getMasteryForCode(s.id, c.Code);
+          const dates    = getTaughtDatesForCode(s.id, c.Code);
+          const lastDate = dates[0] || '';
+          let bg, cellTitle, dot;
+          if      (mastery === 'Achieved')   { bg='var(--green)';    cellTitle=`Achieved${lastDate?' · '+lastDate:''}`;        dot='●'; }
+          else if (mastery === 'Developing') { bg='var(--gold)';     cellTitle=`Developing${lastDate?' · '+lastDate:''}`;      dot='◐'; }
+          else if (mastery === 'Emerging')   { bg='var(--rust)';     cellTitle=`Emerging${lastDate?' · '+lastDate:''}`;        dot='○'; }
+          else if (taught)                   { bg='var(--blue-dim)'; cellTitle=`Taught ${lastDate} · not assessed`;            dot='·'; }
+          else                               { bg='transparent';     cellTitle='Not taught yet';                               dot=' '; }
+          return `<td style="padding:2px;text-align:center;border-bottom:1px solid var(--border);border-right:1px solid var(--border)" title="${s.first_name} ${s.last_name} · ${cellTitle}">
             <div style="width:20px;height:20px;border-radius:3px;background:${bg};margin:auto;display:flex;align-items:center;justify-content:center;font-size:10px;color:${mastery!=='Not taught'?'#0f1117':'var(--text3)'}">${dot}</div>
           </td>`;
         }).join('');
 
-        const gapCount = students.length - taughtCount;
-        return `<tr style="${ci%2===1?'background:rgba(255,255,255,0.01)':''}">
-          <td style="padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;left:0;background:${ci%2===1?'#1c2030':'var(--surface)'}">
+        return `<tr style="${ci%2===1?'background:rgba(255,255,255,0.01)':''}"
+          onmouseenter="showCoverageTooltip(event,'${c.Code}','${fullDesc}','${c.Subject||''}','${c.Strand||''}')"
+          onmouseleave="hideCoverageTooltip()">
+          <td style="padding:5px 8px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${ci%2===1?'#1c2030':'var(--surface)'}">
             <div style="font-family:'DM Mono',monospace;font-size:10px;color:${col}">${c.Code}</div>
-            <div style="font-size:10px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(c.Descriptor||c.Aspect||'').slice(0,50)}</div>
+            <div style="font-size:10px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(c.Descriptor||c.Aspect||'').slice(0,42)}…</div>
           </td>
           ${cells}
           <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap">
@@ -2229,22 +2280,22 @@ function renderCoverage(main) {
       <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:2px">
         <!-- Subject -->
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">SUBJECT</span>
-        ${availSubjects.map(s => fBtn(subjectShort(s), cf.subject===s, `state.coverageFilter.subject='${s}';state.coverageFilter.strand='all';showView('coverage')`)).join('')}
+        ${availSubjects.map(s => fBtn(subjectShort(s), cf.subject===s, 'subject', s)).join('')}
         <div style="width:1px;height:18px;background:var(--border2)"></div>
         <!-- Year -->
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">YEAR</span>
-        ${['all','F','1','2','3','4','5','6'].map(y => fBtn(y==='all'?'All':'Yr '+y, cf.year===y, `state.coverageFilter.year='${y}';showView('coverage')`)).join('')}
+        ${['all','F','1','2','3','4','5','6'].map(y => fBtn(y==='all'?'All':'Yr '+y, cf.year===y, 'year', y)).join('')}
         <div style="width:1px;height:18px;background:var(--border2)"></div>
         <!-- Mode -->
-        ${fBtn('All codes',    cf.mode==='all',        "state.coverageFilter.mode='all';showView('coverage')")}
-        ${fBtn('⚠ Gaps only', cf.mode==='not-taught', "state.coverageFilter.mode='not-taught';showView('coverage')")}
+        ${fBtn('All codes',    cf.mode==='all',        'mode', 'all')}
+        ${fBtn('⚠ Gaps only', cf.mode==='not-taught', 'mode', 'not-taught')}
       </div>
       <!-- Strand filter row — only shown when a subject is selected -->
       ${availStrands.length > 0 ? `
       <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-top:6px;border-top:1px solid var(--border)">
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">STRAND</span>
-        ${fBtn('All strands', cf.strand==='all', "state.coverageFilter.strand='all';showView('coverage')")}
-        ${availStrands.map(st => fBtn(st, cf.strand===st, `state.coverageFilter.strand='${st.replace(/'/g,"\\'")}';showView('coverage')`)).join('')}
+        ${fBtn('All strands', cf.strand==='all', 'strand', 'all')}
+        ${availStrands.map(st => fBtn(st, cf.strand===st, 'strand', st)).join('')}
       </div>` : ''}
     </div>
     <div style="padding:0">

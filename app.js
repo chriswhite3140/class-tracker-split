@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.3.2
+ * THIS FILE IS VERSION: v1.3.3
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,42 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.3.2 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.3.3 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.3.2';
+const APP_VERSION = 'v1.3.3';
+
+// ── GLOBAL CONSTANTS ──
+const SUBJECT_COLOURS = {
+  'English':                       { col: 'var(--blue)',   bg: 'var(--blue-dim)'   },
+  'Mathematics':                   { col: 'var(--green)',  bg: 'var(--green-dim)'  },
+  'Science':                       { col: 'var(--teal)',   bg: 'var(--teal-dim)'   },
+  'HASS':                          { col: 'var(--gold)',   bg: 'var(--gold-dim)'   },
+  'Health and Physical Education': { col: 'var(--rust)',   bg: 'var(--rust-dim)'   },
+  'Design and Technologies':       { col: 'var(--purple)', bg: 'var(--purple-dim)' },
+  'Digital Technologies':          { col: 'var(--purple)', bg: 'var(--purple-dim)' },
+};
+const SUBJECT_ICONS = {
+  'English':'✦','Mathematics':'∑','Science':'⚗','HASS':'◎',
+  'Health and Physical Education':'◉','Design and Technologies':'⬡','Digital Technologies':'⬡',
+};
+const YLM = {
+  'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3',
+  '4':'Year 4','5':'Year 5','6':'Year 6',
+};
+function subjectCol(subj)   { return (SUBJECT_COLOURS[subj] || {col:'var(--blue)'}).col; }
+function subjectBg(subj)    { return (SUBJECT_COLOURS[subj] || {bg:'var(--surface2)'}).bg; }
+function subjectShort(subj) {
+  if (subj === 'Health and Physical Education') return 'HPE';
+  if (subj === 'Design and Technologies')       return 'D&T';
+  if (subj === 'Digital Technologies')          return 'DigiTech';
+  return subj;
+}
+function csvYear(yr) { return YLM[yr] || yr; }
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -263,9 +291,10 @@ function toast(msg, type = 'success') {
   const wrap = document.getElementById('toast-wrap');
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.innerHTML = `<span>${type === 'success' ? '✓' : '✗'}</span> ${msg}`;
+  const icon = type === 'success' ? '✓' : type === 'info' ? '✦' : '✗';
+  el.innerHTML = `<span>${icon}</span> ${msg}`;
   wrap.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+  setTimeout(() => el.remove(), type === 'info' ? 4000 : 3000);
 }
 
 // ── HELPERS ──
@@ -406,6 +435,14 @@ function parseCSVLine(line) {
 
 // ── VIEWS ──
 function showView(v) {
+  // Warn if navigating away from bulk assess with unsaved changes
+  if (state.currentView === 'bulk-assess' && state.bulkAssess) {
+    const pending = Object.keys(state.bulkAssess.pendingChanges || {}).length;
+    if (pending > 0 && v !== 'bulk-assess') {
+      if (!confirm(`You have ${pending} unsaved change${pending>1?'s':''} in Bulk Assess. Leave without saving?`)) return;
+      state.bulkAssess.pendingChanges = {};
+    }
+  }
   state.currentView = v;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const nb = document.getElementById('nav-' + v);
@@ -445,19 +482,7 @@ function renderDashboard(main) {
     .slice(0, 5);
 
   const subjectOrder = ['English','Mathematics','Science','HASS','Health and Physical Education','Design and Technologies','Digital Technologies'];
-  const subjectColours = {
-    'English':                    ['var(--blue)',   'var(--blue-dim)'],
-    'Mathematics':                ['var(--green)',  'var(--green-dim)'],
-    'Science':                    ['var(--teal)',   'var(--teal-dim)'],
-    'HASS':                       ['var(--gold)',   'var(--gold-dim)'],
-    'Health and Physical Education': ['var(--rust)', 'var(--rust-dim)'],
-    'Design and Technologies':    ['var(--purple)', 'var(--purple-dim)'],
-    'Digital Technologies':       ['var(--purple)', 'var(--purple-dim)'],
-  };
-  const subjectIcons = {
-    'English':'✦','Mathematics':'∑','Science':'⚗','HASS':'◎',
-    'Health and Physical Education':'◉','Design and Technologies':'⬡','Digital Technologies':'⬡'
-  };
+
 
   const subjects = subjectOrder.filter(subj => state.curriculumCodes.some(c => c.Subject === subj));
 
@@ -467,8 +492,9 @@ function renderDashboard(main) {
   const coveragePct = totalCodes ? Math.round((new Set(state.taughtLog.map(t => t.code)).size / totalCodes) * 100) : 0;
 
   function subjectCard(subj) {
-    const [col, bg] = subjectColours[subj] || ['var(--text2)', 'var(--surface2)'];
-    const icon = subjectIcons[subj] || '◈';
+    const col = subjectCol(subj);
+    const bg = subjectBg(subj);
+    const icon = SUBJECT_ICONS[subj] || '◈';
     const codes = state.curriculumCodes.filter(c => c.Subject === subj);
     const strands = [...new Set(codes.map(c => c.Strand).filter(Boolean))].sort();
     const assessed = state.progress.filter(p => codes.some(c => c.Code === p.code));
@@ -687,7 +713,6 @@ function renderClassOverview(main) {
     </div>`;
   }
 
-  const subjectShort = s => s==='Health and Physical Education'?'HPE':s==='Design and Technologies'?'D&T':s==='Digital Technologies'?'DigiTech':s;
 
   main.innerHTML = `
     <div class="topbar" style="flex-wrap:wrap;gap:8px">
@@ -773,6 +798,7 @@ function openStudentDetail(studentId) {
   state.selectedStudent = studentId;
   state.currentView = 'student-detail';
   state.detailFilter = 'all';
+  state.detailSection = 'curriculum'; // always reset to curriculum tab
   const student = state.students.find(x => x.id === studentId);
   state.detailYearFilter = student ? student.year_level : 'all';
   // Auto-select first available subject if not yet set
@@ -803,18 +829,7 @@ function renderStudentDetail(main) {
   const subjectFilter = state.detailSubjectFilter || (availableSubjects[0] || 'English');
 
   // Subject colour map for the tab pills
-  const subjectColours = {
-    'English':                    'var(--blue)',
-    'Mathematics':                'var(--green)',
-    'Science':                    'var(--teal)',
-    'HASS':                       'var(--gold)',
-    'Health and Physical Education': 'var(--rust)',
-    'Design and Technologies':    'var(--purple)',
-    'Digital Technologies':       'var(--purple)',
-  };
-  const subjectShort = subj => subj === 'Health and Physical Education' ? 'HPE'
-    : subj === 'Design and Technologies' ? 'D&T'
-    : subj === 'Digital Technologies' ? 'DigiTech' : subj;
+
 
   // Filter codes by selected subject + year + strand
   const strandFilter = state.detailStrandFilter || 'all';
@@ -853,7 +868,7 @@ function renderStudentDetail(main) {
     nottaught:  codes.filter(c => getMasteryForCode(s.id, c.Code) === 'Not taught').length,
   };
 
-  const activeCol = subjectColours[subjectFilter] || 'var(--blue)';
+  const activeCol = subjectCol(subjectFilter);
 
   main.innerHTML = `
     <div class="detail-header" style="flex-wrap:wrap;gap:12px">
@@ -1192,7 +1207,6 @@ function renderStandards(main) {
   if (!state.standardsFilter) state.standardsFilter = { subject: 'English', year: 'all' };
   const sf = state.standardsFilter;
   const availableSubjects = [...new Set(stds.map(s => s.Subject).filter(Boolean))].sort();
-  const subjectShort = s => s==='Health and Physical Education'?'HPE':s==='Design and Technologies'?'D&T':s==='Digital Technologies'?'DigiTech':s;
   const filteredBySubject = stds.filter(s => s.Subject === sf.subject);
   const years = allYearOrder.filter(y => filteredBySubject.some(s => s['Year Level'] === y));
   const visibleStds = filteredBySubject.filter(s => sf.year === 'all' || s['Year Level'] === sf.year);
@@ -1773,7 +1787,6 @@ function filterBulkCodeList(q) {
   const list = document.getElementById('ba-code-list');
   if (!list) return;
   const ba = state.bulkAssess;
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
   const filtered = state.curriculumCodes.filter(c => {
     if (c.Subject !== ba.subjectFilter) return false;
     if (ba.strandFilter !== 'all' && c.Strand !== ba.strandFilter) return false;
@@ -1796,7 +1809,6 @@ function buildCodeListItem(c, selectedCode) {
 function renderBulkAssess(main) {
   if (!state.bulkAssess) state.bulkAssess = { mode:'by-code', yearFilter:'all', subjectFilter:'English', strandFilter:'all', selectedCode:null, selectedStudent:null, date:new Date().toISOString().split('T')[0], pendingChanges:{} };
   const ba = state.bulkAssess;
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
   const pendingCount = Object.keys(ba.pendingChanges).length;
   const availSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
   const availStrands = ['all', ...new Set(state.curriculumCodes.filter(c => c.Subject===ba.subjectFilter).map(c => c.Strand).filter(Boolean))].sort();
@@ -1926,7 +1938,6 @@ function renderBulkAssess(main) {
   }
 
   const modeContent = ba.mode === 'by-student' ? buildByStudent() : buildByCode();
-  const subjectShort = s => s==='Health and Physical Education'?'HPE':s==='Design and Technologies'?'D&T':s==='Digital Technologies'?'DigiTech':s;
 
   main.innerHTML = `
     <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:10px 20px">
@@ -1996,7 +2007,6 @@ function reportBadge(m) {
  */
 function buildStudentReportBody(s, opts) {
   opts = opts || {};
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
   const normYr = normaliseYear(s.year_level);
   const csvYear = YLM[normYr] || normYr;
   const today = new Date().toLocaleDateString('en-AU', {day:'numeric',month:'long',year:'numeric'});
@@ -2071,6 +2081,124 @@ function buildStudentReportBody(s, opts) {
 
   const subjectSections = subjects.map(buildSubjectSection).join('');
 
+  // ── Standards Judgments section ──
+  function buildJudgmentsSection() {
+    const relevantStandards = state.standards.filter(std => {
+      if ((std['Year Level']||'') !== csvYear) return false;
+      if (opts.subjectFilter && std.Subject !== opts.subjectFilter) return false;
+      return true;
+    });
+    if (!relevantStandards.length) return '';
+
+    const scale = getScale();
+    const rows = relevantStandards.map(std => {
+      const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
+      const j   = getJudgmentForStudent(s.id, sid);
+      const scaleItem = j ? getScaleItem(j.judgment) : null;
+      const readiness = getStandardReadiness(s.id, sid);
+
+      // Inline colour for print (CSS vars don't work in print window)
+      const printColours = {
+        'not-evident':      { bg:'#f1f3f4', border:'#ccc',    text:'#555'    },
+        'developing':       { bg:'#f8d7da', border:'#f5c6cb', text:'#721c24' },
+        'competent':        { bg:'#fff3cd', border:'#ffeeba', text:'#856404' },
+        'highly-competent': { bg:'#d4edda', border:'#c3e6cb', text:'#155724' },
+        'outstanding':      { bg:'#cce5ff', border:'#b8daff', text:'#004085' },
+      };
+      const pc = j ? (printColours[j.judgment] || printColours['not-evident']) : null;
+      const badgeHtml = scaleItem && pc
+        ? `<span style="display:inline-block;padding:2px 10px;border-radius:3px;font-size:10px;font-weight:700;background:${pc.bg};border:1px solid ${pc.border};color:${pc.text}">${scaleItem.label}${j.locked?' 🔒':''}</span>`
+        : `<span style="display:inline-block;padding:2px 10px;border-radius:3px;font-size:10px;color:#999;background:#f9f9f9;border:1px solid #eee">Not yet judged</span>`;
+
+      return `<tr style="border-bottom:1px solid #eee">
+        <td style="padding:6px 8px;width:120px;vertical-align:top">
+          <span style="font-family:monospace;font-size:10px;color:#1a6db5;font-weight:600">${sid}</span>
+          ${j?.date ? `<div style="font-size:9px;color:#999;margin-top:2px">${j.date}${j.period?' · '+j.period:''}</div>` : ''}
+        </td>
+        <td style="padding:6px 8px;vertical-align:top">
+          <div style="font-size:11px;color:#222;line-height:1.4">${std['Standard Text']||'—'}</div>
+          ${j?.notes ? `<div style="font-size:9px;color:#666;margin-top:3px;font-style:italic">${j.notes}</div>` : ''}
+          ${!readiness.noLinks ? `<div style="font-size:9px;color:#888;margin-top:3px">${readiness.taught}/${readiness.total} linked codes taught (${readiness.pct}%)</div>` : ''}
+        </td>
+        <td style="padding:6px 8px;width:130px;vertical-align:top;text-align:right">${badgeHtml}</td>
+      </tr>`;
+    }).join('');
+
+    const judgedCount = relevantStandards.filter(std => {
+      const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
+      return getJudgmentForStudent(s.id, sid);
+    }).length;
+
+    return `<div style="margin-bottom:24px;page-break-inside:avoid">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid #333;padding-bottom:4px;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;color:#111">Achievement Standards</div>
+        <div style="font-size:10px;color:#555;font-family:monospace">${judgedCount}/${relevantStandards.length} judged</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse">${rows}</table>
+    </div>`;
+  }
+
+  // ── Progression Placements section ──
+  function buildPlacementsSection() {
+    const litProgs = state.progressions;
+    const numProgs = state.numeracyProgressions;
+    if (!litProgs.length && !numProgs.length) return '';
+
+    function progRows(progs, label) {
+      if (!progs.length) return '';
+      const elements = [...new Set(progs.map(p => p.Element).filter(Boolean))];
+      const rows = elements.flatMap(element => {
+        const subEls = [...new Set(progs.filter(p => p.Element === element).map(p => p['Sub-element']).filter(Boolean))].sort();
+        return subEls.map(subEl => {
+          const items = progs.filter(p => p.Element === element && p['Sub-element'] === subEl);
+          const levels = [...new Set(items.map(p => String(p['Progression level'])).filter(Boolean))].sort((a,b)=>Number(a)-Number(b));
+          const placement = getPlacementForStudent(s.id, element, subEl);
+          const curLevel  = placement ? String(placement.level) : null;
+          const curIdx    = curLevel ? levels.indexOf(curLevel) : -1;
+          const nextLevel = curIdx >= 0 && curIdx < levels.length-1 ? levels[curIdx+1] : null;
+          const nextItem  = nextLevel ? items.find(i => String(i['Progression level']) === nextLevel) : null;
+
+          return `<tr style="border-bottom:1px solid #eee">
+            <td style="padding:5px 8px;width:160px;vertical-align:top;font-size:10px;color:#555">${element}</td>
+            <td style="padding:5px 8px;width:160px;vertical-align:top;font-size:10px;color:#333;font-weight:600">${subEl}</td>
+            <td style="padding:5px 8px;width:80px;vertical-align:top;text-align:center">
+              ${curLevel
+                ? `<span style="font-family:monospace;font-size:11px;font-weight:700;color:#5b2d9e;background:#ede9fe;padding:2px 8px;border-radius:3px">L${curLevel}</span>`
+                : `<span style="font-size:10px;color:#999">—</span>`}
+              ${placement?.ext_value ? `<div style="font-size:9px;color:#b45309;margin-top:2px">${placement.ext_label||''} ${placement.ext_value}</div>` : ''}
+            </td>
+            <td style="padding:5px 8px;vertical-align:top;font-size:10px;color:#444;line-height:1.4">
+              ${nextItem
+                ? `<span style="font-size:9px;color:#0e7490;font-weight:600">L${nextLevel} next · </span>${nextItem['Indicator text (no examples)']||nextItem['Indicator text (verbatim)']||''}`
+                : curLevel ? '<span style="color:#166534">✓ At highest level</span>' : '<span style="color:#999">Not yet placed</span>'}
+            </td>
+          </tr>`;
+        });
+      }).join('');
+
+      if (!rows) return '';
+      return `<div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">${label}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:#f5f5f5">
+            <th style="padding:4px 8px;text-align:left;font-size:9px;color:#666;font-weight:600;text-transform:uppercase">Element</th>
+            <th style="padding:4px 8px;text-align:left;font-size:9px;color:#666;font-weight:600;text-transform:uppercase">Sub-element</th>
+            <th style="padding:4px 8px;text-align:center;font-size:9px;color:#666;font-weight:600;text-transform:uppercase">Level</th>
+            <th style="padding:4px 8px;text-align:left;font-size:9px;color:#666;font-weight:600;text-transform:uppercase">Next Step</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    const content = progRows(litProgs,'Literacy Progressions') + progRows(numProgs,'Numeracy Progressions');
+    if (!content) return '';
+    return `<div style="margin-bottom:24px;page-break-inside:avoid">
+      <div style="font-size:14px;font-weight:700;color:#111;border-bottom:2px solid #333;padding-bottom:4px;margin-bottom:10px">Progression Placements</div>
+      ${content}
+    </div>`;
+  }
+
   return `
   <!-- Header -->
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid #111">
@@ -2090,6 +2218,8 @@ function buildStudentReportBody(s, opts) {
     <div style="flex:1;background:#f8d7da;border:1px solid #f5c6cb;border-radius:6px;padding:10px 14px"><div style="font-size:22px;font-weight:700;color:#721c24">${emerging}</div><div style="font-size:10px;color:#721c24;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Emerging</div></div>
     <div style="flex:1;background:#f1f3f4;border:1px solid #ddd;border-radius:6px;padding:10px 14px"><div style="font-size:22px;font-weight:700;color:#333">${assessed}/${total}</div><div style="font-size:10px;color:#555;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Assessed · ${pct}%</div></div>
   </div>
+  ${buildJudgmentsSection()}
+  ${buildPlacementsSection()}
   ${subjectSections || '<p style="color:#888;font-style:italic">No curriculum data loaded for this scope.</p>'}
   <div style="margin-top:30px;padding-top:10px;border-top:1px solid #ddd;font-size:9px;color:#aaa;display:flex;justify-content:space-between">
     <span>ClassTracker · chriswhite3140.github.io/class-tracker-split</span>
@@ -2102,7 +2232,6 @@ function openPrintOptionsModal(studentId) {
   const s = state.students.find(x => x.id === studentId);
   if (!s) return;
 
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
   const normYr = normaliseYear(s.year_level);
   const csvYear = YLM[normYr] || normYr;
 
@@ -2196,8 +2325,7 @@ function updatePrintStrandOpts() {
     const sid = state.selectedStudent;
     const s = state.students.find(x => x.id === sid);
     if (!s) return;
-    const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
-    const csvYear = YLM[normaliseYear(s.year_level)] || s.year_level;
+      const csvYear = YLM[normaliseYear(s.year_level)] || s.year_level;
     const strands = [...new Set(
       state.curriculumCodes.filter(c => c.Subject === subjVal && (c['Year Level']||'').trim() === csvYear).map(c => c.Strand).filter(Boolean)
     )].sort();
@@ -2214,7 +2342,6 @@ function updatePrintScopePreview(studentId) {
   if (!s) return;
   const subjVal   = document.querySelector('input[name="print-subject"]:checked')?.value || 'all';
   const strandVal = document.querySelector('input[name="print-strand"]:checked')?.value   || 'all';
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
   const csvYear = YLM[normaliseYear(s.year_level)] || s.year_level;
 
   const codes = state.curriculumCodes.filter(c => {
@@ -2457,7 +2584,6 @@ function showCoverageTooltip(event, code, descriptor, subject, strand) {
   hideCoverageTooltip();
   const tip = document.createElement('div');
   tip.id = 'cv-tooltip';
-  const subjectColours = {'English':'var(--blue)','Mathematics':'var(--green)','Science':'var(--teal)','HASS':'var(--gold)','Health and Physical Education':'var(--rust)','Design and Technologies':'var(--purple)','Digital Technologies':'var(--purple)'};
   const col = subjectColours[subject] || 'var(--blue)';
   tip.style.cssText = `position:fixed;z-index:999;max-width:320px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,0.4);pointer-events:none;animation:fadeIn 0.1s ease`;
   tip.innerHTML = `
@@ -2493,15 +2619,9 @@ function renderCoverage(main) {
   }
   const cf = state.coverageFilter;
 
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
-  const subjectColours = {
-    'English':'var(--blue)','Mathematics':'var(--green)','Science':'var(--teal)',
-    'HASS':'var(--gold)','Health and Physical Education':'var(--rust)',
-    'Design and Technologies':'var(--purple)','Digital Technologies':'var(--purple)'
-  };
-  const subjectShort = s => s==='Health and Physical Education'?'HPE':s==='Design and Technologies'?'D&T':s==='Digital Technologies'?'DigiTech':s;
+
   const availSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
-  const col = subjectColours[cf.subject] || 'var(--blue)';
+  const col = subjectCol(cf.subject);
 
   // Filter codes
   let codes = state.curriculumCodes.filter(c => {
@@ -2706,11 +2826,8 @@ function renderStandardsJudgments(main) {
   const sf = state.sjFilter;
   const scale = getScale();
 
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
-  const subjectColours = { 'English':'var(--blue)','Mathematics':'var(--green)','Science':'var(--teal)','HASS':'var(--gold)','Health and Physical Education':'var(--rust)','Design and Technologies':'var(--purple)','Digital Technologies':'var(--purple)' };
-  const subjectShort = s => s==='Health and Physical Education'?'HPE':s==='Design and Technologies'?'D&T':s==='Digital Technologies'?'DigiTech':s;
   const availSubjects = [...new Set(state.standards.map(s => s.Subject).filter(Boolean))].sort();
-  const col = subjectColours[sf.subject] || 'var(--blue)';
+  const col = subjectCol(sf.subject);
 
   // Filter standards to selected subject + year
   let visibleStandards = state.standards.filter(s => {
@@ -3232,6 +3349,72 @@ async function submitPlacement(studentId, element, subElement) {
   }
 }
 
+// ── DATA EXPORT ──
+function downloadCSV(filename, rows) {
+  const escape = v => {
+    const s = String(v === null || v === undefined ? '' : v);
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const csv = rows.map(r => r.map(escape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportStudents() {
+  const rows = [['id','first_name','last_name','year_level','date_added']];
+  state.students.forEach(s => rows.push([s.id, s.first_name, s.last_name, s.year_level, s.date_added]));
+  downloadCSV('classtracker_students.csv', rows);
+}
+
+function exportProgress() {
+  const rows = [['id','student_id','student_name','code','mastery','date','notes']];
+  state.progress.forEach(p => {
+    const s = state.students.find(x => x.id === p.student_id);
+    rows.push([p.id, p.student_id, s ? `${s.first_name} ${s.last_name}` : '', p.code, p.mastery, p.date, p.notes||'']);
+  });
+  downloadCSV('classtracker_progress.csv', rows);
+}
+
+function exportTaughtLog() {
+  const rows = [['id','date','student_id','student_name','code','notes']];
+  state.taughtLog.forEach(t => {
+    const s = state.students.find(x => x.id === t.student_id);
+    rows.push([t.id, t.date, t.student_id, s ? `${s.first_name} ${s.last_name}` : '', t.code, t.notes||'']);
+  });
+  downloadCSV('classtracker_taughtlog.csv', rows);
+}
+
+function exportJudgments() {
+  const rows = [['id','student_id','student_name','standard_id','judgment','locked','date','period','notes']];
+  state.standardsJudgments.forEach(j => {
+    const s = state.students.find(x => x.id === j.student_id);
+    rows.push([j.id, j.student_id, s ? `${s.first_name} ${s.last_name}` : '', j.standard_id, j.judgment, j.locked ? 'TRUE' : 'FALSE', j.date, j.period||'', j.notes||'']);
+  });
+  downloadCSV('classtracker_judgments.csv', rows);
+}
+
+function exportPlacements() {
+  const rows = [['id','student_id','student_name','element','sub_element','level','date','notes','ext_label','ext_value']];
+  state.progressionPlacements.forEach(p => {
+    const s = state.students.find(x => x.id === p.student_id);
+    rows.push([p.id, p.student_id, s ? `${s.first_name} ${s.last_name}` : '', p.element, p.sub_element, p.level, p.date, p.notes||'', p.ext_label||'', p.ext_value||'']);
+  });
+  downloadCSV('classtracker_placements.csv', rows);
+}
+
+function exportAll() {
+  exportStudents();
+  setTimeout(exportProgress,   200);
+  setTimeout(exportTaughtLog,  400);
+  setTimeout(exportJudgments,  600);
+  setTimeout(exportPlacements, 800);
+  toast('Exporting 5 files…', 'info');
+}
+
 // ════════════════════════════════════════════════════
 // ── ADMIN VIEW ──
 // Configure assessment scale, view system info
@@ -3263,6 +3446,30 @@ function renderAdmin(main) {
           <div style="display:flex;gap:8px;margin-top:14px">
             <button class="btn btn-primary" onclick="saveScaleFromEditor()">✓ Save Scale</button>
             <button class="btn" onclick="addScaleItem()">+ Add Level</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Export -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-head"><div class="card-title">Export Data</div></div>
+        <div style="padding:14px 18px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Download your data as CSV files for backup or use in other tools.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            ${[
+              ['Students',             'exportStudents',    'var(--blue)'],
+              ['Progress records',     'exportProgress',    'var(--green)'],
+              ['Taught log',           'exportTaughtLog',   'var(--gold)'],
+              ['Standards judgments',  'exportJudgments',   'var(--purple)'],
+              ['Progression placements','exportPlacements', 'var(--teal)'],
+            ].map(([label, fn, col]) => `<button onclick="${fn}()"
+              style="padding:8px 16px;border-radius:6px;border:1px solid ${col};background:none;color:${col};font-family:'Instrument Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+              ↓ ${label}
+            </button>`).join('')}
+            <button onclick="exportAll()"
+              style="padding:8px 16px;border-radius:6px;border:none;background:var(--blue);color:#0f1117;font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer">
+              ↓ Export All
+            </button>
           </div>
         </div>
       </div>
@@ -3589,7 +3796,6 @@ function buildDlStep2() {
 
 function wireDlStep2Events() {
   // Work out the year levels of present students
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
   const presentYears = [...new Set(
     state.students
       .filter(s => !dlState.absentIds.has(s.id))
@@ -4234,7 +4440,6 @@ function getTaughtDatesForCode(studentId, code) {
 }
 
 function getUntaughtCodes(studentId, yearLevel) {
-  const YLM = {'F':'Foundation','1':'Year 1','2':'Year 2','3':'Year 3','4':'Year 4','5':'Year 5','6':'Year 6'};
   const csvYear = YLM[normaliseYear(yearLevel)] || yearLevel;
   return state.curriculumCodes.filter(c =>
     (c['Year Level']||'').trim() === csvYear &&
@@ -4257,7 +4462,6 @@ function renderDailyLog(main) {
       <div class="topbar-title">Session History</div>
       <div style="margin-left:auto;display:flex;gap:8px">
         <button class="btn" style="border-color:var(--gold);color:var(--gold)" onclick="openDailyLogWizard()">✦ Log Today</button>
-        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);align-self:center">${APP_VERSION}</span>
       </div>
     </div>
     <div class="content">
@@ -4328,7 +4532,7 @@ function renderDailyLog(main) {
 
 // ── Apps Script additions needed ──
 console.info(
-  '%cClassTracker v1.3.2 — Apps Script update needed\n\n' +
+  '%cClassTracker v1.3.3 — Apps Script update needed\n\n' +
   'Add these sheets to your Google Spreadsheet:\n' +
   '  StandardsJudgments — A:id B:student_id C:standard_id D:judgment E:locked F:date G:notes H:period\n' +
   '  ProgressionPlacements — A:id B:student_id C:element D:sub_element E:level F:date G:notes H:ext_label I:ext_value\n\n' +
@@ -4368,8 +4572,9 @@ async function init() {
   // Show daily log popup if nothing logged today
   const today = new Date().toISOString().split('T')[0];
   const loggedToday = state.taughtLog.some(t => t.date === today);
+  // Never auto-open the wizard — just show the badge and a gentle toast
   if (!loggedToday && state.students.length > 0) {
-    setTimeout(() => openDailyLogWizard(), 1200);
+    setTimeout(() => toast('✦ Nothing logged today — tap Log Today when ready', 'info'), 2000);
   }
 
   // Warn if Sheets data didn't load

@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.2.3
+ * THIS FILE IS VERSION: v1.2.4
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.2.3 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.2.4 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.2.3';
+const APP_VERSION = 'v1.2.4';
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -615,8 +615,9 @@ function openStudentDetail(studentId) {
   renderView();
 }
 
-function setDetailYearFilter(year) { state.detailYearFilter = year; renderView(); }
-function setDetailSubject(subj)    { state.detailSubjectFilter = subj; state.detailFilter = 'all'; renderView(); }
+function setDetailYearFilter(year)  { state.detailYearFilter = year; renderView(); }
+function setDetailSubject(subj)     { state.detailSubjectFilter = subj; state.detailFilter = 'all'; state.detailStrandFilter = 'all'; renderView(); }
+function setDetailStrand(strand)    { state.detailStrandFilter = strand; state.detailFilter = 'all'; renderView(); }
 
 function renderStudentDetail(main) {
   const s = state.students.find(x => x.id === state.selectedStudent);
@@ -646,9 +647,15 @@ function renderStudentDetail(main) {
     : subj === 'Design and Technologies' ? 'D&T'
     : subj === 'Digital Technologies' ? 'DigiTech' : subj;
 
-  // Filter codes by selected subject + year
+  // Filter codes by selected subject + year + strand
+  const strandFilter = state.detailStrandFilter || 'all';
+  const availableStrands = [...new Set(
+    state.curriculumCodes.filter(c => c.Subject === subjectFilter).map(c => c.Strand).filter(Boolean)
+  )].sort();
+
   let codes = state.curriculumCodes.filter(c => {
     if (c.Subject !== subjectFilter) return false;
+    if (strandFilter !== 'all' && c.Strand !== strandFilter) return false;
     if (!yearFilter || yearFilter === 'all') return true;
     const csvYear = yearLevelMap[yearFilter] || yearFilter;
     return (c['Year Level'] || '').trim() === csvYear;
@@ -700,6 +707,20 @@ function renderStudentDetail(main) {
           </button>`;
         }).join('')}
       </div>
+
+      <!-- Strand filter row -->
+      ${availableStrands.length > 0 ? `
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)">Strand</span>
+        <button onclick="setDetailStrand('all')"
+          style="padding:4px 10px;border-radius:4px;border:1px solid ${strandFilter==='all'?activeCol:'var(--border2)'};background:${strandFilter==='all'?activeCol+'22':'none'};color:${strandFilter==='all'?activeCol:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;font-weight:${strandFilter==='all'?'700':'400'}">
+          All
+        </button>
+        ${availableStrands.map(st => `<button onclick="setDetailStrand('${st}')"
+          style="padding:4px 10px;border-radius:4px;border:1px solid ${strandFilter===st?activeCol:'var(--border2)'};background:${strandFilter===st?activeCol+'22':'none'};color:${strandFilter===st?activeCol:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap;font-weight:${strandFilter===st?'700':'400'}">
+          ${st}
+        </button>`).join('')}
+      </div>` : ''}
 
       <!-- Year level toggle -->
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -1384,10 +1405,13 @@ document.addEventListener('click', function(e) {
   const el = e.target.closest('[data-ba-action]');
   if (!el || !state.bulkAssess) return;
   const action = el.dataset.baAction, val = el.dataset.baVal, key = el.dataset.baKey;
-  if (action === 'setBulkCode')          setBulkCode(val);
-  else if (action === 'setBulkStudent')  setBulkStudent(val);
-  else if (action === 'setBulkMastery')  setBulkMastery(key, val);
-  else if (action === 'applyMasteryToAll') applyMasteryToAll(key, val);
+  if      (action === 'setBulkCode')          setBulkCode(val);
+  else if (action === 'setBulkStudent')       setBulkStudent(val);
+  else if (action === 'setBulkMastery')       setBulkMastery(key, val);
+  else if (action === 'applyMasteryToAll')    applyMasteryToAll(key, val);
+  else if (action === 'setBulkSubject')       setBulkSubject(val);
+  else if (action === 'setBulkYear')          setBulkYear(val);
+  else if (action === 'setBulkStrand')        setBulkStrand(val);
 });
 
 function filterBulkCodeList(q) {
@@ -1434,8 +1458,14 @@ function renderBulkAssess(main) {
     .sort((a,b) => a.last_name.localeCompare(b.last_name));
 
   function fBtn(label, active, fn) {
+    // For simple set* calls, use data-ba-fn eval. For filter buttons we use data-ba-action instead.
     const safeFn = fn.replace(/"/g, '&quot;');
     return `<button data-ba-fn="${safeFn}" style="padding:4px 10px;border-radius:4px;border:1px solid ${active?'var(--blue)':'var(--border2)'};background:${active?'var(--blue-dim)':'none'};color:${active?'var(--blue)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
+  }
+
+  // Safe filter buttons that use data-ba-action (no eval, handles special chars)
+  function filterBtn(label, active, action, value) {
+    return `<button data-ba-action="${action}" data-ba-val="${value}" style="padding:4px 10px;border-radius:4px;border:1px solid ${active?'var(--blue)':'var(--border2)'};background:${active?'var(--blue-dim)':'none'};color:${active?'var(--blue)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
   }
 
   const masteryColours = { 'Achieved':['var(--green)','var(--green-dim)'], 'Developing':['var(--gold)','var(--gold-dim)'], 'Emerging':['var(--rust)','var(--rust-dim)'], 'Not taught':['var(--border2)','var(--surface2)'] };
@@ -1546,14 +1576,14 @@ function renderBulkAssess(main) {
   main.innerHTML = `
     <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:10px 20px">
       <div class="topbar-title" style="margin-right:4px">Bulk Assess</div>
-      ${fBtn('By Code', ba.mode==='by-code', "setBulkMode('by-code')")}
+      ${fBtn('By Code',    ba.mode==='by-code',    "setBulkMode('by-code')")}
       ${fBtn('By Student', ba.mode==='by-student', "setBulkMode('by-student')")}
       <div style="width:1px;height:18px;background:var(--border2);margin:0 3px"></div>
-      ${availSubjects.map(s => fBtn(subjectShort(s), ba.subjectFilter===s, `setBulkSubject('${s}')`)).join('')}
+      ${availSubjects.map(s => filterBtn(subjectShort(s), ba.subjectFilter===s, 'setBulkSubject', s)).join('')}
       <div style="width:1px;height:18px;background:var(--border2);margin:0 3px"></div>
-      ${['all','F','1','2','3','4','5','6'].map(yr => fBtn(yr==='all'?'All':'Yr '+yr, ba.yearFilter===yr, `setBulkYear('${yr}')`)).join('')}
+      ${['all','F','1','2','3','4','5','6'].map(yr => filterBtn(yr==='all'?'All':'Yr '+yr, ba.yearFilter===yr, 'setBulkYear', yr)).join('')}
       <div style="width:1px;height:18px;background:var(--border2);margin:0 3px"></div>
-      ${availStrands.map(st => fBtn(st==='all'?'All strands':st, ba.strandFilter===st, `setBulkStrand('${st}')`)).join('')}
+      ${availStrands.map(st => filterBtn(st==='all'?'All strands':st, ba.strandFilter===st, 'setBulkStrand', st)).join('')}
       <div style="width:1px;height:18px;background:var(--border2);margin:0 3px;margin-left:auto"></div>
       <input type="date" value="${ba.date}" onchange="state.bulkAssess.date=this.value" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;outline:none">
       ${pendingCount > 0 ? `

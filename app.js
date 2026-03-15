@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.3.0
+ * THIS FILE IS VERSION: v1.3.1
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.3.0 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.3.1 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.3.0';
+const APP_VERSION = 'v1.3.1';
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -210,6 +210,7 @@ async function addStudent(data) {
 }
 
 async function saveProgress(data) {
+  invalidateReadinessCache();
   const existing = state.progress.find(
     p => p.student_id === data.student_id && p.code === data.content_descriptor_code
   );
@@ -337,18 +338,39 @@ function getPlacementForStudent(studentId, element, subElement) {
 }
 
 // How many linked codes for a standard have been taught to a student
+// Memoised readiness cache — rebuilt when taughtLog or progress changes
+let _readinessCache = null;
+function invalidateReadinessCache() { _readinessCache = null; }
+
 function getStandardReadiness(studentId, standardId) {
-  const linkedCodes = state.curriculumCodes.filter(c =>
-    (c['Linked Achievement IDs'] || '').split(',').map(x=>x.trim()).includes(standardId)
-  );
-  if (!linkedCodes.length) return { taught: 0, total: 0, pct: 0, masterySpread: {} };
+  if (!_readinessCache) _readinessCache = {};
+  const key = studentId + '|' + standardId;
+  if (_readinessCache[key]) return _readinessCache[key];
+
+  const linkedCodes = state.curriculumCodes.filter(c => {
+    const ids = (c['Linked Achievement IDs'] || c['Linked Aspect IDs'] || '')
+      .split(',').map(x => x.trim()).filter(Boolean);
+    return ids.includes(standardId);
+  });
+
+  if (!linkedCodes.length) {
+    _readinessCache[key] = { taught:0, total:0, pct:0, masterySpread:{}, codes:[], noLinks:true };
+    return _readinessCache[key];
+  }
+
   const taught = linkedCodes.filter(c => wasCodeTaughtToStudent(studentId, c.Code)).length;
   const masterySpread = { Achieved:0, Developing:0, Emerging:0, 'Not taught':0 };
   linkedCodes.forEach(c => {
     const m = getMasteryForCode(studentId, c.Code);
     masterySpread[m] = (masterySpread[m] || 0) + 1;
   });
-  return { taught, total: linkedCodes.length, pct: Math.round(taught/linkedCodes.length*100), masterySpread, codes: linkedCodes };
+
+  _readinessCache[key] = {
+    taught, total: linkedCodes.length,
+    pct: Math.round(taught / linkedCodes.length * 100),
+    masterySpread, codes: linkedCodes, noLinks: false
+  };
+  return _readinessCache[key];
 }
 
 function normaliseYear(val) {
@@ -884,6 +906,8 @@ function renderStudentDetail(main) {
       </div>
 
       <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn" onclick="state.sjFilter={subject:'${subjectFilter}',year:'${s.year_level}',period:''};showView('standards-judgments')">◈ Judgments</button>
+        <button class="btn" onclick="state.ppFilter={type:'literacy',element:'',year:'${normaliseYear(s.year_level)}'};showView('progression-placement')">⟡ Progression</button>
         <button class="btn" onclick="openBulkPrintModal()">⎙ Bulk Print</button>
         <button class="btn" onclick="openPrintOptionsModal('${s.id}')">⎙ Print Report</button>
         <button class="btn btn-primary" onclick="openBulkAssess('${s.id}')">+ Record Assessment</button>
@@ -1526,6 +1550,38 @@ function applyMasteryToAll(code, mastery) {
 function discardBulkChanges() { state.bulkAssess.pendingChanges={}; renderBulkAssess(document.getElementById('main-content')); }
 
 document.addEventListener('click', function(e) {
+  // ── Progression Placement buttons ──
+  const ppType = e.target.closest('[data-pp-type]');
+  if (ppType) {
+    if (!state.ppFilter) state.ppFilter = { type:'literacy', element:'', year:'all' };
+    state.ppFilter.type = ppType.dataset.ppType;
+    state.ppFilter.element = '';
+    showView('progression-placement');
+    return;
+  }
+  const ppYear = e.target.closest('[data-pp-year]');
+  if (ppYear) {
+    if (!state.ppFilter) state.ppFilter = { type:'literacy', element:'', year:'all' };
+    state.ppFilter.year = ppYear.dataset.ppYear;
+    showView('progression-placement');
+    return;
+  }
+  const ppEl = e.target.closest('[data-pp-element]');
+  if (ppEl && !ppEl.dataset.ppOpen) {
+    if (!state.ppFilter) state.ppFilter = { type:'literacy', element:'', year:'all' };
+    state.ppFilter.element = ppEl.dataset.ppElement;
+    showView('progression-placement');
+    return;
+  }
+  const ppOpen = e.target.closest('[data-pp-open]');
+  if (ppOpen) {
+    const studentId  = ppOpen.dataset.ppOpen;
+    const element    = ppOpen.dataset.ppElement;
+    const subElement = ppOpen.dataset.ppSubelement;
+    if (studentId && element && subElement) openPlacementPicker(studentId, element, subElement);
+    return;
+  }
+
   // ── Standards Judgments filter buttons ──
   const sjEl = e.target.closest('[data-sj-action]');
   if (sjEl) {
@@ -2546,46 +2602,71 @@ function renderStandardsJudgments(main) {
     if (!visibleStandards.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">◇</div><div class="empty-title">No standards match this filter</div><div class="empty-sub">Load your standards CSV and select a subject/year</div></div>`;
     if (!students.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">◎</div><div class="empty-title">No students in this year level</div></div>`;
 
+    // Check if any standards have linked codes at all
+    const anyLinked = visibleStandards.some(std => {
+      const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
+      return state.curriculumCodes.some(c =>
+        (c['Linked Achievement IDs'] || c['Linked Aspect IDs'] || '').split(',').map(x=>x.trim()).includes(sid)
+      );
+    });
+
     const stdHeaders = visibleStandards.map(std => {
       const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
-      // Count how many students are ready to assess for this standard
       const readyCount = students.filter(s => getStandardReadiness(s.id, sid).pct >= 60).length;
+      const hasLinks = !getStandardReadiness(students[0]?.id || '', sid).noLinks;
       return `<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);min-width:160px;max-width:200px;vertical-align:bottom;border-left:1px solid var(--border)">
         <div style="font-family:'DM Mono',monospace;font-size:9px;color:${col};margin-bottom:3px">${sid}</div>
         <div style="font-size:9px;color:var(--text2);line-height:1.3;margin-bottom:4px">${(std['Standard Text']||'').slice(0,80)}${(std['Standard Text']||'').length>80?'…':''}</div>
-        ${readyCount > 0 ? `<div style="font-size:9px;color:var(--gold)">⚡ ${readyCount} student${readyCount>1?'s':''} ready to assess</div>` : ''}
+        ${readyCount > 0 ? `<div style="font-size:9px;color:var(--gold)">⚡ ${readyCount} student${readyCount>1?'s':''} ready</div>` : ''}
+        ${!hasLinks ? `<div style="font-size:9px;color:var(--text3);font-style:italic">No linked codes in CSV</div>` : ''}
       </th>`;
     }).join('');
 
     const rows = students.map((s, si) => {
+      // Summary: how many standards judged for this student
+      const judgedCount  = visibleStandards.filter(std => {
+        const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
+        return getJudgmentForStudent(s.id, sid);
+      }).length;
+      const lockedCount  = visibleStandards.filter(std => {
+        const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
+        const j = getJudgmentForStudent(s.id, sid);
+        return j?.locked;
+      }).length;
+
       const cells = visibleStandards.map(std => {
         const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
         const j = getJudgmentForStudent(s.id, sid);
         const readiness = getStandardReadiness(s.id, sid);
         const scaleItem = j ? getScaleItem(j.judgment) : null;
+        const isLocked  = j?.locked || false;
 
         return `<td style="padding:4px 6px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);vertical-align:top">
-          <!-- Readiness bar -->
-          <div style="height:3px;background:var(--surface2);border-radius:2px;margin-bottom:4px;overflow:hidden">
+          <!-- Readiness bar — only show if there are linked codes -->
+          ${!readiness.noLinks ? `<div style="height:3px;background:var(--surface2);border-radius:2px;margin-bottom:4px;overflow:hidden">
             <div style="height:100%;width:${readiness.pct}%;background:${readiness.pct>=60?'var(--gold)':'var(--border2)'};border-radius:2px"></div>
-          </div>
-          <!-- Judgment button -->
-          <button data-sj-open="${s.id}|${sid}"
-            style="width:100%;padding:4px 6px;border-radius:4px;border:1px solid ${scaleItem?scaleItem.colour:'var(--border2)'};background:${scaleItem?scaleItem.bg:'none'};color:${scaleItem?scaleItem.colour:'var(--text3)'};font-size:9px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:4px">
-            ${j?.locked ? '<span style="font-size:8px">🔒</span>' : ''}
+          </div>` : ''}
+          <!-- Judgment button — disabled if locked -->
+          <button ${isLocked ? '' : `data-sj-open="${s.id}|${sid}"`}
+            style="width:100%;padding:4px 6px;border-radius:4px;border:1px solid ${scaleItem?scaleItem.colour:'var(--border2)'};background:${scaleItem?scaleItem.bg:'none'};color:${scaleItem?scaleItem.colour:'var(--text3)'};font-size:9px;cursor:${isLocked?'default':'pointer'};text-align:left;display:flex;align-items:center;gap:4px;opacity:${isLocked?'0.85':'1'}">
+            ${isLocked ? '<span style="font-size:8px" title="Locked for reporting">🔒</span>' : ''}
             <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${scaleItem ? scaleItem.label : '— Rate'}</span>
           </button>
           ${j?.date ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);margin-top:2px">${j.date}</div>` : ''}
+          ${isLocked ? '' : ''}
         </td>`;
       }).join('');
 
       return `<tr style="${si%2===1?'background:rgba(255,255,255,0.02)':''}">
         <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${si%2===1?'#1c2030':'var(--surface)'};min-width:160px">
           <div style="display:flex;align-items:center;gap:8px">
-            <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0">${getInitials(s)}</div>
+            <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0;cursor:pointer" onclick="openStudentDetail('${s.id}')">${getInitials(s)}</div>
             <div>
-              <div style="font-size:12px;font-weight:600;color:var(--text)">${s.first_name} ${s.last_name}</div>
-              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">Yr ${s.year_level}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);cursor:pointer" onclick="openStudentDetail('${s.id}')">${s.first_name} ${s.last_name}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">
+                ${judgedCount}/${visibleStandards.length} judged
+                ${lockedCount > 0 ? `· 🔒 ${lockedCount} locked` : ''}
+              </div>
             </div>
           </div>
         </td>
@@ -2593,26 +2674,30 @@ function renderStandardsJudgments(main) {
       </tr>`;
     }).join('');
 
-    return `<div style="overflow:auto;max-height:calc(100vh - 200px)">
-      <table style="border-collapse:collapse;min-width:${180+visibleStandards.length*170}px">
-        <thead style="position:sticky;top:0;z-index:5;background:var(--surface)">
-          <tr style="background:var(--surface2)">
-            <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface2);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
-            ${stdHeaders}
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <!-- Scale legend -->
-    <div style="display:flex;gap:10px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center">
-      <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em">Scale</span>
-      ${scale.map(s => `<div style="display:flex;align-items:center;gap:5px">
-        <div style="width:10px;height:10px;border-radius:2px;background:${s.bg};border:1px solid ${s.colour}"></div>
-        <span style="font-size:10px;color:${s.colour}">${s.label}</span>
-      </div>`).join('')}
-      <div style="margin-left:auto;font-size:10px;color:var(--text3)">⚡ = ≥60% of linked codes taught · 🔒 = locked for reporting</div>
-    </div>`;
+    return `
+      ${!anyLinked ? `<div style="padding:10px 16px;background:var(--gold-dim);border-bottom:1px solid var(--gold);font-size:12px;color:var(--gold)">
+        ⚠ No curriculum codes in your CSV have Linked Achievement IDs — readiness tracking is unavailable. Check your Content Descriptors CSV has a "Linked Achievement IDs" column.
+      </div>` : ''}
+      <div style="overflow:auto;max-height:calc(100vh - 220px)">
+        <table style="border-collapse:collapse;min-width:${180+visibleStandards.length*170}px">
+          <thead style="position:sticky;top:0;z-index:5;background:var(--surface)">
+            <tr style="background:var(--surface2)">
+              <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface2);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
+              ${stdHeaders}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <!-- Scale legend -->
+      <div style="display:flex;gap:10px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em">Scale</span>
+        ${scale.map(s => `<div style="display:flex;align-items:center;gap:5px">
+          <div style="width:10px;height:10px;border-radius:2px;background:${s.bg};border:1px solid ${s.colour}"></div>
+          <span style="font-size:10px;color:${s.colour}">${s.label}</span>
+        </div>`).join('')}
+        <div style="margin-left:auto;font-size:10px;color:var(--text3)">⚡ ≥60% linked codes taught · 🔒 locked for reporting</div>
+      </div>`;
   }
 
   main.innerHTML = `
@@ -2774,70 +2859,100 @@ async function submitJudgment(studentId, standardId) {
 // ════════════════════════════════════════════════════
 
 function renderProgressionPlacement(main) {
-  if (!state.ppFilter) state.ppFilter = { type: 'literacy', element: '', student: null };
+  if (!state.ppFilter) state.ppFilter = { type: 'literacy', element: '', year: 'all' };
   const ppf = state.ppFilter;
   const progs = ppf.type === 'numeracy' ? state.numeracyProgressions : state.progressions;
   const elements = [...new Set(progs.map(p => p.Element).filter(Boolean))];
   const activeElement = ppf.element || elements[0] || '';
   const subElements = [...new Set(progs.filter(p => p.Element === activeElement).map(p => p['Sub-element']).filter(Boolean))].sort();
 
-  const students = [...state.students].sort((a,b) => a.last_name.localeCompare(b.last_name));
+  // Filter students by year
+  const students = [...state.students]
+    .filter(s => ppf.year === 'all' || normaliseYear(s.year_level) === ppf.year)
+    .sort((a,b) => a.last_name.localeCompare(b.last_name));
 
   function buildPlacementTable() {
-    if (!progs.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">${ppf.type === 'numeracy' ? 'Numeracy' : 'Literacy'} progressions not loaded</div></div>`;
+    if (!progs.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">${ppf.type === 'numeracy' ? 'Numeracy' : 'Literacy'} progressions not loaded</div><div class="empty-sub">Load your progressions CSV from Admin</div></div>`;
     if (!subElements.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">Select an element above</div></div>`;
+    if (!students.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">◎</div><div class="empty-title">No students in this year level</div></div>`;
 
     return subElements.map(subEl => {
       const items = progs.filter(p => p.Element === activeElement && p['Sub-element'] === subEl);
-      const levels = [...new Set(items.map(p => p['Progression level']).filter(Boolean))].sort((a,b) => Number(a)-Number(b));
+      const levels = [...new Set(items.map(p => String(p['Progression level'])).filter(Boolean))]
+        .sort((a,b) => Number(a) - Number(b));
+
+      // Class summary row — count students at each level
+      const levelCounts = {};
+      levels.forEach(l => { levelCounts[l] = 0; });
+      students.forEach(s => {
+        const p = getPlacementForStudent(s.id, activeElement, subEl);
+        if (p && levelCounts[String(p.level)] !== undefined) levelCounts[String(p.level)]++;
+      });
+      const placedCount = students.filter(s => getPlacementForStudent(s.id, activeElement, subEl)).length;
 
       const studentRows = students.map((s, si) => {
         const placement = getPlacementForStudent(s.id, activeElement, subEl);
-        const currentLevel = placement ? placement.level : null;
-        const nextLevel = currentLevel
-          ? levels[levels.indexOf(String(currentLevel)) + 1] || null
-          : levels[0] || null;
+        const currentLevel = placement ? String(placement.level) : null;
+        const currentIdx   = currentLevel ? levels.indexOf(currentLevel) : -1;
+        const nextLevel    = currentIdx >= 0 && currentIdx < levels.length - 1 ? levels[currentIdx + 1] : null;
         const nextIndicator = nextLevel
-          ? items.find(i => String(i['Progression level']) === String(nextLevel))
+          ? items.find(i => String(i['Progression level']) === nextLevel)
           : null;
 
+        // Encode element and subElement safely as data attributes
         return `<tr style="${si%2===1?'background:rgba(255,255,255,0.02)':''}">
           <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${si%2===1?'#1c2030':'var(--surface)'}">
             <div style="display:flex;align-items:center;gap:8px">
-              <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0">${getInitials(s)}</div>
-              <div style="font-size:12px;font-weight:600">${s.first_name} ${s.last_name}</div>
+              <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0;cursor:pointer" onclick="openStudentDetail('${s.id}')">${getInitials(s)}</div>
+              <div style="font-size:12px;font-weight:600;cursor:pointer" onclick="openStudentDetail('${s.id}')">${s.first_name} ${s.last_name}</div>
             </div>
           </td>
           <!-- Current level -->
           <td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">
-            <button onclick="openPlacementPicker('${s.id}','${activeElement.replace(/'/g,"\\'")}','${subEl.replace(/'/g,"\\'")}')"
+            <button data-pp-open="${s.id}"
+              data-pp-element="${activeElement.replace(/"/g,'&quot;')}"
+              data-pp-subelement="${subEl.replace(/"/g,'&quot;')}"
               style="padding:4px 12px;border-radius:4px;border:1px solid ${currentLevel?'var(--purple)':'var(--border2)'};background:${currentLevel?'var(--purple-dim)':'none'};color:${currentLevel?'var(--purple)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;font-weight:700">
               ${currentLevel ? 'L'+currentLevel : '— Set'}
             </button>
             ${placement?.date ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);margin-top:2px">${placement.date}</div>` : ''}
           </td>
-          <!-- Next step indicator -->
-          <td style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);line-height:1.4;max-width:300px">
+          <!-- Next step -->
+          <td style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);line-height:1.4;max-width:320px">
             ${nextIndicator
               ? `<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);background:var(--teal-dim);padding:1px 5px;border-radius:3px;margin-right:5px">L${nextLevel} next</span>${nextIndicator['Indicator text (no examples)']||nextIndicator['Indicator text (verbatim)']||''}`
               : currentLevel
                 ? `<span style="color:var(--green);font-size:10px">✓ At highest level</span>`
-                : `<span style="color:var(--text3);font-size:10px">No placement set</span>`
-            }
+                : `<span style="color:var(--text3);font-size:10px">Set a level to see next step</span>`}
           </td>
           <!-- External level -->
           <td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">
             ${placement?.ext_value
-              ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold)">${placement.ext_label ? placement.ext_label+' ' : ''}${placement.ext_value}</span>`
+              ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold)" title="${placement.ext_label||''}">${placement.ext_value}</span>`
               : `<span style="color:var(--text3);font-size:10px">—</span>`}
           </td>
         </tr>`;
       }).join('');
 
       return `<div style="margin-bottom:20px">
-        <div style="padding:8px 14px;background:var(--surface2);font-family:'DM Mono',monospace;font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.1em;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-          <span>${subEl} · ${levels.length} levels</span>
-          <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">Levels: ${levels.map(l=>'L'+l).join(' → ')}</span>
+        <div style="padding:8px 14px;background:var(--surface2);font-family:'DM Mono',monospace;font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.1em;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span>${subEl} · ${levels.length} levels</span>
+            <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">${placedCount}/${students.length} students placed</span>
+          </div>
+          <!-- Class distribution bar -->
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+            ${levels.map(l => {
+              const count = levelCounts[l] || 0;
+              const pct   = students.length ? Math.round(count/students.length*100) : 0;
+              return count > 0 ? `<div style="display:flex;align-items:center;gap:3px" title="L${l}: ${count} students">
+                <span style="font-size:8px;color:var(--text3)">L${l}</span>
+                <div style="height:12px;width:${Math.max(pct*1.2,8)}px;background:var(--purple);border-radius:2px;opacity:0.7"></div>
+                <span style="font-size:8px;color:var(--text3)">${count}</span>
+              </div>` : '';
+            }).join('')}
+            ${placedCount < students.length ? `<span style="font-size:9px;color:var(--text3)">${students.length-placedCount} not yet placed</span>` : ''}
+          </div>
         </div>
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;min-width:600px">
@@ -2845,8 +2960,8 @@ function renderProgressionPlacement(main) {
               <tr style="background:var(--surface2)">
                 <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;min-width:160px">Student</th>
                 <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:100px">Current Level</th>
-                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Next Step</th>
-                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:120px">External Level</th>
+                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Next Step Indicator</th>
+                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:100px">External</th>
               </tr>
             </thead>
             <tbody>${studentRows}</tbody>
@@ -2860,22 +2975,27 @@ function renderProgressionPlacement(main) {
     <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:12px 20px">
       <div class="topbar-title">Progression Placement</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
-        <button onclick="state.ppFilter.type='literacy';state.ppFilter.element='';renderProgressionPlacement(document.getElementById('main-content'))"
+        <button data-pp-type="literacy"
           style="padding:4px 12px;border-radius:4px;border:1px solid ${ppf.type==='literacy'?'var(--blue)':'var(--border2)'};background:${ppf.type==='literacy'?'var(--blue-dim)':'none'};color:${ppf.type==='literacy'?'var(--blue)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">✦ Literacy</button>
-        <button onclick="state.ppFilter.type='numeracy';state.ppFilter.element='';renderProgressionPlacement(document.getElementById('main-content'))"
+        <button data-pp-type="numeracy"
           style="padding:4px 12px;border-radius:4px;border:1px solid ${ppf.type==='numeracy'?'var(--green)':'var(--border2)'};background:${ppf.type==='numeracy'?'var(--green-dim)':'none'};color:${ppf.type==='numeracy'?'var(--green)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">∑ Numeracy</button>
+        <div style="width:1px;height:18px;background:var(--border2)"></div>
+        ${['all','F','1','2','3','4','5','6'].map(yr => `<button data-pp-year="${yr}"
+          style="padding:4px 10px;border-radius:4px;border:1px solid ${ppf.year===yr?'var(--purple)':'var(--border2)'};background:${ppf.year===yr?'var(--purple-dim)':'none'};color:${ppf.year===yr?'var(--purple)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">
+          ${yr==='all'?'All':'Yr '+yr}
+        </button>`).join('')}
       </div>
     </div>
     <!-- Element tabs -->
     <div style="padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;gap:6px;flex-wrap:wrap">
-      ${elements.map(el => `<button onclick="state.ppFilter.element='${el.replace(/'/g,"\\'")}';renderProgressionPlacement(document.getElementById('main-content'))"
+      ${elements.map(el => `<button data-pp-element="${el.replace(/"/g,'&quot;')}"
         style="padding:5px 12px;border-radius:4px;border:1px solid ${activeElement===el?'var(--purple)':'var(--border2)'};background:${activeElement===el?'var(--purple-dim)':'none'};color:${activeElement===el?'var(--purple)':'var(--text3)'};font-size:12px;cursor:pointer">
         ${el}
       </button>`).join('')}
     </div>
     <div class="content">
       ${!progs.length
-        ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">No ${ppf.type} progressions loaded</div><div class="empty-sub">Load your progressions CSV from the Admin menu</div></div>`
+        ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">No ${ppf.type} progressions loaded</div></div>`
         : buildPlacementTable()}
     </div>
   `;
@@ -4076,7 +4196,7 @@ function renderDailyLog(main) {
 
 // ── Apps Script additions needed ──
 console.info(
-  '%cClassTracker v1.3.0 — Apps Script update needed\n\n' +
+  '%cClassTracker v1.3.1 — Apps Script update needed\n\n' +
   'Add these sheets to your Google Spreadsheet:\n' +
   '  StandardsJudgments — A:id B:student_id C:standard_id D:judgment E:locked F:date G:notes H:period\n' +
   '  ProgressionPlacements — A:id B:student_id C:element D:sub_element E:level F:date G:notes H:ext_label I:ext_value\n\n' +

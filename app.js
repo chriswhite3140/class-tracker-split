@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.3.4
+ * THIS FILE IS VERSION: v1.3.5
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.3.4 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.3.5 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.3.4';
+const APP_VERSION = 'v1.3.5';
 
 // ── GLOBAL CONSTANTS ──
 const SUBJECT_COLOURS = {
@@ -76,6 +76,7 @@ let state = {
   loading: true,
   syncing: false,
   detailSubjectFilter: null,
+  studentSortBy: 'last_name', // 'last_name' | 'first_name'
 
   // ── ASSESSMENT SCALE (configurable) ──
   // Each item: { id, label, colour, description }
@@ -105,6 +106,10 @@ async function apiCall(action, data = null) {
 // ── BATCHED LOAD — single round trip for all Sheets data ──
 async function loadAll() {
   const result = await apiCall('getAll');
+
+  // If Apps Script doesn't know getAll yet, it returns { error: '...' }
+  // Throw so the fallback in init() kicks in
+  if (result.error) throw new Error('getAll not supported: ' + result.error);
 
   // Students
   if (Array.isArray(result.students) && result.students.length > 1) {
@@ -344,6 +349,17 @@ function toast(msg, type = 'success') {
 // ── HELPERS ──
 function getInitials(s) { return ((s.first_name||'')[0]+(s.last_name||'')[0]).toUpperCase(); }
 function getAvClass(i) { return 'av-' + (i % 6); }
+function sortStudents(arr) {
+  const by = state.studentSortBy || 'last_name';
+  return [...arr].sort((a,b) => {
+    if (by === 'first_name') return `${a.first_name}${a.last_name}`.localeCompare(`${b.first_name}${b.last_name}`);
+    return `${a.last_name}${a.first_name}`.localeCompare(`${b.last_name}${b.first_name}`);
+  });
+}
+function toggleStudentSort() {
+  state.studentSortBy = state.studentSortBy === 'last_name' ? 'first_name' : 'last_name';
+  renderView();
+}
 function getStudentProgress(sid) { return state.progress.filter(p => p.student_id === sid); }
 function getMasteryForCode(sid, code) {
   const p = state.progress.find(x => x.student_id === sid && x.code === code);
@@ -694,8 +710,7 @@ function renderClassOverview(main) {
     return 'var(--surface2)';
   }
 
-  const visibleStudents = students.filter(s => ovf.year === 'all' || normaliseYear(s.year_level) === ovf.year)
-    .sort((a,b) => `${a.last_name}${a.first_name}`.localeCompare(`${b.last_name}${b.first_name}`));
+  const visibleStudents = sortStudents(state.students.filter(s => ovf.year === 'all' || normaliseYear(s.year_level) === ovf.year));
 
   function buildStrandGrid() {
     if (!visibleStudents.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">▦</div><div class="empty-title">No students match this filter</div></div>`;
@@ -801,6 +816,9 @@ function renderStudents(main) {
           <span class="search-icon">⌕</span>
           <input class="search-input" placeholder="Search students…" oninput="filterStudents(this.value)" id="student-search">
         </div>
+        <button class="btn" onclick="toggleStudentSort()" title="Toggle name sort order">
+          ${state.studentSortBy === 'last_name' ? '↕ Last, First' : '↕ First, Last'}
+        </button>
         <button class="btn" onclick="openBulkPrintModal()">⎙ Bulk Print Reports</button>
         <button class="btn btn-primary" onclick="openAddStudentModal()">+ Add Student</button>
       </div>
@@ -808,7 +826,7 @@ function renderStudents(main) {
     <div class="content">
       ${state.students.length === 0
         ? `<div class="empty-state" style="padding:80px"><div class="empty-icon">◎</div><div class="empty-title">No students yet</div><div class="empty-sub">Add your first student to start tracking progress.</div><button class="btn btn-primary" style="margin-top:12px" onclick="openAddStudentModal()">+ Add Student</button></div>`
-        : `<div class="student-grid" id="student-grid">${renderStudentCards(state.students)}</div>`}
+        : `<div class="student-grid" id="student-grid">${renderStudentCards(sortStudents(state.students))}</div>`}
     </div>
   `;
 }
@@ -833,7 +851,9 @@ function renderStudentCards(students) {
 function filterStudents(q) {
   const grid = document.getElementById('student-grid');
   if (!grid) return;
-  const filtered = state.students.filter(s => `${s.first_name} ${s.last_name}`.toLowerCase().includes(q.toLowerCase()));
+  const filtered = sortStudents(state.students.filter(s =>
+    `${s.first_name} ${s.last_name}`.toLowerCase().includes(q.toLowerCase())
+  ));
   grid.innerHTML = renderStudentCards(filtered);
 }
 
@@ -1864,9 +1884,7 @@ function renderBulkAssess(main) {
     return true;
   });
 
-  const filteredStudents = state.students
-    .filter(s => ba.yearFilter==='all'||normaliseYear(s.year_level)===ba.yearFilter)
-    .sort((a,b) => a.last_name.localeCompare(b.last_name));
+  const filteredStudents = sortStudents(state.students.filter(s => ba.yearFilter==='all'||normaliseYear(s.year_level)===ba.yearFilter));
 
   function fBtn(label, active, fn) {
     // For simple set* calls, use data-ba-fn eval. For filter buttons we use data-ba-action instead.
@@ -2482,7 +2500,7 @@ function buildBulkStudentList() {
   let html = '';
   yearOrder.forEach(yr => {
     const group = state.students.filter(s => normaliseYear(s.year_level) === yr)
-      .sort((a,b) => a.last_name.localeCompare(b.last_name));
+      ;
     if (!group.length) return;
     html += `<div style="margin-bottom:12px">
       <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px">${yearLabel[yr] || 'Year '+yr}</div>
@@ -2676,9 +2694,7 @@ function renderCoverage(main) {
   });
 
   // Filter students by year
-  const students = state.students
-    .filter(s => cf.year === 'all' || normaliseYear(s.year_level) === cf.year)
-    .sort((a,b) => a.last_name.localeCompare(b.last_name));
+  const students = sortStudents(state.students.filter(s => cf.year === 'all' || normaliseYear(s.year_level) === cf.year));
 
   // Mode filter — not-taught-yet only shows codes not taught to ANY student
   if (cf.mode === 'not-taught') {
@@ -2881,9 +2897,7 @@ function renderStandardsJudgments(main) {
   });
 
   // Filter students
-  const students = state.students
-    .filter(s => sf.year === 'all' || normaliseYear(s.year_level) === sf.year)
-    .sort((a,b) => a.last_name.localeCompare(b.last_name));
+  const students = sortStudents(state.students.filter(s => sf.year === 'all' || normaliseYear(s.year_level) === sf.year));
 
   function fBtn(label, active, action, value) {
     return `<button data-sj-action="${action}" data-sj-value="${value}"
@@ -3160,9 +3174,7 @@ function renderProgressionPlacement(main) {
   const subElements = [...new Set(progs.filter(p => p.Element === activeElement).map(p => p['Sub-element']).filter(Boolean))].sort();
 
   // Filter students by year
-  const students = [...state.students]
-    .filter(s => ppf.year === 'all' || normaliseYear(s.year_level) === ppf.year)
-    .sort((a,b) => a.last_name.localeCompare(b.last_name));
+  const students = sortStudents(state.students.filter(s => ppf.year === 'all' || normaliseYear(s.year_level) === ppf.year));
 
   function buildPlacementTable() {
     if (!progs.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">⟡</div><div class="empty-title">${ppf.type === 'numeracy' ? 'Numeracy' : 'Literacy'} progressions not loaded</div><div class="empty-sub">Load your progressions CSV from Admin</div></div>`;
@@ -3713,13 +3725,17 @@ function closeDlModal() {
 
 // ── STEP 1: ATTENDANCE ──
 function buildDlStep1() {
-  const sorted = [...state.students].sort((a,b) => a.last_name.localeCompare(b.last_name));
+  const sorted = sortStudents(state.students);
   const presentCount = sorted.length - dlState.absentIds.size;
   return `
     <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Tap any student to mark them <strong style="color:var(--rust)">absent</strong>. Everyone else is present.</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${presentCount} present · ${dlState.absentIds.size} absent</div>
       <div style="display:flex;gap:6px">
+        <button onclick="state.studentSortBy=state.studentSortBy==='last_name'?'first_name':'last_name';document.getElementById('dl-body').innerHTML=buildDlStep1()"
+          style="padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:none;color:var(--text3);font-size:11px;cursor:pointer">
+          ${state.studentSortBy === 'last_name' ? '↕ Last, First' : '↕ First, Last'}
+        </button>
         <button onclick="dlMarkAll(false)" style="padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:none;color:var(--text3);font-size:11px;cursor:pointer">All present</button>
         <button onclick="dlMarkAll(true)" style="padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:none;color:var(--text3);font-size:11px;cursor:pointer">All absent</button>
       </div>
@@ -4250,8 +4266,7 @@ function dlAddAISuggested(code) {
 
 // ── STEP 3: QUICK MASTERY ──
 function buildDlStep3() {
-  const presentStudents = state.students.filter(s => !dlState.absentIds.has(s.id))
-    .sort((a,b) => a.last_name.localeCompare(b.last_name));
+  const presentStudents = sortStudents(state.students.filter(s => !dlState.absentIds.has(s.id)));
   const codes = dlState.selectedCodes;
 
   if (!codes.length) return `<div class="empty-state" style="padding:40px"><div class="empty-icon">◈</div><div class="empty-title">No codes selected</div><div class="empty-sub">Go back and select codes taught today</div></div>`;
@@ -4359,7 +4374,7 @@ function buildDlStep3() {
 }
 
 function dlMarkAllForCode(code, mastery) {
-  const presentStudents = state.students.filter(s => !dlState.absentIds.has(s.id));
+  const presentStudents = sortStudents(state.students.filter(s => !dlState.absentIds.has(s.id)));
   presentStudents.forEach(s => {
     const key = s.id + '|' + code;
     if (mastery === null) delete dlState.masteryMap[key];
@@ -4576,7 +4591,7 @@ function renderDailyLog(main) {
 
 // ── Apps Script additions needed ──
 console.info(
-  '%cClassTracker v1.3.4 — Apps Script update needed\n\n' +
+  '%cClassTracker v1.3.5 — Apps Script update needed\n\n' +
   'Add these sheets to your Google Spreadsheet:\n' +
   '  StandardsJudgments — A:id B:student_id C:standard_id D:judgment E:locked F:date G:notes H:period\n' +
   '  ProgressionPlacements — A:id B:student_id C:element D:sub_element E:level F:date G:notes H:ext_label I:ext_value\n\n' +
@@ -4589,6 +4604,10 @@ async function init() {
   if (verEl) verEl.textContent = APP_VERSION;
   loadAssessmentScale();
 
+  // Show loading message
+  const main = document.getElementById('main-content');
+  if (main) main.innerHTML = `<div class="loading"><div class="spinner"></div><div style="margin-top:12px;color:var(--text3);font-size:13px">Loading your data…</div></div>`;
+
   // Run Sheets fetch and CSV fetch in parallel.
   // Try the fast batched getAll first; fall back to individual calls
   // if the Apps Script hasn't been updated yet.
@@ -4596,7 +4615,7 @@ async function init() {
     try {
       await loadAll();
     } catch(e) {
-      console.warn('getAll not available, falling back to individual calls:', e);
+      console.warn('getAll not available or failed, falling back to individual calls:', e);
       await Promise.allSettled([
         loadStudents(), loadProgress(), loadTaughtLog(),
         loadStandardsJudgments(), loadProgressionPlacements()
@@ -4624,7 +4643,7 @@ async function init() {
   }
 
   if (state.students.length === 0) {
-    toast('Could not load student data — check your Sheets connection', 'error');
+    toast('⚠ No student data loaded — check your Sheets connection or update your Apps Script', 'error');
   }
 }
 

@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.3.5
+ * THIS FILE IS VERSION: v1.3.6
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,14 +10,14 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.3.5 - Coverage gaps view, student detail taught filter, dashboard taught stats
+ * v1.3.6 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
  * v0.9.x - Multi-subject student detail, print reports
  * ============================================================
  */
 
-const APP_VERSION = 'v1.3.5';
+const APP_VERSION = 'v1.3.6';
 
 // ── GLOBAL CONSTANTS ──
 const SUBJECT_COLOURS = {
@@ -546,22 +546,32 @@ function renderDashboard(main) {
 
   const subjects = subjectOrder.filter(subj => state.curriculumCodes.some(c => c.Subject === subj));
 
-  // Taught stats across all codes for top stat row
-  const totalCodes = state.curriculumCodes.length;
-  const taughtCodeCount = new Set(state.taughtLog.map(t => t.student_id + '|' + t.code)).size;
-  const coveragePct = totalCodes ? Math.round((new Set(state.taughtLog.map(t => t.code)).size / totalCodes) * 100) : 0;
+  // Year levels present in this class — used to scope codes correctly
+  const classYearLevels = [...new Set(state.students.map(s => YLM[normaliseYear(s.year_level)] || s.year_level).filter(Boolean))];
+
+  // Taught stats — scoped to year levels in the class
+  const classYearCodes = state.curriculumCodes.filter(c =>
+    classYearLevels.length === 0 || classYearLevels.includes((c['Year Level']||'').trim())
+  );
+  const totalCodes = classYearCodes.length;
+  const coveragePct = totalCodes ? Math.round((new Set(state.taughtLog.filter(t => classYearCodes.some(c => c.Code === t.code)).map(t => t.code)).size / totalCodes) * 100) : 0;
 
   function subjectCard(subj) {
     const col = subjectCol(subj);
     const bg = subjectBg(subj);
     const icon = SUBJECT_ICONS[subj] || '◈';
-    const codes = state.curriculumCodes.filter(c => c.Subject === subj);
+
+    // All codes for this subject — but if we have students, scope to their year levels
+    const allSubjCodes = state.curriculumCodes.filter(c => c.Subject === subj);
+    const codes = classYearLevels.length > 0
+      ? allSubjCodes.filter(c => classYearLevels.includes((c['Year Level']||'').trim()))
+      : allSubjCodes;
+
     const strands = [...new Set(codes.map(c => c.Strand).filter(Boolean))].sort();
     const assessed = state.progress.filter(p => codes.some(c => c.Code === p.code));
     const subjAchieved = assessed.filter(p => p.mastery === 'Achieved').length;
-    const assessedPct = assessed.length ? Math.round(subjAchieved/assessed.length*100) : 0;
 
-    // Taught: unique codes from this subject that appear in taughtLog
+    // Taught: unique codes from this subject+year that appear in taughtLog
     const taughtCodes = new Set(
       state.taughtLog.filter(t => codes.some(c => c.Code === t.code)).map(t => t.code)
     );
@@ -573,7 +583,7 @@ function renderDashboard(main) {
         <div style="width:34px;height:34px;border-radius:8px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;color:${col};flex-shrink:0">${icon}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${subj}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:1px">${codes.length} codes · ${strands.length} strands</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:1px">${codes.length} codes · ${strands.length} strands${classYearLevels.length === 1 ? ' · ' + classYearLevels[0] : ''}</div>
         </div>
         <div style="text-align:right">
           ${taughtPct > 0 ? `<div style="font-family:'DM Mono',monospace;font-size:11px;color:${col};font-weight:700">${taughtPct}%</div>
@@ -4591,7 +4601,7 @@ function renderDailyLog(main) {
 
 // ── Apps Script additions needed ──
 console.info(
-  '%cClassTracker v1.3.5 — Apps Script update needed\n\n' +
+  '%cClassTracker v1.3.6 — Apps Script update needed\n\n' +
   'Add these sheets to your Google Spreadsheet:\n' +
   '  StandardsJudgments — A:id B:student_id C:standard_id D:judgment E:locked F:date G:notes H:period\n' +
   '  ProgressionPlacements — A:id B:student_id C:element D:sub_element E:level F:date G:notes H:ext_label I:ext_value\n\n' +

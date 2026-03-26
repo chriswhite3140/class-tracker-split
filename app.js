@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.3.6
+ * THIS FILE IS VERSION: v1.4.0
  * Last updated: 2026-03-15
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.4.0 - Class/teacher group settings with subject+strand toggles
  * v1.3.6 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
  * v1.0.x - Daily log wizard with AI suggestions
@@ -17,7 +18,7 @@
  * ============================================================
  */
 
-const APP_VERSION = 'v1.3.6';
+const APP_VERSION = 'v1.4.0';
 
 // ── GLOBAL CONSTANTS ──
 const SUBJECT_COLOURS = {
@@ -82,6 +83,7 @@ let state = {
   // Each item: { id, label, colour, description }
   // Stored in localStorage so it persists across sessions
   assessmentScale: null, // loaded in init
+  classSettings: null,   // loaded in init — class/teacher group config
 };
 
 // ── GOOGLE SHEETS API ──
@@ -725,7 +727,8 @@ function renderClassOverview(main) {
   function buildStrandGrid() {
     if (!visibleStudents.length) return `<div class="empty-state" style="padding:60px"><div class="empty-icon">▦</div><div class="empty-title">No students match this filter</div></div>`;
     const allStrands = ovf.strand !== 'all' ? [ovf.strand]
-      : [...new Set(visibleStudents.flatMap(s => getStrandsForStudent(s)))].sort();
+      : [...new Set(visibleStudents.flatMap(s => getStrandsForStudent(s)))].sort()
+          .filter(strand => !state.classSettings || isStrandEnabled(ovf.subject, strand));
 
     return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px">
       <thead><tr style="background:var(--surface2)">
@@ -914,6 +917,7 @@ function renderStudentDetail(main) {
   let codes = state.curriculumCodes.filter(c => {
     if (c.Subject !== subjectFilter) return false;
     if (strandFilter !== 'all' && c.Strand !== strandFilter) return false;
+    if (state.classSettings && !isStrandEnabled(c.Subject, c.Strand)) return false;
     if (!yearFilter || yearFilter === 'all') return true;
     const csvYear = yearLevelMap[yearFilter] || yearFilter;
     return (c['Year Level'] || '').trim() === csvYear;
@@ -1891,6 +1895,7 @@ function renderBulkAssess(main) {
     if (c.Subject !== ba.subjectFilter) return false;
     if (ba.strandFilter !== 'all' && c.Strand !== ba.strandFilter) return false;
     if (ba.yearFilter !== 'all' && (c['Year Level']||'').trim() !== (YLM[ba.yearFilter]||ba.yearFilter)) return false;
+    if (state.classSettings && !isStrandEnabled(c.Subject, c.Strand)) return false;
     return true;
   });
 
@@ -3481,6 +3486,207 @@ function exportAll() {
   toast('Exporting 5 files…', 'info');
 }
 
+
+// ════════════════════════════════════════════════════
+// ── CLASS / TEACHER GROUP SETTINGS ──
+// ════════════════════════════════════════════════════
+
+function loadClassSettings() {
+  try {
+    const raw = localStorage.getItem('ct_class_settings');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return {
+    groups: [{ id: 'main', name: 'My Class', color: '#4f8ef7', disabledStrands: {} }],
+    activeGroup: 'main'
+  };
+}
+
+function saveClassSettings() {
+  try { localStorage.setItem('ct_class_settings', JSON.stringify(state.classSettings)); } catch(e) {}
+}
+
+function getActiveGroup() {
+  const s = state.classSettings;
+  return s.groups.find(g => g.id === s.activeGroup) || s.groups[0];
+}
+
+function isStrandEnabled(subject, strand) {
+  const g = getActiveGroup();
+  if (!g || !strand) return true;
+  const key = subject + '|' + strand;
+  return !(g.disabledStrands && g.disabledStrands[key]);
+}
+
+function isSubjectEnabled(subject) {
+  const strands = [...new Set(state.curriculumCodes.filter(c => c.Subject === subject).map(c => c.Strand).filter(Boolean))];
+  if (!strands.length) return true;
+  return strands.some(st => isStrandEnabled(subject, st));
+}
+
+function saveActiveGroupMeta() {
+  const name  = document.getElementById('cs-group-name')?.value?.trim();
+  const color = document.getElementById('cs-group-color')?.value;
+  const g = getActiveGroup();
+  if (!g) return;
+  if (name)  g.name  = name;
+  if (color) g.color = color;
+  saveClassSettings();
+  toast('Group updated', 'success');
+  renderAdmin(document.getElementById('main-content'));
+}
+
+function buildClassSettingsSection() {
+  const cs = state.classSettings;
+  if (!cs) return '';
+  const groups = cs.groups;
+  const activeGroup = getActiveGroup();
+  const allSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
+
+  function groupTab(g) {
+    const active = g.id === cs.activeGroup;
+    const safeColor = g.color || '#4f8ef7';
+    return `<button data-cs-action="setGroup" data-cs-val="${g.id}"
+      style="padding:5px 14px;border-radius:6px;border:1px solid ${active ? safeColor : 'var(--border2)'};
+      background:${active ? safeColor + '22' : 'none'};color:${active ? safeColor : 'var(--text3)'};
+      font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${g.name}</button>`;
+  }
+
+  function subjectBlock(subject) {
+    const strands = [...new Set(state.curriculumCodes.filter(c => c.Subject === subject).map(c => c.Strand).filter(Boolean))].sort();
+    if (!strands.length) return '';
+    const allOn = strands.every(st => isStrandEnabled(subject, st));
+
+    const strandRows = strands.map(strand => {
+      const enabled = isStrandEnabled(subject, strand);
+      const key = subject + '|' + strand;
+      const codeCount = state.curriculumCodes.filter(c => c.Subject === subject && c.Strand === strand).length;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <span style="font-size:12px;color:${enabled ? 'var(--text)' : 'var(--text3)'}">${strand}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-left:8px">${codeCount} codes</span>
+        </div>
+        <button data-cs-action="toggleStrand" data-cs-key="${key}" data-cs-enabled="${enabled}"
+          style="padding:3px 14px;border-radius:4px;border:1px solid ${enabled ? 'var(--green)' : 'var(--border2)'};
+          background:${enabled ? 'var(--green-dim)' : 'none'};color:${enabled ? 'var(--green)' : 'var(--text3)'};
+          font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">
+          ${enabled ? '✓ On' : '✕ Off'}
+        </button>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.06em">${subject}</div>
+        <button data-cs-action="toggleSubject" data-cs-key="${subject}" data-cs-enabled="${allOn}"
+          style="padding:2px 10px;border-radius:4px;border:1px solid var(--border2);background:none;
+          color:var(--text3);font-family:'DM Mono',monospace;font-size:9px;cursor:pointer">
+          ${allOn ? 'Disable all' : 'Enable all'}
+        </button>
+      </div>
+      ${strandRows}
+    </div>`;
+  }
+
+  const noCodesMsg = allSubjects.length === 0
+    ? `<div style="color:var(--text3);font-size:12px;padding:16px 0">Load curriculum CSV files first to configure subjects and strands.</div>`
+    : '';
+
+  return `<div class="card" style="margin-bottom:20px">
+    <div class="card-head">
+      <div class="card-title">Class &amp; Teacher Groups</div>
+    </div>
+    <div style="padding:16px 18px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+        Configure which subjects and strands each teacher or group is responsible for.
+        Disabled strands are hidden across Bulk Assess, Student Detail, Class Overview and printed reports.
+        Settings are saved in your browser.
+      </div>
+
+      <!-- Group tabs -->
+      <div style="margin-bottom:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em">Groups</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${groups.map(groupTab).join('')}
+          <button data-cs-action="addGroup"
+            style="padding:5px 10px;border-radius:6px;border:1px dashed var(--border2);background:none;color:var(--text3);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">+ Add Group</button>
+          ${groups.length > 1 ? `<button data-cs-action="deleteGroup"
+            style="padding:5px 10px;border-radius:6px;border:1px solid var(--border2);background:none;color:var(--rust);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">Delete &ldquo;${activeGroup.name}&rdquo;</button>` : ''}
+        </div>
+      </div>
+
+      <!-- Active group meta -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 12px;background:var(--surface2);border-radius:6px;flex-wrap:wrap">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">NAME</span>
+        <input id="cs-group-name" value="${activeGroup.name}"
+          style="background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:4px 10px;color:var(--text);font-size:12px;outline:none;width:160px">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">COLOUR</span>
+        <input type="color" id="cs-group-color" value="${activeGroup.color || '#4f8ef7'}"
+          style="width:32px;height:28px;border:1px solid var(--border2);border-radius:4px;padding:2px;cursor:pointer;background:none">
+        <button onclick="saveActiveGroupMeta()" style="padding:4px 12px;border-radius:5px;border:1px solid var(--blue);background:var(--blue-dim);color:var(--blue);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">Save</button>
+      </div>
+
+      <!-- Subject/strand toggles -->
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.1em">
+        Subjects &amp; Strands — <span style="color:${activeGroup.color || 'var(--blue)'};">${activeGroup.name}</span>
+      </div>
+      ${noCodesMsg}
+      ${allSubjects.map(subjectBlock).join('')}
+    </div>
+  </div>`;
+}
+
+// Delegated handler for class settings buttons
+document.addEventListener('click', function(e) {
+  const el = e.target.closest('[data-cs-action]');
+  if (!el || !state.classSettings) return;
+  const action  = el.dataset.csAction;
+  const val     = el.dataset.csVal;
+  const key     = el.dataset.csKey;
+  const enabled = el.dataset.csEnabled === 'true';
+  const cs = state.classSettings;
+
+  if (action === 'setGroup') {
+    cs.activeGroup = val;
+    saveClassSettings();
+    renderAdmin(document.getElementById('main-content'));
+
+  } else if (action === 'toggleStrand') {
+    const g = getActiveGroup();
+    if (!g.disabledStrands) g.disabledStrands = {};
+    if (enabled) g.disabledStrands[key] = true;
+    else delete g.disabledStrands[key];
+    saveClassSettings();
+    renderAdmin(document.getElementById('main-content'));
+
+  } else if (action === 'toggleSubject') {
+    const g = getActiveGroup();
+    if (!g.disabledStrands) g.disabledStrands = {};
+    const strands = [...new Set(state.curriculumCodes.filter(c => c.Subject === key).map(c => c.Strand).filter(Boolean))];
+    if (enabled) strands.forEach(st => { g.disabledStrands[key + '|' + st] = true; });
+    else strands.forEach(st => { delete g.disabledStrands[key + '|' + st]; });
+    saveClassSettings();
+    renderAdmin(document.getElementById('main-content'));
+
+  } else if (action === 'addGroup') {
+    const name = prompt('Group name (e.g. Specialist — Art):');
+    if (!name) return;
+    const id = 'group_' + Date.now();
+    cs.groups.push({ id, name, color: '#a78bfa', disabledStrands: {} });
+    cs.activeGroup = id;
+    saveClassSettings();
+    renderAdmin(document.getElementById('main-content'));
+
+  } else if (action === 'deleteGroup') {
+    if (cs.groups.length <= 1) { toast('Cannot delete the only group', 'error'); return; }
+    if (!confirm('Delete group "' + getActiveGroup().name + '"?')) return;
+    cs.groups = cs.groups.filter(g => g.id !== cs.activeGroup);
+    cs.activeGroup = cs.groups[0].id;
+    saveClassSettings();
+    renderAdmin(document.getElementById('main-content'));
+  }
+});
+
 // ════════════════════════════════════════════════════
 // ── ADMIN VIEW ──
 // Configure assessment scale, view system info
@@ -3494,6 +3700,9 @@ function renderAdmin(main) {
       <div class="topbar-title">Admin &amp; Settings</div>
     </div>
     <div class="content">
+
+      <!-- Class & Teacher Groups -->
+      ${buildClassSettingsSection()}
 
       <!-- Assessment Scale configurator -->
       <div class="card" style="margin-bottom:20px">
@@ -4613,6 +4822,7 @@ async function init() {
   const verEl = document.getElementById('sidebar-version');
   if (verEl) verEl.textContent = APP_VERSION;
   loadAssessmentScale();
+  state.classSettings = loadClassSettings();
 
   // Show loading message
   const main = document.getElementById('main-content');

@@ -13,7 +13,19 @@ It helps teachers:
 
 The app is a static front end (`index.html`, `styles.css`, `app.js`) that loads curriculum reference data from CSV files included in this repository and syncs student/progress data to a Google Apps Script endpoint configured in `app.js`.
 
-## Run locally
+## Preferred usage (GitHub Pages)
+
+I usually run and access this app through GitHub Pages in a browser, rather than running it locally.
+
+Live URL:
+
+```text
+https://chriswhite3140.github.io/class-tracker-split
+```
+
+## Optional: run locally for development
+
+If needed for development or troubleshooting, you can run the app locally.
 
 ### 1) Clone the repository
 
@@ -38,8 +50,8 @@ Visit:
 http://localhost:8000
 ```
 
-## Notes for local development
+## Notes
 
-- Opening `index.html` directly via `file://` may cause fetch/CORS issues in some browsers; using a local server is recommended.
+- Opening `index.html` directly via `file://` may cause fetch/CORS issues in some browsers; using a local server is recommended when running locally.
 - The repository includes curriculum CSV files used by the app UI.
 - Live data operations (students, progress, taught log, judgments, placements) depend on the configured Google Apps Script API URL in `app.js`.

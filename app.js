@@ -83,7 +83,10 @@ let state = {
   // Each item: { id, label, colour, description }
   // Stored in localStorage so it persists across sessions
   assessmentScale: null, // loaded in init
-  classSettings: null,   // loaded in init — class/teacher group config
+  classSettings: (() => {
+    try { const r = localStorage.getItem('ct_class_settings'); if (r) return JSON.parse(r); } catch(e) {}
+    return { groups: [{ id: 'main', name: 'My Class', color: '#4f8ef7', disabledStrands: {} }], activeGroup: 'main' };
+  })(),  // class/teacher group config — loaded from localStorage
 };
 
 // ── GOOGLE SHEETS API ──
@@ -4822,7 +4825,6 @@ async function init() {
   const verEl = document.getElementById('sidebar-version');
   if (verEl) verEl.textContent = APP_VERSION;
   loadAssessmentScale();
-  state.classSettings = loadClassSettings();
 
   // Show loading message
   const main = document.getElementById('main-content');

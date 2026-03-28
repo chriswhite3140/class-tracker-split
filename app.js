@@ -83,10 +83,7 @@ let state = {
   // Each item: { id, label, colour, description }
   // Stored in localStorage so it persists across sessions
   assessmentScale: null, // loaded in init
-  classSettings: (() => {
-    try { const r = localStorage.getItem('ct_class_settings'); if (r) return JSON.parse(r); } catch(e) {}
-    return { groups: [{ id: 'main', name: 'My Class', color: '#4f8ef7', disabledStrands: {} }], activeGroup: 'main' };
-  })(),  // class/teacher group config — loaded from localStorage
+  classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
 };
 
 // ── GOOGLE SHEETS API ──
@@ -549,14 +546,15 @@ function renderDashboard(main) {
   const subjectOrder = ['English','Mathematics','Science','HASS','Health and Physical Education','Design and Technologies','Digital Technologies'];
 
 
-  const subjects = subjectOrder.filter(subj => state.curriculumCodes.some(c => c.Subject === subj));
+  const subjects = subjectOrder.filter(subj => state.curriculumCodes.some(c => c.Subject === subj) && isSubjectEnabled(subj));
 
   // Year levels present in this class — used to scope codes correctly
   const classYearLevels = [...new Set(state.students.map(s => YLM[normaliseYear(s.year_level)] || s.year_level).filter(Boolean))];
 
   // Taught stats — scoped to year levels in the class
   const classYearCodes = state.curriculumCodes.filter(c =>
-    classYearLevels.length === 0 || classYearLevels.includes((c['Year Level']||'').trim())
+    isCurriculumCodeEnabled(c) &&
+    (classYearLevels.length === 0 || classYearLevels.includes((c['Year Level']||'').trim()))
   );
   const totalCodes = classYearCodes.length;
   const coveragePct = totalCodes ? Math.round((new Set(state.taughtLog.filter(t => classYearCodes.some(c => c.Code === t.code)).map(t => t.code)).size / totalCodes) * 100) : 0;
@@ -567,7 +565,7 @@ function renderDashboard(main) {
     const icon = SUBJECT_ICONS[subj] || '◈';
 
     // All codes for this subject — but if we have students, scope to their year levels
-    const allSubjCodes = state.curriculumCodes.filter(c => c.Subject === subj);
+    const allSubjCodes = state.curriculumCodes.filter(c => c.Subject === subj && isCurriculumCodeEnabled(c));
     const codes = classYearLevels.length > 0
       ? allSubjCodes.filter(c => classYearLevels.includes((c['Year Level']||'').trim()))
       : allSubjCodes;
@@ -694,12 +692,22 @@ function renderClassOverview(main) {
   if (!state.overviewFilter) state.overviewFilter = { year: 'all', subject: 'English', strand: 'all' };
   const ovf = state.overviewFilter;
 
-  const availableSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
+  const availableSubjects = getEnabledSubjectsFromRows(state.curriculumCodes);
+  if (!availableSubjects.length) {
+    main.innerHTML = `<div class="topbar"><div class="topbar-title">Class Overview</div></div>
+      <div class="content"><div class="empty-state" style="padding:60px"><div class="empty-icon">▦</div><div class="empty-title">No enabled subjects for this class</div><div class="empty-sub">Go to Admin &amp; Settings to enable subjects and strands.</div></div></div>`;
+    return;
+  }
+  if (!availableSubjects.includes(ovf.subject)) {
+    ovf.subject = availableSubjects[0];
+    ovf.strand = 'all';
+  }
 
   function getCodesForStudent(student) {
     const csvYear = yearLevelMap[normaliseYear(student.year_level)] || student.year_level;
     return state.curriculumCodes.filter(c => {
       if (c.Subject !== ovf.subject) return false;
+      if (!isCurriculumCodeEnabled(c)) return false;
       if ((c['Year Level']||'').trim() !== csvYear) return false;
       if (ovf.strand !== 'all' && c.Strand !== ovf.strand) return false;
       return true;
@@ -708,7 +716,7 @@ function renderClassOverview(main) {
 
   function getStrandsForStudent(student) {
     const csvYear = yearLevelMap[normaliseYear(student.year_level)] || student.year_level;
-    return [...new Set(state.curriculumCodes.filter(c => c.Subject === ovf.subject && (c['Year Level']||'').trim() === csvYear).map(c => c.Strand).filter(Boolean))].sort();
+    return [...new Set(state.curriculumCodes.filter(c => c.Subject === ovf.subject && (c['Year Level']||'').trim() === csvYear && isCurriculumCodeEnabled(c)).map(c => c.Strand).filter(Boolean))].sort();
   }
 
   function masteryColour(pct) {
@@ -883,7 +891,7 @@ function openStudentDetail(studentId) {
   state.detailYearFilter = student ? student.year_level : 'all';
   // Auto-select first available subject if not yet set
   if (!state.detailSubjectFilter) {
-    const subjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
+    const subjects = getEnabledSubjectsFromRows(state.curriculumCodes);
     state.detailSubjectFilter = subjects[0] || 'English';
   }
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -905,8 +913,9 @@ function renderStudentDetail(main) {
   const yearFilter = state.detailYearFilter !== undefined ? state.detailYearFilter : s.year_level;
 
   // All subjects available in the curriculum data
-  const availableSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
-  const subjectFilter = state.detailSubjectFilter || (availableSubjects[0] || 'English');
+  const availableSubjects = getEnabledSubjectsFromRows(state.curriculumCodes);
+  const subjectFilter = availableSubjects.includes(state.detailSubjectFilter) ? state.detailSubjectFilter : (availableSubjects[0] || 'English');
+  state.detailSubjectFilter = subjectFilter;
 
   // Subject colour map for the tab pills
 
@@ -914,13 +923,13 @@ function renderStudentDetail(main) {
   // Filter codes by selected subject + year + strand
   const strandFilter = state.detailStrandFilter || 'all';
   const availableStrands = [...new Set(
-    state.curriculumCodes.filter(c => c.Subject === subjectFilter).map(c => c.Strand).filter(Boolean)
+    state.curriculumCodes.filter(c => c.Subject === subjectFilter && isCurriculumCodeEnabled(c)).map(c => c.Strand).filter(Boolean)
   )].sort();
 
   let codes = state.curriculumCodes.filter(c => {
     if (c.Subject !== subjectFilter) return false;
     if (strandFilter !== 'all' && c.Strand !== strandFilter) return false;
-    if (state.classSettings && !isStrandEnabled(c.Subject, c.Strand)) return false;
+    if (state.classSettings && !isCurriculumCodeEnabled(c)) return false;
     if (!yearFilter || yearFilter === 'all') return true;
     const csvYear = yearLevelMap[yearFilter] || yearFilter;
     return (c['Year Level'] || '').trim() === csvYear;
@@ -1017,6 +1026,7 @@ function renderStudentDetail(main) {
   function buildCoverageSection() {
     const subjectCodes = state.curriculumCodes.filter(c => {
       if (c.Subject !== subjectFilter) return false;
+      if (!isCurriculumCodeEnabled(c)) return false;
       if (!yearFilter || yearFilter === 'all') return true;
       const csvYear = yearLevelMap[yearFilter] || yearFilter;
       return (c['Year Level']||'').trim() === csvYear;
@@ -1872,6 +1882,7 @@ function filterBulkCodeList(q) {
     if (c.Subject !== ba.subjectFilter) return false;
     if (ba.strandFilter !== 'all' && c.Strand !== ba.strandFilter) return false;
     if (ba.yearFilter !== 'all' && (c['Year Level']||'').trim() !== (YLM[ba.yearFilter]||ba.yearFilter)) return false;
+    if (!isCurriculumCodeEnabled(c)) return false;
     if (q && !(c.Code.toLowerCase().includes(q.toLowerCase())||(c.Descriptor||'').toLowerCase().includes(q.toLowerCase()))) return false;
     return true;
   });
@@ -1891,14 +1902,18 @@ function renderBulkAssess(main) {
   if (!state.bulkAssess) state.bulkAssess = { mode:'by-code', yearFilter:'all', subjectFilter:'English', strandFilter:'all', selectedCode:null, selectedStudent:null, date:new Date().toISOString().split('T')[0], pendingChanges:{} };
   const ba = state.bulkAssess;
   const pendingCount = Object.keys(ba.pendingChanges).length;
-  const availSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
-  const availStrands = ['all', ...new Set(state.curriculumCodes.filter(c => c.Subject===ba.subjectFilter).map(c => c.Strand).filter(Boolean))].sort();
+  const availSubjects = getEnabledSubjectsFromRows(state.curriculumCodes);
+  if (!availSubjects.includes(ba.subjectFilter)) {
+    ba.subjectFilter = availSubjects[0] || 'English';
+    ba.strandFilter = 'all';
+  }
+  const availStrands = ['all', ...new Set(state.curriculumCodes.filter(c => c.Subject===ba.subjectFilter && isCurriculumCodeEnabled(c)).map(c => c.Strand).filter(Boolean))].sort();
 
   const filteredCodes = state.curriculumCodes.filter(c => {
     if (c.Subject !== ba.subjectFilter) return false;
     if (ba.strandFilter !== 'all' && c.Strand !== ba.strandFilter) return false;
     if (ba.yearFilter !== 'all' && (c['Year Level']||'').trim() !== (YLM[ba.yearFilter]||ba.yearFilter)) return false;
-    if (state.classSettings && !isStrandEnabled(c.Subject, c.Strand)) return false;
+    if (state.classSettings && !isCurriculumCodeEnabled(c)) return false;
     return true;
   });
 
@@ -1985,7 +2000,7 @@ function renderBulkAssess(main) {
     const codesHtml = !student ? '' : (() => {
       const normYr = normaliseYear(student.year_level);
       const csvYear = YLM[normYr]||normYr;
-      const sCodes = state.curriculumCodes.filter(c => c.Subject===ba.subjectFilter && (c['Year Level']||'').trim()===csvYear && (ba.strandFilter==='all'||c.Strand===ba.strandFilter));
+      const sCodes = state.curriculumCodes.filter(c => c.Subject===ba.subjectFilter && (c['Year Level']||'').trim()===csvYear && (ba.strandFilter==='all'||c.Strand===ba.strandFilter) && isCurriculumCodeEnabled(c));
       return sCodes.map((c,ci) => {
         const key = student.id+'|'+c.Code;
         const pending = ba.pendingChanges[key];
@@ -2316,16 +2331,17 @@ function openPrintOptionsModal(studentId) {
   const csvYear = YLM[normYr] || normYr;
 
   // Current view state
-  const currentSubject = state.detailSubjectFilter || null;
+  let currentSubject = state.detailSubjectFilter || null;
   const currentStrand = null; // strand filter not yet tracked in detail view — future feature
 
   const availableSubjects = [...new Set(
     state.curriculumCodes.filter(c => (c['Year Level']||'').trim() === csvYear).map(c => c.Subject).filter(Boolean)
-  )].sort();
+  )].sort().filter(isSubjectEnabled);
+  if (!availableSubjects.includes(currentSubject)) currentSubject = null;
 
   const availableStrands = currentSubject
     ? [...new Set(
-        state.curriculumCodes.filter(c => c.Subject === currentSubject && (c['Year Level']||'').trim() === csvYear).map(c => c.Strand).filter(Boolean)
+        state.curriculumCodes.filter(c => c.Subject === currentSubject && (c['Year Level']||'').trim() === csvYear && isCurriculumCodeEnabled(c)).map(c => c.Strand).filter(Boolean)
       )].sort()
     : [];
 
@@ -2407,7 +2423,7 @@ function updatePrintStrandOpts() {
     if (!s) return;
       const csvYear = YLM[normaliseYear(s.year_level)] || s.year_level;
     const strands = [...new Set(
-      state.curriculumCodes.filter(c => c.Subject === subjVal && (c['Year Level']||'').trim() === csvYear).map(c => c.Strand).filter(Boolean)
+      state.curriculumCodes.filter(c => c.Subject === subjVal && (c['Year Level']||'').trim() === csvYear && isCurriculumCodeEnabled(c)).map(c => c.Strand).filter(Boolean)
     )].sort();
     strandOpts.innerHTML = buildPrintStrandOpts(strands, null);
   }
@@ -2428,6 +2444,7 @@ function updatePrintScopePreview(studentId) {
     if ((c['Year Level']||'').trim() !== csvYear) return false;
     if (subjVal !== 'all' && c.Subject !== subjVal) return false;
     if (strandVal !== 'all' && c.Strand !== strandVal) return false;
+    if (!isCurriculumCodeEnabled(c)) return false;
     return true;
   });
   const achieved = codes.filter(c => getMasteryForCode(s.id, c.Code) === 'Achieved').length;
@@ -2450,7 +2467,7 @@ function submitPrintReport(studentId) {
 
 // ── BULK PRINT MODAL (from Students list) ──
 function openBulkPrintModal() {
-  const allSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
+  const allSubjects = getEnabledSubjectsFromRows(state.curriculumCodes);
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
@@ -2550,7 +2567,7 @@ function updateBulkPrintStrands() {
     strandGroup.style.display = 'none';
   } else {
     strandGroup.style.display = 'block';
-    const strands = [...new Set(state.curriculumCodes.filter(c => c.Subject === subj).map(c => c.Strand).filter(Boolean))].sort();
+    const strands = [...new Set(state.curriculumCodes.filter(c => c.Subject === subj && isCurriculumCodeEnabled(c)).map(c => c.Strand).filter(Boolean))].sort();
     strandSel.innerHTML = `<option value="all">All strands</option>${strands.map(st => `<option value="${st}">${st}</option>`).join('')}`;
   }
   updateBulkPrintSummary();
@@ -2700,7 +2717,11 @@ function renderCoverage(main) {
   const cf = state.coverageFilter;
 
 
-  const availSubjects = [...new Set(state.curriculumCodes.map(c => c.Subject).filter(Boolean))].sort();
+  const availSubjects = getEnabledSubjectsFromRows(state.curriculumCodes);
+  if (!availSubjects.includes(cf.subject)) {
+    cf.subject = availSubjects[0] || 'English';
+    cf.strand = 'all';
+  }
   const col = subjectCol(cf.subject);
 
   // Filter codes
@@ -2708,6 +2729,7 @@ function renderCoverage(main) {
     if (cf.subject !== 'all' && c.Subject !== cf.subject) return false;
     if (cf.strand  !== 'all' && c.Strand  !== cf.strand)  return false;
     if (cf.year    !== 'all' && (c['Year Level']||'').trim() !== (YLM[cf.year]||cf.year)) return false;
+    if (!isCurriculumCodeEnabled(c)) return false;
     return true;
   });
 
@@ -2844,7 +2866,7 @@ function renderCoverage(main) {
 
   // Strands for the selected subject
   const availStrands = cf.subject !== 'all'
-    ? [...new Set(state.curriculumCodes.filter(c => c.Subject === cf.subject).map(c => c.Strand).filter(Boolean))].sort()
+    ? [...new Set(state.curriculumCodes.filter(c => c.Subject === cf.subject && isCurriculumCodeEnabled(c)).map(c => c.Strand).filter(Boolean))].sort()
     : [];
 
   main.innerHTML = `
@@ -2904,7 +2926,8 @@ function renderStandardsJudgments(main) {
   const sf = state.sjFilter;
   const scale = getScale();
 
-  const availSubjects = [...new Set(state.standards.map(s => s.Subject).filter(Boolean))].sort();
+  const availSubjects = getEnabledSubjectsFromRows(state.standards);
+  if (!availSubjects.includes(sf.subject)) sf.subject = availSubjects[0] || 'English';
   const col = subjectCol(sf.subject);
 
   // Filter standards to selected subject + year
@@ -3495,14 +3518,35 @@ function exportAll() {
 // ════════════════════════════════════════════════════
 
 function loadClassSettings() {
+  function normaliseGroup(g, idx) {
+    if (!g || typeof g !== 'object') g = {};
+    return {
+      id: g.id || ('group_' + idx),
+      name: g.name || 'My Class',
+      color: g.color || '#4f8ef7',
+      disabledSubjects: g.disabledSubjects || {},
+      disabledStrands: g.disabledStrands || {},
+      disabledAreas: g.disabledAreas || {},
+    };
+  }
+
+  function fallback() {
+    return {
+      groups: [normaliseGroup({ id: 'main', name: 'My Class', color: '#4f8ef7' }, 0)],
+      activeGroup: 'main'
+    };
+  }
+
   try {
     const raw = localStorage.getItem('ct_class_settings');
-    if (raw) return JSON.parse(raw);
+    if (!raw) return fallback();
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.groups) || parsed.groups.length === 0) return fallback();
+    const groups = parsed.groups.map((g, idx) => normaliseGroup(g, idx));
+    const activeGroup = groups.some(g => g.id === parsed.activeGroup) ? parsed.activeGroup : groups[0].id;
+    return { groups, activeGroup };
   } catch(e) {}
-  return {
-    groups: [{ id: 'main', name: 'My Class', color: '#4f8ef7', disabledStrands: {} }],
-    activeGroup: 'main'
-  };
+  return fallback();
 }
 
 function saveClassSettings() {
@@ -3517,14 +3561,38 @@ function getActiveGroup() {
 function isStrandEnabled(subject, strand) {
   const g = getActiveGroup();
   if (!g || !strand) return true;
+  if (g.disabledSubjects && g.disabledSubjects[subject]) return false;
   const key = subject + '|' + strand;
   return !(g.disabledStrands && g.disabledStrands[key]);
 }
 
 function isSubjectEnabled(subject) {
+  const g = getActiveGroup();
+  if (g && g.disabledSubjects && g.disabledSubjects[subject]) return false;
   const strands = [...new Set(state.curriculumCodes.filter(c => c.Subject === subject).map(c => c.Strand).filter(Boolean))];
   if (!strands.length) return true;
   return strands.some(st => isStrandEnabled(subject, st));
+}
+
+function isCurriculumAreaEnabled(subject, strand, area) {
+  const g = getActiveGroup();
+  if (!g || !area) return isStrandEnabled(subject, strand);
+  if (!isStrandEnabled(subject, strand)) return false;
+  const key = subject + '|' + strand + '|' + area;
+  return !(g.disabledAreas && g.disabledAreas[key]);
+}
+
+function isCurriculumCodeEnabled(row) {
+  if (!row) return true;
+  const subject = row.Subject || '';
+  const strand = row.Strand || '';
+  const area = row['Sub-strand'] || row['Sub Strand'] || '';
+  return isCurriculumAreaEnabled(subject, strand, area);
+}
+
+function getEnabledSubjectsFromRows(rows, subjectField = 'Subject') {
+  const all = [...new Set((rows || []).map(r => r && r[subjectField]).filter(Boolean))].sort();
+  return all.filter(isSubjectEnabled);
 }
 
 function saveActiveGroupMeta() {
@@ -3556,6 +3624,7 @@ function buildClassSettingsSection() {
   }
 
   function subjectBlock(subject) {
+    const subjectEnabled = isSubjectEnabled(subject);
     const strands = [...new Set(state.curriculumCodes.filter(c => c.Subject === subject).map(c => c.Strand).filter(Boolean))].sort();
     if (!strands.length) return '';
     const allOn = strands.every(st => isStrandEnabled(subject, st));
@@ -3564,15 +3633,35 @@ function buildClassSettingsSection() {
       const enabled = isStrandEnabled(subject, strand);
       const key = subject + '|' + strand;
       const codeCount = state.curriculumCodes.filter(c => c.Subject === subject && c.Strand === strand).length;
+      const areas = [...new Set(
+        state.curriculumCodes
+          .filter(c => c.Subject === subject && c.Strand === strand)
+          .map(c => c['Sub-strand'] || c['Sub Strand'])
+          .filter(Boolean)
+      )].sort();
+      const areaRows = areas.map(area => {
+        const areaEnabled = isCurriculumAreaEnabled(subject, strand, area);
+        const areaKey = subject + '|' + strand + '|' + area;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0 5px 12px">
+          <div style="font-size:11px;color:${areaEnabled ? 'var(--text2)' : 'var(--text3)'}">↳ ${area}</div>
+          <button data-cs-action="toggleArea" data-cs-key="${areaKey}" data-cs-enabled="${areaEnabled}"
+            style="padding:2px 10px;border-radius:4px;border:1px solid ${areaEnabled ? 'var(--teal)' : 'var(--border2)'};
+            background:${areaEnabled ? 'var(--teal-dim)' : 'none'};color:${areaEnabled ? 'var(--teal)' : 'var(--text3)'};
+            font-family:'DM Mono',monospace;font-size:9px;cursor:pointer">
+            ${areaEnabled ? '✓ On' : '✕ Off'}
+          </button>
+        </div>`;
+      }).join('');
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
-        <div>
+        <div style="flex:1">
           <span style="font-size:12px;color:${enabled ? 'var(--text)' : 'var(--text3)'}">${strand}</span>
           <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-left:8px">${codeCount} codes</span>
+          ${areaRows ? `<div style="margin-top:4px">${areaRows}</div>` : ''}
         </div>
         <button data-cs-action="toggleStrand" data-cs-key="${key}" data-cs-enabled="${enabled}"
           style="padding:3px 14px;border-radius:4px;border:1px solid ${enabled ? 'var(--green)' : 'var(--border2)'};
           background:${enabled ? 'var(--green-dim)' : 'none'};color:${enabled ? 'var(--green)' : 'var(--text3)'};
-          font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">
+          font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;align-self:flex-start;margin-left:10px" ${subjectEnabled ? '' : 'disabled'}>
           ${enabled ? '✓ On' : '✕ Off'}
         </button>
       </div>`;
@@ -3580,12 +3669,20 @@ function buildClassSettingsSection() {
 
     return `<div style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.06em">${subject}</div>
+        <div style="font-size:12px;font-weight:700;color:${subjectEnabled ? 'var(--text)' : 'var(--text3)'};text-transform:uppercase;letter-spacing:0.06em">${subject}</div>
+        <div style="display:flex;gap:6px">
+        <button data-cs-action="toggleSubjectEnabled" data-cs-key="${subject}" data-cs-enabled="${subjectEnabled}"
+          style="padding:2px 10px;border-radius:4px;border:1px solid ${subjectEnabled ? 'var(--green)' : 'var(--border2)'};
+          background:${subjectEnabled ? 'var(--green-dim)' : 'none'};
+          color:${subjectEnabled ? 'var(--green)' : 'var(--text3)'};font-family:'DM Mono',monospace;font-size:9px;cursor:pointer">
+          ${subjectEnabled ? '✓ Subject on' : '✕ Subject off'}
+        </button>
         <button data-cs-action="toggleSubject" data-cs-key="${subject}" data-cs-enabled="${allOn}"
           style="padding:2px 10px;border-radius:4px;border:1px solid var(--border2);background:none;
           color:var(--text3);font-family:'DM Mono',monospace;font-size:9px;cursor:pointer">
           ${allOn ? 'Disable all' : 'Enable all'}
         </button>
+        </div>
       </div>
       ${strandRows}
     </div>`;
@@ -3601,7 +3698,7 @@ function buildClassSettingsSection() {
     </div>
     <div style="padding:16px 18px">
       <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
-        Configure which subjects and strands each teacher or group is responsible for.
+        Configure which subjects, strands and curriculum areas each teacher or group is responsible for.
         Disabled strands are hidden across Bulk Assess, Student Detail, Class Overview and printed reports.
         Settings are saved in your browser.
       </div>
@@ -3662,6 +3759,22 @@ document.addEventListener('click', function(e) {
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));
 
+  } else if (action === 'toggleArea') {
+    const g = getActiveGroup();
+    if (!g.disabledAreas) g.disabledAreas = {};
+    if (enabled) g.disabledAreas[key] = true;
+    else delete g.disabledAreas[key];
+    saveClassSettings();
+    renderAdmin(document.getElementById('main-content'));
+
+  } else if (action === 'toggleSubjectEnabled') {
+    const g = getActiveGroup();
+    if (!g.disabledSubjects) g.disabledSubjects = {};
+    if (enabled) g.disabledSubjects[key] = true;
+    else delete g.disabledSubjects[key];
+    saveClassSettings();
+    renderAdmin(document.getElementById('main-content'));
+
   } else if (action === 'toggleSubject') {
     const g = getActiveGroup();
     if (!g.disabledStrands) g.disabledStrands = {};
@@ -3675,7 +3788,7 @@ document.addEventListener('click', function(e) {
     const name = prompt('Group name (e.g. Specialist — Art):');
     if (!name) return;
     const id = 'group_' + Date.now();
-    cs.groups.push({ id, name, color: '#a78bfa', disabledStrands: {} });
+    cs.groups.push({ id, name, color: '#a78bfa', disabledSubjects: {}, disabledStrands: {}, disabledAreas: {} });
     cs.activeGroup = id;
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));

@@ -2,14 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: v1.4.0
- * Last updated: 2026-03-15
+ * THIS FILE IS VERSION: 1.5.0
+ * Last updated: 2026-03-29
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.5.0 - Visible class settings entry + teacher-friendly checkboxes + filtering polish
  * v1.4.0 - Class/teacher group settings with subject+strand toggles
  * v1.3.6 - Coverage gaps view, student detail taught filter, dashboard taught stats
  * v1.1.0 - Mark-all buttons with full labels and icons
@@ -18,7 +19,7 @@
  * ============================================================
  */
 
-const APP_VERSION = 'v1.4.0';
+const APP_VERSION = '1.5.0';
 
 // ── GLOBAL CONSTANTS ──
 const SUBJECT_COLOURS = {
@@ -540,6 +541,10 @@ function renderDashboard(main) {
   const gaps = state.progress.filter(p => p.mastery === 'Emerging').length;
 
   const recent = [...state.progress]
+    .filter(p => {
+      const row = state.curriculumCodes.find(c => c.Code === p.code);
+      return !row || isCurriculumCodeEnabled(row);
+    })
     .sort((a,b) => new Date(b.date) - new Date(a.date))
     .slice(0, 5);
 
@@ -1214,6 +1219,7 @@ let cdFilters = { subject: 'English', year: 'all', strand: 'all', sort: 'code', 
 function getFilteredCurriculumCodes() {
   const yearOrder = ['Foundation','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'];
   let codes = state.curriculumCodes.filter(c => {
+    if (!isCurriculumCodeEnabled(c)) return false;
     if (cdFilters.subject !== 'all' && (c.Subject||'').trim() !== cdFilters.subject) return false;
     if (cdFilters.year    !== 'all' && (c['Year Level']||'').trim() !== cdFilters.year) return false;
     if (cdFilters.strand  !== 'all' && (c.Strand||'').trim() !== cdFilters.strand) return false;
@@ -1230,7 +1236,7 @@ function getFilteredCurriculumCodes() {
 }
 
 function renderCurriculum(main) {
-  const allCodes = state.curriculumCodes;
+  const allCodes = state.curriculumCodes.filter(c => isCurriculumCodeEnabled(c));
   const codes    = getFilteredCurriculumCodes();
   const subjects = ['all', ...new Set(allCodes.map(c => c.Subject).filter(Boolean))].sort();
   const years    = ['all','Foundation','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'];
@@ -1297,7 +1303,8 @@ function renderStandards(main) {
   const allYearOrder = ['Foundation','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'];
   if (!state.standardsFilter) state.standardsFilter = { subject: 'English', year: 'all' };
   const sf = state.standardsFilter;
-  const availableSubjects = [...new Set(stds.map(s => s.Subject).filter(Boolean))].sort();
+  const availableSubjects = getEnabledSubjectsFromRows(stds);
+  if (!availableSubjects.includes(sf.subject)) sf.subject = availableSubjects[0] || 'English';
   const filteredBySubject = stds.filter(s => s.Subject === sf.subject);
   const years = allYearOrder.filter(y => filteredBySubject.some(s => s['Year Level'] === y));
   const visibleStds = filteredBySubject.filter(s => sf.year === 'all' || s['Year Level'] === sf.year);
@@ -3643,40 +3650,34 @@ function buildClassSettingsSection() {
         const areaEnabled = isCurriculumAreaEnabled(subject, strand, area);
         const areaKey = subject + '|' + strand + '|' + area;
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0 5px 12px">
-          <div style="font-size:11px;color:${areaEnabled ? 'var(--text2)' : 'var(--text3)'}">↳ ${area}</div>
-          <button data-cs-action="toggleArea" data-cs-key="${areaKey}" data-cs-enabled="${areaEnabled}"
-            style="padding:2px 10px;border-radius:4px;border:1px solid ${areaEnabled ? 'var(--teal)' : 'var(--border2)'};
-            background:${areaEnabled ? 'var(--teal-dim)' : 'none'};color:${areaEnabled ? 'var(--teal)' : 'var(--text3)'};
-            font-family:'DM Mono',monospace;font-size:9px;cursor:pointer">
-            ${areaEnabled ? '✓ On' : '✕ Off'}
-          </button>
+          <label style="font-size:11px;color:${areaEnabled ? 'var(--text2)' : 'var(--text3)'};display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" data-cs-action="toggleArea" data-cs-key="${areaKey}" ${areaEnabled ? 'checked' : ''}
+              style="accent-color:var(--teal)">
+            <span>↳ ${area}</span>
+          </label>
         </div>`;
       }).join('');
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
         <div style="flex:1">
-          <span style="font-size:12px;color:${enabled ? 'var(--text)' : 'var(--text3)'}">${strand}</span>
+          <label style="font-size:12px;color:${enabled ? 'var(--text)' : 'var(--text3)'};display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" data-cs-action="toggleStrand" data-cs-key="${key}" ${enabled ? 'checked' : ''} ${subjectEnabled ? '' : 'disabled'}
+              style="accent-color:var(--green)">
+            <span>${strand}</span>
+          </label>
           <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-left:8px">${codeCount} codes</span>
           ${areaRows ? `<div style="margin-top:4px">${areaRows}</div>` : ''}
         </div>
-        <button data-cs-action="toggleStrand" data-cs-key="${key}" data-cs-enabled="${enabled}"
-          style="padding:3px 14px;border-radius:4px;border:1px solid ${enabled ? 'var(--green)' : 'var(--border2)'};
-          background:${enabled ? 'var(--green-dim)' : 'none'};color:${enabled ? 'var(--green)' : 'var(--text3)'};
-          font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;align-self:flex-start;margin-left:10px" ${subjectEnabled ? '' : 'disabled'}>
-          ${enabled ? '✓ On' : '✕ Off'}
-        </button>
       </div>`;
     }).join('');
 
     return `<div style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div style="font-size:12px;font-weight:700;color:${subjectEnabled ? 'var(--text)' : 'var(--text3)'};text-transform:uppercase;letter-spacing:0.06em">${subject}</div>
+        <label style="font-size:12px;font-weight:700;color:${subjectEnabled ? 'var(--text)' : 'var(--text3)'};text-transform:uppercase;letter-spacing:0.06em;display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" data-cs-action="toggleSubjectEnabled" data-cs-key="${subject}" ${subjectEnabled ? 'checked' : ''}
+            style="accent-color:var(--green)">
+          <span>${subject}</span>
+        </label>
         <div style="display:flex;gap:6px">
-        <button data-cs-action="toggleSubjectEnabled" data-cs-key="${subject}" data-cs-enabled="${subjectEnabled}"
-          style="padding:2px 10px;border-radius:4px;border:1px solid ${subjectEnabled ? 'var(--green)' : 'var(--border2)'};
-          background:${subjectEnabled ? 'var(--green-dim)' : 'none'};
-          color:${subjectEnabled ? 'var(--green)' : 'var(--text3)'};font-family:'DM Mono',monospace;font-size:9px;cursor:pointer">
-          ${subjectEnabled ? '✓ Subject on' : '✕ Subject off'}
-        </button>
         <button data-cs-action="toggleSubject" data-cs-key="${subject}" data-cs-enabled="${allOn}"
           style="padding:2px 10px;border-radius:4px;border:1px solid var(--border2);background:none;
           color:var(--text3);font-family:'DM Mono',monospace;font-size:9px;cursor:pointer">
@@ -3692,14 +3693,14 @@ function buildClassSettingsSection() {
     ? `<div style="color:var(--text3);font-size:12px;padding:16px 0">Load curriculum CSV files first to configure subjects and strands.</div>`
     : '';
 
-  return `<div class="card" style="margin-bottom:20px">
+  return `<div class="card" id="class-settings-card" style="margin-bottom:20px">
     <div class="card-head">
       <div class="card-title">Class &amp; Teacher Groups</div>
     </div>
     <div style="padding:16px 18px">
       <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
         Configure which subjects, strands and curriculum areas each teacher or group is responsible for.
-        Disabled strands are hidden across Bulk Assess, Student Detail, Class Overview and printed reports.
+        Untick any option to hide it across Dashboard, Class Overview, Student Detail, Bulk Assess, Standards and reports.
         Settings are saved in your browser.
       </div>
 
@@ -3736,46 +3737,48 @@ function buildClassSettingsSection() {
   </div>`;
 }
 
-// Delegated handler for class settings buttons
-document.addEventListener('click', function(e) {
-  const el = e.target.closest('[data-cs-action]');
-  if (!el || !state.classSettings) return;
-  const action  = el.dataset.csAction;
-  const val     = el.dataset.csVal;
-  const key     = el.dataset.csKey;
-  const enabled = el.dataset.csEnabled === 'true';
+function applyClassSettingAction(action, { val, key, enabled, checked } = {}) {
+  if (!state.classSettings) return;
   const cs = state.classSettings;
 
   if (action === 'setGroup') {
     cs.activeGroup = val;
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));
+    return;
+  }
 
-  } else if (action === 'toggleStrand') {
+  if (action === 'toggleStrand') {
     const g = getActiveGroup();
     if (!g.disabledStrands) g.disabledStrands = {};
-    if (enabled) g.disabledStrands[key] = true;
-    else delete g.disabledStrands[key];
+    if (checked) delete g.disabledStrands[key];
+    else g.disabledStrands[key] = true;
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));
+    return;
+  }
 
-  } else if (action === 'toggleArea') {
+  if (action === 'toggleArea') {
     const g = getActiveGroup();
     if (!g.disabledAreas) g.disabledAreas = {};
-    if (enabled) g.disabledAreas[key] = true;
-    else delete g.disabledAreas[key];
+    if (checked) delete g.disabledAreas[key];
+    else g.disabledAreas[key] = true;
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));
+    return;
+  }
 
-  } else if (action === 'toggleSubjectEnabled') {
+  if (action === 'toggleSubjectEnabled') {
     const g = getActiveGroup();
     if (!g.disabledSubjects) g.disabledSubjects = {};
-    if (enabled) g.disabledSubjects[key] = true;
-    else delete g.disabledSubjects[key];
+    if (checked) delete g.disabledSubjects[key];
+    else g.disabledSubjects[key] = true;
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));
+    return;
+  }
 
-  } else if (action === 'toggleSubject') {
+  if (action === 'toggleSubject') {
     const g = getActiveGroup();
     if (!g.disabledStrands) g.disabledStrands = {};
     const strands = [...new Set(state.curriculumCodes.filter(c => c.Subject === key).map(c => c.Strand).filter(Boolean))];
@@ -3783,8 +3786,10 @@ document.addEventListener('click', function(e) {
     else strands.forEach(st => { delete g.disabledStrands[key + '|' + st]; });
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));
+    return;
+  }
 
-  } else if (action === 'addGroup') {
+  if (action === 'addGroup') {
     const name = prompt('Group name (e.g. Specialist — Art):');
     if (!name) return;
     const id = 'group_' + Date.now();
@@ -3792,8 +3797,10 @@ document.addEventListener('click', function(e) {
     cs.activeGroup = id;
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));
+    return;
+  }
 
-  } else if (action === 'deleteGroup') {
+  if (action === 'deleteGroup') {
     if (cs.groups.length <= 1) { toast('Cannot delete the only group', 'error'); return; }
     if (!confirm('Delete group "' + getActiveGroup().name + '"?')) return;
     cs.groups = cs.groups.filter(g => g.id !== cs.activeGroup);
@@ -3801,6 +3808,28 @@ document.addEventListener('click', function(e) {
     saveClassSettings();
     renderAdmin(document.getElementById('main-content'));
   }
+}
+
+// Delegated handler for class settings buttons
+document.addEventListener('click', function(e) {
+  const el = e.target.closest('[data-cs-action]');
+  if (!el || el.matches('input[type="checkbox"]')) return;
+  const action  = el.dataset.csAction;
+  applyClassSettingAction(action, {
+    val: el.dataset.csVal,
+    key: el.dataset.csKey,
+    enabled: el.dataset.csEnabled === 'true'
+  });
+});
+
+// Delegated handler for class settings checkbox toggles
+document.addEventListener('change', function(e) {
+  const el = e.target.closest('input[type="checkbox"][data-cs-action]');
+  if (!el) return;
+  applyClassSettingAction(el.dataset.csAction, {
+    key: el.dataset.csKey,
+    checked: !!el.checked
+  });
 });
 
 // ════════════════════════════════════════════════════
@@ -4926,7 +4955,7 @@ function renderDailyLog(main) {
 
 // ── Apps Script additions needed ──
 console.info(
-  '%cClassTracker v1.3.6 — Apps Script update needed\n\n' +
+  `%cClassTracker v${APP_VERSION} — Apps Script update needed\n\n` +
   'Add these sheets to your Google Spreadsheet:\n' +
   '  StandardsJudgments — A:id B:student_id C:standard_id D:judgment E:locked F:date G:notes H:period\n' +
   '  ProgressionPlacements — A:id B:student_id C:element D:sub_element E:level F:date G:notes H:ext_label I:ext_value\n\n' +
@@ -4991,6 +5020,14 @@ function toggleAdminMenu() {
   menu.style.display  = open ? 'none' : 'flex';
   if (chevron) chevron.textContent = open ? '▸' : '▾';
   if (btn) btn.style.background = open ? '' : 'var(--surface2)';
+}
+
+function openClassSettings() {
+  showView('admin');
+  setTimeout(() => {
+    const card = document.getElementById('class-settings-card');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 0);
 }
 
 // Auto-open admin menu if any CSV file hasn't loaded yet

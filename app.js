@@ -24,7 +24,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.7.5';
+const APP_VERSION = '1.7.6';
 const THEME_STORAGE_KEY = 'app_theme';
 let systemThemeMediaQuery = null;
 
@@ -825,10 +825,10 @@ function renderClassOverview(main) {
 
     return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px">
       <thead><tr style="background:var(--surface-alt)">
-        <th style="padding:10px 16px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:180px;position:sticky;left:0;background:var(--surface-alt);z-index:2">Student</th>
-        <th style="padding:10px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:80px">Overall</th>
-        ${allStrands.map(strand => `<th style="padding:10px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;cursor:pointer" onclick="state.overviewFilter.strand='${strand}';renderClassOverview(document.getElementById('main-content'))">${strand}<br><span style="font-size:8px;opacity:0.6;font-weight:400">click to filter</span></th>`).join('')}
-        <th style="padding:10px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:60px">Gaps</th>
+        <th style="padding:12px 16px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:180px;position:sticky;left:0;background:var(--surface-alt);z-index:2">Student</th>
+        <th style="padding:12px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:80px">Overall</th>
+        ${allStrands.map(strand => `<th style="padding:12px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;cursor:pointer" onclick="state.overviewFilter.strand='${strand}';renderClassOverview(document.getElementById('main-content'))">${strand}<br><span style="font-size:9px;opacity:0.7;font-weight:500">click to filter</span></th>`).join('')}
+        <th style="padding:12px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:60px">Gaps</th>
       </tr></thead>
       <tbody>
         ${visibleStudents.map((s, si) => {
@@ -840,7 +840,7 @@ function renderClassOverview(main) {
             const sc = allCodes.filter(c => c.Strand === strand);
             const sa = sc.filter(c => getMasteryForCode(s.id, c.Code) === 'Achieved').length;
             const pct = sc.length ? Math.round(sa/sc.length*100) : 0;
-            return `<td style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border);cursor:pointer" onclick="openStudentDetail('${s.id}')">
+            return `<td style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);cursor:pointer" onclick="openStudentDetail('${s.id}')">
               <div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
                 <div style="width:44px;height:44px;border-radius:50%;background:${masteryBg(pct)};border:2px solid ${masteryColour(pct)};display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${masteryColour(pct)}">${sc.length ? pct+'%' : '—'}</div>
                 <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3)">${sa}/${sc.length}</div>
@@ -848,7 +848,7 @@ function renderClassOverview(main) {
             </td>`;
           }).join('');
           return `<tr style="border-bottom:1px solid var(--border);background:${getStripedRowSurface(si)}">
-            <td style="padding:10px 16px;position:sticky;left:0;background:${getStripedRowSurface(si)};z-index:1;cursor:pointer" onclick="openStudentDetail('${s.id}')">
+            <td style="padding:12px 16px;position:sticky;left:0;background:${getStripedRowSurface(si)};z-index:1;cursor:pointer" onclick="openStudentDetail('${s.id}')">
               <div style="display:flex;align-items:center;gap:10px">
                 <div class="sc-avatar ${getAvClass(si)}" style="width:30px;height:30px;font-size:12px;flex-shrink:0">${getInitials(s)}</div>
                 <div>
@@ -880,7 +880,7 @@ function renderClassOverview(main) {
 
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:8px">
+    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Class Overview <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);font-weight:400">· ${ovf.subject}</span></div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">SUBJECT</span>
@@ -1326,7 +1326,7 @@ function renderCurriculum(main) {
   }
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:8px">
+    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Curriculum Codes</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
         <div class="search-wrap"><span class="search-icon">⌕</span><input class="search-input" placeholder="Search…" value="${cdFilters.search}" oninput="cdFilters.search=this.value;renderCurriculum(document.getElementById('main-content'))"></div>
@@ -1387,7 +1387,7 @@ function renderStandards(main) {
   const visibleStds = filteredBySubject.filter(s => sf.year === 'all' || s['Year Level'] === sf.year);
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:8px">
+    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Achievement Standards <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);font-weight:400">· ${sf.subject}</span></div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">SUBJECT</span>
@@ -1436,7 +1436,7 @@ function renderProgressions(main) {
   }).join('');
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:8px">
+    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Progressions <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);font-weight:400">· ${typeLabel}</span></div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">TYPE</span>
@@ -2031,7 +2031,7 @@ function renderBulkAssess(main) {
     const rosterHtml = !code
       ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">⊞</div><div class="empty-title">Select a code on the left</div><div class="empty-sub">Then set mastery for each student</div></div>`
       : `<div style="display:flex;flex-direction:column;overflow:hidden;height:100%">
-          <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface-alt);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface-alt);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0">
             <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue)">${code}</span>
             <span style="font-size:12px;color:var(--text-muted);flex:1;line-height:1.3">${cd ? (cd.Descriptor||cd.Aspect||'') : ''}</span>
             <button data-ba-action="applyMasteryToAll" data-ba-key="${code}" data-ba-val="Achieved" style="padding:4px 10px;border-radius:4px;border:1px solid var(--green);background:var(--green-dim);color:var(--green);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">✓ All Achieved</button>
@@ -2045,7 +2045,7 @@ function renderBulkAssess(main) {
               const current = pending !== undefined ? pending : (saved || 'Not taught');
               const changed = pending !== undefined && pending !== saved;
               return `<tr style="background:${getStripedRowSurface(si)}${changed?';box-shadow:inset 3px 0 0 var(--gold)':''}">
-                <td style="padding:10px 16px;width:200px">
+                <td style="padding:12px 16px;width:220px">
                   <div style="display:flex;align-items:center;gap:10px">
                     <div class="sc-avatar ${getAvClass(si)}" style="width:28px;height:28px;font-size:11px;flex-shrink:0">${getInitials(s)}</div>
                     <div><div style="font-size:13px;font-weight:600">${s.last_name}, ${s.first_name}</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">Yr ${s.year_level}${changed?' · <span style="color:var(--gold)">changed</span>':''}</div></div>
@@ -2074,7 +2074,7 @@ function renderBulkAssess(main) {
     const studentListHtml = filteredStudents.map((s,si) => {
       const active = s.id === sid;
       const pct = getProgressStats(s.id).pct;
-      return `<div data-ba-action="setBulkStudent" data-ba-val="${s.id}" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:10px;align-items:center;${active?'background:var(--blue-dim);':''}">
+      return `<div data-ba-action="setBulkStudent" data-ba-val="${s.id}" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:10px;align-items:center;${active?'background:var(--blue-dim);':''}">
         <div class="sc-avatar ${getAvClass(si)}" style="width:28px;height:28px;font-size:11px;flex-shrink:0">${getInitials(s)}</div>
         <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">${s.last_name}, ${s.first_name}</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">Yr ${s.year_level}</div></div>
         <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">${pct}%</span>
@@ -2092,7 +2092,7 @@ function renderBulkAssess(main) {
         const current = pending !== undefined ? pending : (saved||'Not taught');
         const changed = pending !== undefined && pending !== saved;
         return `<tr style="background:${getStripedRowSurface(ci)}${changed?';box-shadow:inset 3px 0 0 var(--gold)':''}">
-          <td style="padding:8px 16px;width:130px;vertical-align:top;padding-top:12px"><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue)">${c.Code}</span></td>
+          <td style="padding:10px 16px;width:140px;vertical-align:top;padding-top:12px"><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue)">${c.Code}</span></td>
           <td style="padding:8px 8px;font-size:11px;color:var(--text-muted);line-height:1.4;max-width:300px;vertical-align:top;padding-top:12px">${c.Descriptor||c.Aspect||'—'}</td>
           <td style="padding:8px 16px;vertical-align:top;padding-top:8px"><div style="display:flex;gap:4px;flex-wrap:wrap">${masteryBtns(key, current)}</div></td>
         </tr>`;
@@ -2107,7 +2107,7 @@ function renderBulkAssess(main) {
       <div style="overflow:hidden;display:flex;flex-direction:column">
         ${!student
           ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">◎</div><div class="empty-title">Select a student on the left</div></div>`
-          : `<div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface-alt);display:flex;align-items:center;gap:10px;flex-shrink:0">
+          : `<div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface-alt);display:flex;align-items:center;gap:10px;flex-shrink:0">
               <div class="sc-avatar ${getAvClass(0)}" style="width:28px;height:28px;font-size:11px">${getInitials(student)}</div>
               <div><div style="font-size:13px;font-weight:600">${student.first_name} ${student.last_name}</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">Year ${student.year_level} · ${ba.subjectFilter}</div></div>
             </div>
@@ -2119,7 +2119,7 @@ function renderBulkAssess(main) {
   const modeContent = ba.mode === 'by-student' ? buildByStudent() : buildByCode();
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:10px 20px">
+    <div class="topbar" style="flex-wrap:wrap;gap:8px;padding:14px 24px">
       <div class="topbar-title" style="margin-right:4px">Bulk Assess</div>
       ${fBtn('By Code',    ba.mode==='by-code',    "setBulkMode('by-code')")}
       ${fBtn('By Student', ba.mode==='by-student', "setBulkMode('by-student')")}
@@ -2863,7 +2863,7 @@ function renderCoverage(main) {
     }
 
     const studentHeaders = students.map(s =>
-      `<th style="padding:4px 6px;text-align:center;border-bottom:1px solid var(--border);writing-mode:vertical-rl;transform:rotate(180deg);height:80px;vertical-align:bottom;font-size:10px;color:var(--text-muted);font-weight:600;cursor:pointer;white-space:nowrap" onclick="openStudentDetail('${s.id}')" title="${s.first_name} ${s.last_name}">
+      `<th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);writing-mode:vertical-rl;transform:rotate(180deg);height:92px;vertical-align:bottom;font-size:11px;color:var(--text-muted);font-weight:600;cursor:pointer;white-space:nowrap" onclick="openStudentDetail('${s.id}')" title="${s.first_name} ${s.last_name}">
         ${s.first_name} ${s.last_name[0]}.
       </th>`
     ).join('');
@@ -2899,17 +2899,17 @@ function renderCoverage(main) {
           else if (mastery === 'Emerging')   { bg='var(--rust)';     cellTitle=`Emerging${lastDate?' · '+lastDate:''}`;        dot='○'; }
           else if (taught)                   { bg='var(--blue-dim)'; cellTitle=`Taught ${lastDate} · not assessed`;            dot='·'; }
           else                               { bg='transparent';     cellTitle='Not taught yet';                               dot=' '; }
-          return `<td style="padding:2px;text-align:center;border-bottom:1px solid var(--border);border-right:1px solid var(--border)" title="${s.first_name} ${s.last_name} · ${cellTitle}">
-            <div style="width:20px;height:20px;border-radius:3px;background:${bg};margin:auto;display:flex;align-items:center;justify-content:center;font-size:10px;color:${mastery!=='Not taught'?'var(--primary-contrast)':'var(--text3)'}">${dot}</div>
+          return `<td style="padding:3px;text-align:center;border-bottom:1px solid var(--border);border-right:1px solid var(--border)" title="${s.first_name} ${s.last_name} · ${cellTitle}">
+            <div style="width:22px;height:22px;border-radius:4px;background:${bg};margin:auto;display:flex;align-items:center;justify-content:center;font-size:10px;color:${mastery!=='Not taught'?'var(--primary-contrast)':'var(--text3)'}">${dot}</div>
           </td>`;
         }).join('');
 
         return `<tr style="background:${getStripedRowSurface(ci)}"
           onmouseenter="showCoverageTooltip(event,'${c.Code}','${fullDesc}','${c.Subject||''}','${c.Strand||''}')"
           onmouseleave="hideCoverageTooltip()">
-          <td style="padding:5px 8px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(ci)}">
+          <td style="padding:7px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(ci)}">
             <div style="font-family:'DM Mono',monospace;font-size:10px;color:${col}">${c.Code}</div>
-            <div style="font-size:10px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(c.Descriptor||c.Aspect||'').slice(0,42)}…</div>
+            <div style="font-size:11px;color:var(--text3);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(c.Descriptor||c.Aspect||'').slice(0,42)}…</div>
           </td>
           ${cells}
           <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap">
@@ -2954,7 +2954,7 @@ function renderCoverage(main) {
     : [];
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:12px 20px">
+    <div class="topbar" style="flex-wrap:wrap;gap:8px;padding:14px 24px">
       <div class="topbar-title">Coverage Gaps</div>
       <!-- Summary stats -->
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -3046,7 +3046,7 @@ function renderStandardsJudgments(main) {
       const sid = std['Achievement Standard ID'] || std['Aspect ID'] || '';
       const readyCount = students.filter(s => getStandardReadiness(s.id, sid).pct >= 60).length;
       const hasLinks = !getStandardReadiness(students[0]?.id || '', sid).noLinks;
-      return `<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);min-width:160px;max-width:200px;vertical-align:bottom;border-left:1px solid var(--border)">
+      return `<th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);min-width:170px;max-width:220px;vertical-align:bottom;border-left:1px solid var(--border)">
         <div style="font-family:'DM Mono',monospace;font-size:9px;color:${col};margin-bottom:3px">${sid}</div>
         <div style="font-size:9px;color:var(--text-muted);line-height:1.3;margin-bottom:4px">${(std['Standard Text']||'').slice(0,80)}${(std['Standard Text']||'').length>80?'…':''}</div>
         ${readyCount > 0 ? `<div style="font-size:9px;color:var(--gold)">⚡ ${readyCount} student${readyCount>1?'s':''} ready</div>` : ''}
@@ -3073,14 +3073,14 @@ function renderStandardsJudgments(main) {
         const scaleItem = j ? getScaleItem(j.judgment) : null;
         const isLocked  = j?.locked || false;
 
-        return `<td style="padding:4px 6px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);vertical-align:top">
+        return `<td style="padding:6px 8px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);vertical-align:top">
           <!-- Readiness bar — only show if there are linked codes -->
           ${!readiness.noLinks ? `<div style="height:3px;background:var(--surface-alt);border-radius:2px;margin-bottom:4px;overflow:hidden">
             <div style="height:100%;width:${readiness.pct}%;background:${readiness.pct>=60?'var(--gold)':'var(--border2)'};border-radius:2px"></div>
           </div>` : ''}
           <!-- Judgment button — disabled if locked -->
           <button ${isLocked ? '' : `data-sj-open="${s.id}|${sid}"`}
-            style="width:100%;padding:4px 6px;border-radius:4px;border:1px solid ${scaleItem?scaleItem.colour:'var(--border2)'};background:${scaleItem?scaleItem.bg:'none'};color:${scaleItem?scaleItem.colour:'var(--text3)'};font-size:9px;cursor:${isLocked?'default':'pointer'};text-align:left;display:flex;align-items:center;gap:4px;opacity:${isLocked?'0.85':'1'}">
+            style="width:100%;padding:6px 7px;border-radius:4px;border:1px solid ${scaleItem?scaleItem.colour:'var(--border2)'};background:${scaleItem?scaleItem.bg:'none'};color:${scaleItem?scaleItem.colour:'var(--text3)'};font-size:9px;cursor:${isLocked?'default':'pointer'};text-align:left;display:flex;align-items:center;gap:4px;opacity:${isLocked?'0.85':'1'}">
             ${isLocked ? '<span style="font-size:8px" title="Locked for reporting">🔒</span>' : ''}
             <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${scaleItem ? scaleItem.label : '— Rate'}</span>
           </button>
@@ -3090,7 +3090,7 @@ function renderStandardsJudgments(main) {
       }).join('');
 
       return `<tr style="background:${getStripedRowSurface(si)}">
-        <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(si)};min-width:160px">
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(si)};min-width:170px">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0;cursor:pointer" onclick="openStudentDetail('${s.id}')">${getInitials(s)}</div>
             <div>
@@ -3114,7 +3114,7 @@ function renderStandardsJudgments(main) {
         <table style="border-collapse:collapse;min-width:${180+visibleStandards.length*170}px">
           <thead style="position:sticky;top:0;z-index:5;background:var(--surface)">
             <tr style="background:var(--surface-alt)">
-              <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
               ${stdHeaders}
             </tr>
           </thead>
@@ -3133,7 +3133,7 @@ function renderStandardsJudgments(main) {
   }
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:12px 20px">
+    <div class="topbar" style="flex-wrap:wrap;gap:8px;padding:14px 24px">
       <div class="topbar-title">Standards Judgments</div>
       <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">SUBJECT</span>
@@ -3331,14 +3331,14 @@ function renderProgressionPlacement(main) {
 
         // Encode element and subElement safely as data attributes
         return `<tr style="background:${getStripedRowSurface(si)}">
-          <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(si)}">
+          <td style="padding:8px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(si)}">
             <div style="display:flex;align-items:center;gap:8px">
               <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0;cursor:pointer" onclick="openStudentDetail('${s.id}')">${getInitials(s)}</div>
               <div style="font-size:12px;font-weight:600;cursor:pointer" onclick="openStudentDetail('${s.id}')">${s.first_name} ${s.last_name}</div>
             </div>
           </td>
           <!-- Current level -->
-          <td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">
+          <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center">
             <button data-pp-open="${s.id}"
               data-pp-element="${activeElement.replace(/"/g,'&quot;')}"
               data-pp-subelement="${subEl.replace(/"/g,'&quot;')}"
@@ -3348,7 +3348,7 @@ function renderProgressionPlacement(main) {
             ${placement?.date ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);margin-top:2px">${placement.date}</div>` : ''}
           </td>
           <!-- Next step -->
-          <td style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-muted);line-height:1.4;max-width:320px">
+          <td style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-muted);line-height:1.4;max-width:320px">
             ${nextIndicator
               ? `<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);background:var(--teal-dim);padding:1px 5px;border-radius:3px;margin-right:5px">L${nextLevel} next</span>${nextIndicator['Indicator text (no examples)']||nextIndicator['Indicator text (verbatim)']||''}`
               : currentLevel
@@ -3356,7 +3356,7 @@ function renderProgressionPlacement(main) {
                 : `<span style="color:var(--text3);font-size:10px">Set a level to see next step</span>`}
           </td>
           <!-- External level -->
-          <td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">
+          <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center">
             ${placement?.ext_value
               ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold)" title="${placement.ext_label||''}">${placement.ext_value}</span>`
               : `<span style="color:var(--text3);font-size:10px">—</span>`}
@@ -3388,10 +3388,10 @@ function renderProgressionPlacement(main) {
           <table style="width:100%;border-collapse:collapse;min-width:600px">
             <thead>
               <tr style="background:var(--surface-alt)">
-                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;min-width:160px">Student</th>
-                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:100px">Current Level</th>
-                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Next Step Indicator</th>
-                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:100px">External</th>
+                <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;min-width:160px">Student</th>
+                <th style="padding:8px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;width:100px">Current Level</th>
+                <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase">Next Step Indicator</th>
+                <th style="padding:8px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;width:100px">External</th>
               </tr>
             </thead>
             <tbody>${studentRows}</tbody>
@@ -3402,7 +3402,7 @@ function renderProgressionPlacement(main) {
   }
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:6px;padding:12px 20px">
+    <div class="topbar" style="flex-wrap:wrap;gap:8px;padding:14px 24px">
       <div class="topbar-title">Progression Placement</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
         <button data-pp-type="literacy"
@@ -3771,7 +3771,7 @@ function buildClassSettingsSection() {
     : '';
 
   return `<div style="padding:16px 18px">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+      <div style="font-size:12.5px;color:var(--text3);margin-bottom:16px">
         Configure which subjects, strands and curriculum areas each teacher or group is responsible for.
         Untick any option to hide it across Dashboard, Class Overview, Student Detail, Bulk Assess, Standards and reports.
         Settings are saved in your browser.
@@ -3988,7 +3988,7 @@ function renderAdmin(main) {
         title: 'Appearance',
         content: `
           <div style="padding:16px 18px">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
+            <div style="font-size:12.5px;color:var(--text3);margin-bottom:14px">
               Choose how ClassTracker appears for this browser. Auto follows your device setting.
             </div>
             <div class="theme-control" style="max-width:320px">
@@ -4036,7 +4036,7 @@ function renderAdmin(main) {
         title: 'Data / CSV Uploads',
         content: `
           <div style="padding:14px 18px">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+            <div style="font-size:12.5px;color:var(--text3);margin-bottom:16px">
               Upload curriculum CSV files here. Status dots show what has already been loaded in this session.
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
@@ -4059,7 +4059,7 @@ function renderAdmin(main) {
         title: 'Export Data',
         content: `
           <div style="padding:14px 18px">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Download your data as CSV files for backup or use in other tools.</div>
+            <div style="font-size:12.5px;color:var(--text3);margin-bottom:16px">Download your data as CSV files for backup or use in other tools.</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap">
               ${[
                 ['Students',             'exportStudents',    'var(--blue)'],
@@ -4285,7 +4285,7 @@ function buildDlStep1() {
   const sorted = sortStudents(state.students);
   const presentCount = sorted.length - dlState.absentIds.size;
   return `
-    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Tap any student to mark them <strong style="color:var(--rust)">absent</strong>. Everyone else is present.</div>
+    <div style="font-size:12.5px;color:var(--text3);margin-bottom:14px">Tap any student to mark them <strong style="color:var(--rust)">absent</strong>. Everyone else is present.</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${presentCount} present · ${dlState.absentIds.size} absent</div>
       <div style="display:flex;gap:6px">
@@ -4352,7 +4352,7 @@ function buildDlStep2() {
   const presenterCount = state.students.length - dlState.absentIds.size;
 
   return `
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+    <div style="font-size:12.5px;color:var(--text3);margin-bottom:16px">
       Select the curriculum codes taught today to <strong style="color:var(--text)">${presenterCount} present students</strong>.
       Search, browse by subject/strand, or describe the lesson and let AI suggest codes.
     </div>
@@ -5074,7 +5074,7 @@ function renderDailyLog(main) {
   const dates = Object.keys(byDate).sort().reverse();
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:8px">
+    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Session History</div>
       <div style="margin-left:auto;display:flex;gap:8px">
         <button class="btn" style="border-color:var(--gold);color:var(--gold)" onclick="openDailyLogWizard()">✦ Log Today</button>
@@ -5474,7 +5474,7 @@ function renderPlanLog(main) {
   }).join('');
 
   main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:8px">
+    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Plan and Log Learning</div>
       <button class="btn btn-primary" onclick="createPlanEntry()">+ New Plan</button>
       <button class="btn" onclick="showView('bulk-assess')">Go to Bulk Assess</button>

@@ -2,14 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.5.0
- * Last updated: 2026-03-29
+ * THIS FILE IS VERSION: 1.6.0
+ * Last updated: 2026-03-30
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.6.0 - Plan and Log Learning workflow with suggested/confirmed code flow and taught/assessment actions
  * v1.5.0 - Visible class settings entry + teacher-friendly checkboxes + filtering polish
  * v1.4.0 - Class/teacher group settings with subject+strand toggles
  * v1.3.6 - Coverage gaps view, student detail taught filter, dashboard taught stats
@@ -19,7 +20,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 
 // ── GLOBAL CONSTANTS ──
 const SUBJECT_COLOURS = {
@@ -85,6 +86,7 @@ let state = {
   // Stored in localStorage so it persists across sessions
   assessmentScale: null, // loaded in init
   classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
+  planLog: loadPlanLogState(),
 };
 
 // ── GOOGLE SHEETS API ──
@@ -522,6 +524,7 @@ function renderView() {
     case 'overview':                renderClassOverview(main); break;
     case 'bulk-assess':             renderBulkAssess(main); break;
     case 'daily-log':               renderDailyLog(main); break;
+    case 'plan-log':                renderPlanLog(main); break;
     case 'coverage':                renderCoverage(main); break;
     case 'standards-judgments':     renderStandardsJudgments(main); break;
     case 'progression-placement':   renderProgressionPlacement(main); break;
@@ -4949,6 +4952,456 @@ function renderDailyLog(main) {
               </div>`;
           }).join('')
       }
+    </div>
+  `;
+}
+
+
+
+// ════════════════════════════════════════════════════
+// ── PLAN & LOG LEARNING ──
+// local-first planning workflow that links into taught log + Bulk Assess
+// ════════════════════════════════════════════════════
+
+function loadPlanLogState() {
+  try {
+    const raw = localStorage.getItem('ct_plan_log_entries');
+    const entries = raw ? JSON.parse(raw) : [];
+    return {
+      entries: Array.isArray(entries) ? entries : [],
+      activeEntryId: null,
+      filters: { classId: 'all', subject: 'all', status: 'all', date: '' },
+      manualCodeInput: ''
+    };
+  } catch(e) {
+    return { entries: [], activeEntryId: null, filters: { classId: 'all', subject: 'all', status: 'all', date: '' }, manualCodeInput: '' };
+  }
+}
+
+function savePlanLogState() {
+  try { localStorage.setItem('ct_plan_log_entries', JSON.stringify(state.planLog?.entries || [])); } catch(e) {}
+}
+
+function getPlanStatuses() {
+  return ['Draft', 'Planned', 'Partially taught', 'Taught'];
+}
+
+function getPlanEntrySubjects() {
+  return getEnabledSubjectsFromRows(state.curriculumCodes).sort();
+}
+
+function getGroupYearLevels(groupId) {
+  // Current data model has one student roster. Group filter is planning metadata only.
+  // We scope suggestions by available class year levels in the current roster.
+  const years = [...new Set(state.students.map(s => normaliseYear(s.year_level)).filter(Boolean))];
+  return years.length ? years : ['F','1','2','3','4','5','6'];
+}
+
+function getPlanStrands(subject) {
+  if (!subject) return [];
+  return [...new Set(state.curriculumCodes
+    .filter(c => c.Subject === subject && isCurriculumCodeEnabled(c))
+    .map(c => c.Strand).filter(Boolean))].sort();
+}
+
+function getPlanAreas(subject, strand) {
+  if (!subject || !strand) return [];
+  return [...new Set(state.curriculumCodes
+    .filter(c => c.Subject === subject && c.Strand === strand && isCurriculumCodeEnabled(c))
+    .map(c => c['Sub-strand'] || c['Sub Strand']).filter(Boolean))].sort();
+}
+
+function blankPlanEntry() {
+  const groups = state.classSettings?.groups || [];
+  const subjects = getPlanEntrySubjects();
+  const subject = subjects[0] || '';
+  const strands = getPlanStrands(subject);
+  return {
+    id: 'plan_' + Date.now(),
+    date: new Date().toISOString().split('T')[0],
+    classId: (state.classSettings?.activeGroup) || (groups[0]?.id || ''),
+    subject,
+    strand: strands[0] || '',
+    area: '',
+    title: '',
+    learningDescription: '',
+    learningIntention: '',
+    successCriteria: '',
+    status: 'Draft',
+    actuallyTaught: '',
+    suggestedCodes: [],
+    confirmedCodes: [],
+    assessmentPrompt: '',
+    lastUpdated: new Date().toISOString()
+  };
+}
+
+function getActivePlanEntry() {
+  const pl = state.planLog;
+  if (!pl || !pl.entries.length) return null;
+  let entry = pl.entries.find(e => e.id === pl.activeEntryId);
+  if (!entry) {
+    entry = pl.entries[0];
+    pl.activeEntryId = entry.id;
+  }
+  return entry;
+}
+
+function createPlanEntry() {
+  const entry = blankPlanEntry();
+  state.planLog.entries.unshift(entry);
+  state.planLog.activeEntryId = entry.id;
+  savePlanLogState();
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function updatePlanEntryField(field, value) {
+  const entry = getActivePlanEntry();
+  if (!entry) return;
+  entry[field] = value;
+  if (field === 'subject') {
+    const strands = getPlanStrands(value);
+    entry.strand = strands.includes(entry.strand) ? entry.strand : (strands[0] || '');
+    const areas = getPlanAreas(entry.subject, entry.strand);
+    entry.area = areas.includes(entry.area) ? entry.area : '';
+  }
+  if (field === 'strand') {
+    const areas = getPlanAreas(entry.subject, value);
+    entry.area = areas.includes(entry.area) ? entry.area : '';
+  }
+  entry.lastUpdated = new Date().toISOString();
+  savePlanLogState();
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function scoreCodeSuggestion(row, tokens) {
+  const text = [row.Description, row.Strand, row['Sub-strand'] || row['Sub Strand'] || ''].join(' ').toLowerCase();
+  let score = 0;
+  tokens.forEach(t => { if (t && text.includes(t)) score += (t.length > 6 ? 2 : 1); });
+  return score;
+}
+
+function suggestPlanCodes() {
+  const entry = getActivePlanEntry();
+  if (!entry) return;
+  if (!entry.learningDescription?.trim()) { toast('Add the planned learning description first', 'error'); return; }
+  const years = getGroupYearLevels(entry.classId).map(csvYear);
+  const text = `${entry.title || ''} ${entry.learningDescription || ''} ${entry.learningIntention || ''} ${entry.successCriteria || ''}`.toLowerCase();
+  const tokens = [...new Set(text.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 4))].slice(0, 25);
+
+  const pool = state.curriculumCodes.filter(c =>
+    c.Subject === entry.subject &&
+    (!entry.strand || c.Strand === entry.strand) &&
+    (!entry.area || (c['Sub-strand'] || c['Sub Strand']) === entry.area) &&
+    years.includes(c.Year_Level) &&
+    isCurriculumCodeEnabled(c)
+  );
+
+  const ranked = pool
+    .map(row => ({
+      code: row.Code,
+      description: row.Description || '',
+      score: scoreCodeSuggestion(row, tokens)
+    }))
+    .filter(r => r.score > 0 || !tokens.length)
+    .sort((a,b) => b.score - a.score || a.code.localeCompare(b.code))
+    .slice(0, 12);
+
+  entry.suggestedCodes = ranked.map(r => ({ code: r.code, description: r.description }));
+  entry.lastUpdated = new Date().toISOString();
+  savePlanLogState();
+  toast(`Suggested ${entry.suggestedCodes.length} code${entry.suggestedCodes.length===1?'':'s'}. Confirm the ones you want to use.`, 'success');
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function removeSuggestedCode(code) {
+  const entry = getActivePlanEntry();
+  if (!entry) return;
+  entry.suggestedCodes = entry.suggestedCodes.filter(c => c.code !== code);
+  savePlanLogState();
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function confirmSuggestedCode(code) {
+  const entry = getActivePlanEntry();
+  if (!entry) return;
+  if (!entry.confirmedCodes.includes(code)) entry.confirmedCodes.push(code);
+  savePlanLogState();
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function removeConfirmedCode(code) {
+  const entry = getActivePlanEntry();
+  if (!entry) return;
+  entry.confirmedCodes = entry.confirmedCodes.filter(c => c !== code);
+  savePlanLogState();
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function addManualPlanCode() {
+  const entry = getActivePlanEntry();
+  if (!entry) return;
+  const input = document.getElementById('pl-manual-code-input');
+  const code = (input?.value || '').trim();
+  if (!code) return;
+  const row = state.curriculumCodes.find(c => c.Code.toLowerCase() === code.toLowerCase());
+  if (!row) { toast('Code not found in loaded curriculum data', 'error'); return; }
+  if (!isCurriculumCodeEnabled(row)) { toast('That code is disabled in Class Settings', 'error'); return; }
+  if (!entry.confirmedCodes.includes(row.Code)) entry.confirmedCodes.push(row.Code);
+  input.value = '';
+  savePlanLogState();
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+async function markPlanAsTaught(entryId = null) {
+  const entry = entryId ? state.planLog.entries.find(e => e.id === entryId) : getActivePlanEntry();
+  if (!entry) return;
+  if (!entry.confirmedCodes.length) { toast('Confirm at least one curriculum code before marking as taught', 'error'); return; }
+
+  const date = entry.date || new Date().toISOString().split('T')[0];
+  const entries = [];
+  state.students.forEach(s => {
+    entry.confirmedCodes.forEach(code => {
+      const dup = state.taughtLog.some(t => t.student_id === s.id && t.code === code && t.date === date);
+      if (!dup) entries.push({ date, student_id: s.id, code, notes: entry.actuallyTaught || 'Logged via Plan and Log Learning' });
+    });
+  });
+
+  if (entries.length) {
+    setSyncing(true);
+    try {
+      const result = await apiCall('saveTaughtLog', { entries });
+      entries.forEach((e, i) => state.taughtLog.push({ id: result?.ids?.[i] || ('local_' + Date.now() + '_' + i), ...e }));
+    } catch(err) {
+      entries.forEach((e, i) => state.taughtLog.push({ id: 'local_' + Date.now() + '_' + i, ...e }));
+      toast('Saved taught entries locally (sync issue)', 'error');
+    }
+    setSyncing(false);
+  }
+
+  entry.status = 'Taught';
+  entry.lastUpdated = new Date().toISOString();
+  savePlanLogState();
+  checkDailyLogBadge();
+  toast(`Marked as taught. ${entries.length} taught log entr${entries.length===1?'y':'ies'} added.`, 'success');
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function generateAssessmentPrompt(entry) {
+  const codeLines = entry.confirmedCodes
+    .map(code => {
+      const row = state.curriculumCodes.find(c => c.Code === code);
+      return `- ${code}: ${row?.Description || 'Curriculum code'}`;
+    })
+    .join('\n');
+  return [
+    `Assessment prompt for ${entry.title || 'planned lesson'} (${entry.subject})`,
+    `Planned learning: ${entry.learningDescription || 'N/A'}`,
+    `Actually taught: ${entry.actuallyTaught || 'N/A'}`,
+    'Confirmed curriculum codes:',
+    codeLines || '- None confirmed',
+    'Create a short formative assessment task with success criteria-aligned evidence checks and a simple rubric language for primary students.'
+  ].join('\n');
+}
+
+function usePlanForAssessment(entryId = null) {
+  const entry = entryId ? state.planLog.entries.find(e => e.id === entryId) : getActivePlanEntry();
+  if (!entry) return;
+  if (!entry.confirmedCodes.length) { toast('Confirm curriculum codes first', 'error'); return; }
+  entry.assessmentPrompt = generateAssessmentPrompt(entry);
+  entry.lastUpdated = new Date().toISOString();
+  savePlanLogState();
+
+  if (!state.bulkAssess) state.bulkAssess = { mode:'by-code', yearFilter:'all', subjectFilter:'English', strandFilter:'all', selectedCode:null, selectedStudent:null, date:new Date().toISOString().split('T')[0], pendingChanges:{} };
+  state.bulkAssess.subjectFilter = entry.subject || state.bulkAssess.subjectFilter;
+  state.bulkAssess.selectedCode = entry.confirmedCodes[0] || null;
+  state.bulkAssess.date = entry.date || state.bulkAssess.date;
+  toast('Assessment prompt generated. You can now record evidence in Bulk Assess.', 'success');
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function selectPlanEntry(id) {
+  state.planLog.activeEntryId = id;
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function setPlanFilter(field, value) {
+  state.planLog.filters[field] = value;
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function renderPlanLog(main) {
+  if (!state.planLog) state.planLog = loadPlanLogState();
+  const pl = state.planLog;
+  const statuses = getPlanStatuses();
+  const classes = state.classSettings?.groups || [];
+
+  if (!pl.entries.length) {
+    const first = blankPlanEntry();
+    pl.entries = [first];
+    pl.activeEntryId = first.id;
+    savePlanLogState();
+  }
+
+  const active = getActivePlanEntry();
+  const subjects = getPlanEntrySubjects();
+  if (active && active.subject && !subjects.includes(active.subject)) {
+    active.subject = subjects[0] || '';
+    active.strand = '';
+  }
+
+  const strands = getPlanStrands(active?.subject || '');
+  const areas = getPlanAreas(active?.subject || '', active?.strand || '');
+
+  const filteredEntries = pl.entries.filter(e =>
+    (pl.filters.classId === 'all' || e.classId === pl.filters.classId) &&
+    (pl.filters.subject === 'all' || e.subject === pl.filters.subject) &&
+    (pl.filters.status === 'all' || e.status === pl.filters.status) &&
+    (!pl.filters.date || e.date === pl.filters.date)
+  );
+
+  function className(classId) {
+    return classes.find(c => c.id === classId)?.name || 'Class';
+  }
+
+  const suggestedRows = (active?.suggestedCodes || []).map(s => `
+    <div style="display:grid;grid-template-columns:150px 1fr auto;gap:8px;align-items:start;padding:7px 0;border-bottom:1px solid var(--border)">
+      <label style="display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:10px;color:var(--blue)">
+        <input type="checkbox" onchange="this.checked?confirmSuggestedCode('${s.code}'):removeConfirmedCode('${s.code}')" ${(active.confirmedCodes||[]).includes(s.code)?'checked':''}>
+        ${s.code}
+      </label>
+      <div style="font-size:11px;color:var(--text2)">${s.description || '—'}</div>
+      <button class="btn" style="padding:3px 8px" onclick="removeSuggestedCode('${s.code}')">Remove</button>
+    </div>`).join('');
+
+  const confirmedRows = (active?.confirmedCodes || []).map(code => {
+    const row = state.curriculumCodes.find(c => c.Code === code);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+      <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:10px">${code}</span>
+      <span style="font-size:11px;color:var(--text3)">${row?.Description || ''}</span>
+      <button class="btn" style="margin-left:auto;padding:2px 8px" onclick="removeConfirmedCode('${code}')">✕</button>
+    </div>`;
+  }).join('');
+
+  main.innerHTML = `
+    <div class="topbar" style="flex-wrap:wrap;gap:8px">
+      <div class="topbar-title">Plan and Log Learning</div>
+      <button class="btn btn-primary" onclick="createPlanEntry()">+ New Plan</button>
+      <button class="btn" onclick="showView('bulk-assess')">Go to Bulk Assess</button>
+    </div>
+    <div class="content">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><div class="card-title">Plan entries</div></div>
+        <div style="padding:12px 14px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <select class="form-input" style="max-width:180px" onchange="setPlanFilter('classId',this.value)">
+              <option value="all" ${pl.filters.classId==='all'?'selected':''}>All classes</option>
+              ${classes.map(c => `<option value="${c.id}" ${pl.filters.classId===c.id?'selected':''}>${c.name}</option>`).join('')}
+            </select>
+            <select class="form-input" style="max-width:180px" onchange="setPlanFilter('subject',this.value)">
+              <option value="all" ${pl.filters.subject==='all'?'selected':''}>All subjects</option>
+              ${subjects.map(s => `<option value="${s}" ${pl.filters.subject===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+            <select class="form-input" style="max-width:180px" onchange="setPlanFilter('status',this.value)">
+              <option value="all" ${pl.filters.status==='all'?'selected':''}>All statuses</option>
+              ${statuses.map(st => `<option value="${st}" ${pl.filters.status===st?'selected':''}>${st}</option>`).join('')}
+            </select>
+            <input class="form-input" type="date" value="${pl.filters.date||''}" onchange="setPlanFilter('date',this.value)" style="max-width:160px">
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;min-width:720px">
+              <thead>
+                <tr style="background:var(--surface2)">
+                  <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Date</th>
+                  <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Class</th>
+                  <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Subject</th>
+                  <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Title</th>
+                  <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Status</th>
+                  <th style="padding:7px 8px;text-align:center;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Confirmed</th>
+                  <th style="padding:7px 8px;text-align:right;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredEntries.map(e => `<tr style="border-bottom:1px solid var(--border)">
+                  <td style="padding:8px">${e.date || '—'}</td>
+                  <td style="padding:8px">${className(e.classId)}</td>
+                  <td style="padding:8px">${e.subject || '—'}</td>
+                  <td style="padding:8px">${e.title || '<span style=\"color:var(--text3)\">Untitled plan</span>'}</td>
+                  <td style="padding:8px"><span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface2)">${e.status || 'Draft'}</span></td>
+                  <td style="padding:8px;text-align:center;font-family:'DM Mono',monospace">${(e.confirmedCodes||[]).length}</td>
+                  <td style="padding:8px;text-align:right">
+                    <button class="btn" style="padding:2px 8px" onclick="selectPlanEntry('${e.id}')">Open/Edit</button>
+                    <button class="btn" style="padding:2px 8px" onclick="markPlanAsTaught('${e.id}')">Mark taught</button>
+                    <button class="btn" style="padding:2px 8px" onclick="usePlanForAssessment('${e.id}')">Use for assessment</button>
+                  </td>
+                </tr>`).join('') || `<tr><td colspan="7" style="padding:14px;color:var(--text3)">No matching plan entries.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      ${active ? `<div class="card">
+        <div class="card-head">
+          <div class="card-title">Edit plan</div>
+          <div style="font-size:10px;color:var(--text3)">Last updated: ${new Date(active.lastUpdated || Date.now()).toLocaleString()}</div>
+        </div>
+        <div style="padding:16px 18px">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">Basic info</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px">
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Date</label><input class="form-input" type="date" value="${active.date||''}" onchange="updatePlanEntryField('date',this.value)"></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Class / teacher group</label><select class="form-input" onchange="updatePlanEntryField('classId',this.value)">${classes.map(c => `<option value="${c.id}" ${active.classId===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Subject</label><select class="form-input" onchange="updatePlanEntryField('subject',this.value)">${subjects.map(s => `<option value="${s}" ${active.subject===s?'selected':''}>${s}</option>`).join('')}</select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Strand</label><select class="form-input" onchange="updatePlanEntryField('strand',this.value)">${strands.map(st => `<option value="${st}" ${active.strand===st?'selected':''}>${st}</option>`).join('')}</select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Curriculum area (optional)</label><select class="form-input" onchange="updatePlanEntryField('area',this.value)"><option value="">All areas</option>${areas.map(a => `<option value="${a}" ${active.area===a?'selected':''}>${a}</option>`).join('')}</select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Status</label><select class="form-input" onchange="updatePlanEntryField('status',this.value)">${statuses.map(st => `<option value="${st}" ${active.status===st?'selected':''}>${st}</option>`).join('')}</select></div>
+          </div>
+
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin:8px 0">Learning description</div>
+          <div class="form-group"><label class="form-label">Lesson title</label><input class="form-input" value="${active.title || ''}" oninput="updatePlanEntryField('title',this.value)"></div>
+          <div class="form-group"><label class="form-label">Planned learning description</label><textarea class="form-input" style="min-height:90px" oninput="updatePlanEntryField('learningDescription',this.value)">${active.learningDescription || ''}</textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group"><label class="form-label">Learning intention (optional)</label><textarea class="form-input" style="min-height:70px" oninput="updatePlanEntryField('learningIntention',this.value)">${active.learningIntention || ''}</textarea></div>
+            <div class="form-group"><label class="form-label">Success criteria (optional)</label><textarea class="form-input" style="min-height:70px" oninput="updatePlanEntryField('successCriteria',this.value)">${active.successCriteria || ''}</textarea></div>
+          </div>
+
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin:10px 0 8px">Curriculum codes</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+            <button class="btn btn-primary" onclick="suggestPlanCodes()">Suggest Curriculum Codes</button>
+            <span style="font-size:11px;color:var(--text3)">Suggestions are never auto-confirmed. Tick only what you approve.</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Suggested codes</div>
+              ${suggestedRows || `<div style="font-size:11px;color:var(--text3)">No suggestions yet. Click <strong>Suggest Curriculum Codes</strong>.</div>`}
+            </div>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Confirmed codes (${(active.confirmedCodes||[]).length})</div>
+              ${confirmedRows || `<div style="font-size:11px;color:var(--text3)">No confirmed codes yet.</div>`}
+              <div style="display:flex;gap:6px;margin-top:8px">
+                <input id="pl-manual-code-input" class="form-input" placeholder="Add code manually (e.g. AC9M2N03)">
+                <button class="btn" onclick="addManualPlanCode()">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin:14px 0 8px">Teaching status</div>
+          <div class="form-group"><label class="form-label">What was actually taught</label><textarea class="form-input" style="min-height:80px" oninput="updatePlanEntryField('actuallyTaught',this.value)">${active.actuallyTaught || ''}</textarea></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="updatePlanEntryField('status','Draft')">Set Draft</button>
+            <button class="btn" onclick="updatePlanEntryField('status','Planned')">Set Planned</button>
+            <button class="btn" onclick="updatePlanEntryField('status','Partially taught')">Set Partially taught</button>
+            <button class="btn btn-primary" onclick="markPlanAsTaught()">Mark as Taught</button>
+          </div>
+
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin:14px 0 8px">Assessment</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <button class="btn btn-primary" onclick="usePlanForAssessment()">Use for Assessment</button>
+            <button class="btn" onclick="showView('bulk-assess')">Open existing assessment workflow</button>
+          </div>
+          <textarea class="form-input" style="min-height:120px" readonly>${active.assessmentPrompt || 'Assessment prompt will appear here after clicking Use for Assessment.'}</textarea>
+        </div>
+      </div>` : ''}
     </div>
   `;
 }

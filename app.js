@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.7.2
+ * THIS FILE IS VERSION: 1.7.3
  * Last updated: 2026-03-30
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.7.3 - Unified Data & Settings accordion: all major sections collapsible and closed by default
  * v1.7.2 - Data & Settings accordion sections for cleaner scanning (Class & Teacher Groups open by default)
  * v1.7.1 - Data & Settings layout cleanup: moved theme + CSV uploads into the main settings view
  * v1.7.0 - Light/Dark/Auto theme toggle with persistent display preference
@@ -23,7 +24,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.7.2';
+const APP_VERSION = '1.7.3';
 const THEME_STORAGE_KEY = 'app_theme';
 let systemThemeMediaQuery = null;
 
@@ -144,9 +145,13 @@ let state = {
   planLog: loadPlanLogState(),
   themePreference: 'auto',
   adminAccordion: {
-    classGroups: true,
+    classGroups: false,
     appearance: false,
     dataUploads: false,
+    assessmentScale: false,
+    exportData: false,
+    dataStatus: false,
+    sheetsSetup: false,
   },
 };
 
@@ -3798,7 +3803,15 @@ function buildClassSettingsSection() {
 
 function isAdminAccordionOpen(key) {
   if (!state.adminAccordion) {
-    state.adminAccordion = { classGroups: true, appearance: false, dataUploads: false };
+    state.adminAccordion = {
+      classGroups: false,
+      appearance: false,
+      dataUploads: false,
+      assessmentScale: false,
+      exportData: false,
+      dataStatus: false,
+      sheetsSetup: false,
+    };
   }
   return !!state.adminAccordion[key];
 }
@@ -3986,25 +3999,28 @@ function renderAdmin(main) {
       })}
 
       <!-- Assessment Scale configurator -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-head">
-          <div class="card-title">Assessment Scale</div>
-          <button class="btn" onclick="resetAssessmentScale()">↺ Reset to defaults</button>
-        </div>
-        <div style="padding:16px 18px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:16px">
-            Configure the scale used for Standards Judgments. Changes are saved locally in your browser.
-            Each level needs a unique ID (no spaces), a label, and a colour.
+      ${buildAdminAccordionSection({
+        key: 'assessmentScale',
+        title: 'Assessment Scale',
+        content: `
+          <div style="padding:16px 18px">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+              <button class="btn" onclick="resetAssessmentScale()">↺ Reset to defaults</button>
+            </div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:16px">
+              Configure the scale used for Standards Judgments. Changes are saved locally in your browser.
+              Each level needs a unique ID (no spaces), a label, and a colour.
+            </div>
+            <div id="scale-editor">
+              ${buildScaleEditor(scale)}
+            </div>
+            <div style="display:flex;gap:8px;margin-top:14px">
+              <button class="btn btn-primary" onclick="saveScaleFromEditor()">✓ Save Scale</button>
+              <button class="btn" onclick="addScaleItem()">+ Add Level</button>
+            </div>
           </div>
-          <div id="scale-editor">
-            ${buildScaleEditor(scale)}
-          </div>
-          <div style="display:flex;gap:8px;margin-top:14px">
-            <button class="btn btn-primary" onclick="saveScaleFromEditor()">✓ Save Scale</button>
-            <button class="btn" onclick="addScaleItem()">+ Add Level</button>
-          </div>
-        </div>
-      </div>
+        `
+      })}
 
       <!-- Data / CSV Uploads -->
       ${buildAdminAccordionSection({
@@ -4030,58 +4046,67 @@ function renderAdmin(main) {
       })}
 
       <!-- Data Export -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-head"><div class="card-title">Export Data</div></div>
-        <div style="padding:14px 18px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Download your data as CSV files for backup or use in other tools.</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            ${[
-              ['Students',             'exportStudents',    'var(--blue)'],
-              ['Progress records',     'exportProgress',    'var(--green)'],
-              ['Taught log',           'exportTaughtLog',   'var(--gold)'],
-              ['Standards judgments',  'exportJudgments',   'var(--purple)'],
-              ['Progression placements','exportPlacements', 'var(--teal)'],
-            ].map(([label, fn, col]) => `<button onclick="${fn}()"
-              style="padding:8px 16px;border-radius:6px;border:1px solid ${col};background:none;color:${col};font-family:'Instrument Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
-              ↓ ${label}
-            </button>`).join('')}
-            <button onclick="exportAll()"
-              style="padding:8px 16px;border-radius:6px;border:none;background:var(--blue);color:#0f1117;font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer">
-              ↓ Export All
-            </button>
+      ${buildAdminAccordionSection({
+        key: 'exportData',
+        title: 'Export Data',
+        content: `
+          <div style="padding:14px 18px">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Download your data as CSV files for backup or use in other tools.</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              ${[
+                ['Students',             'exportStudents',    'var(--blue)'],
+                ['Progress records',     'exportProgress',    'var(--green)'],
+                ['Taught log',           'exportTaughtLog',   'var(--gold)'],
+                ['Standards judgments',  'exportJudgments',   'var(--purple)'],
+                ['Progression placements','exportPlacements', 'var(--teal)'],
+              ].map(([label, fn, col]) => `<button onclick="${fn}()"
+                style="padding:8px 16px;border-radius:6px;border:1px solid ${col};background:none;color:${col};font-family:'Instrument Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+                ↓ ${label}
+              </button>`).join('')}
+              <button onclick="exportAll()"
+                style="padding:8px 16px;border-radius:6px;border:none;background:var(--blue);color:#0f1117;font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer">
+                ↓ Export All
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        `
+      })}
 
       <!-- CSV status -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-head"><div class="card-title">Data Status</div></div>
-        <div style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
-          ${[
-            ['Content Descriptors', state.curriculumCodes.length],
-            ['Achievement Standards', state.standards.length],
-            ['Literacy Progressions', state.progressions.length],
-            ['Numeracy Progressions', state.numeracyProgressions.length],
-            ['Students', state.students.length],
-            ['Progress records', state.progress.length],
-            ['Taught log entries', state.taughtLog.length],
-            ['Standards judgments', state.standardsJudgments.length],
-            ['Progression placements', state.progressionPlacements.length],
-          ].map(([label, count]) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:6px">
-            <span style="font-size:12px;color:var(--text2)">${label}</span>
-            <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${count>0?'var(--green)':'var(--text3)'}">${count}</span>
-          </div>`).join('')}
-        </div>
-      </div>
+      ${buildAdminAccordionSection({
+        key: 'dataStatus',
+        title: 'Data Status',
+        content: `
+          <div style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+            ${[
+              ['Content Descriptors', state.curriculumCodes.length],
+              ['Achievement Standards', state.standards.length],
+              ['Literacy Progressions', state.progressions.length],
+              ['Numeracy Progressions', state.numeracyProgressions.length],
+              ['Students', state.students.length],
+              ['Progress records', state.progress.length],
+              ['Taught log entries', state.taughtLog.length],
+              ['Standards judgments', state.standardsJudgments.length],
+              ['Progression placements', state.progressionPlacements.length],
+            ].map(([label, count]) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:6px">
+              <span style="font-size:12px;color:var(--text2)">${label}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${count>0?'var(--green)':'var(--text3)'}">${count}</span>
+            </div>`).join('')}
+          </div>
+        `
+      })}
 
       <!-- Apps Script info -->
-      <div class="card">
-        <div class="card-head"><div class="card-title">Google Sheets Setup</div></div>
-        <div style="padding:14px 18px;font-size:12px;color:var(--text3);line-height:1.6">
-          <p style="margin-bottom:8px">Make sure your Apps Script has been updated with the new <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">getStandardsJudgments</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">saveStandardsJudgment</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">getProgressionPlacements</code> and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">saveProgressionPlacement</code> functions.</p>
-          <p>Open your browser console (F12) for the complete Apps Script code to copy.</p>
-        </div>
-      </div>
+      ${buildAdminAccordionSection({
+        key: 'sheetsSetup',
+        title: 'Google Sheets Setup',
+        content: `
+          <div style="padding:14px 18px;font-size:12px;color:var(--text3);line-height:1.6">
+            <p style="margin-bottom:8px">Make sure your Apps Script has been updated with the new <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">getStandardsJudgments</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">saveStandardsJudgment</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">getProgressionPlacements</code> and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">saveProgressionPlacement</code> functions.</p>
+            <p>Open your browser console (F12) for the complete Apps Script code to copy.</p>
+          </div>
+        `
+      })}
 
     </div>
   `;

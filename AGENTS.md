@@ -125,3 +125,4 @@ If a feature is user-facing, explain exactly how to test it.
 - Small, focused, safe updates are preferred over large rewrites.
 - Build new systems first, then do refinement in a second pass.
 - For UI work, prioritize clarity, consistency, readability, and teacher usability.
+

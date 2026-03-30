@@ -24,7 +24,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.7.8';
+const APP_VERSION = '1.7.9';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 let systemThemeMediaQuery = null;

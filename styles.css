@@ -34,6 +34,18 @@
   --neutral: #4b5872;
   --neutral-dim: #e2e8f0;
 
+  --space-1: 6px;
+  --space-2: 10px;
+  --space-3: 14px;
+  --space-4: 18px;
+  --space-5: 24px;
+  --space-6: 30px;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 15px;
+
   --status-neutral-text: var(--neutral);
   --status-neutral-bg: var(--neutral-dim);
   --status-neutral-border: #cbd5e1;
@@ -231,7 +243,7 @@ body {
 }
 
 .topbar {
-  padding: 16px 28px;
+  padding: var(--space-4) 30px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -245,8 +257,9 @@ body {
 
 .topbar-title {
   font-family: 'Fraunces', serif;
-  font-size: 20px;
-  font-weight: 400;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.15;
 }
 
 .topbar-actions { margin-left: auto; display: flex; gap: 8px; }
@@ -277,18 +290,21 @@ body {
 
 .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: var(--primary-contrast); }
 
-.content { padding: 24px 28px; flex: 1; }
+.content { padding: 28px 30px; flex: 1; }
+.content > * + * { margin-top: var(--space-5); }
 
 /* ── CARDS ── */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
+.card + .card { margin-top: var(--space-4); }
+
 .card-head {
-  padding: 14px 18px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -297,13 +313,14 @@ body {
 
 .card-title {
   font-family: 'Fraunces', serif;
-  font-size: 15px;
-  font-weight: 400;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 /* ── ADMIN ACCORDION ── */
 .accordion-card {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .accordion-trigger {
@@ -358,15 +375,15 @@ body {
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px 18px;
+  border-radius: 10px;
+  padding: 18px 20px;
   position: relative;
   overflow: hidden;
 }
@@ -385,7 +402,7 @@ body {
 
 .stat-label {
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text3);
@@ -404,7 +421,7 @@ body {
 .stat-card.c-gold .stat-value { color: var(--status-warning-text); }
 .stat-card.c-green .stat-value { color: var(--status-success-text); }
 
-.stat-sub { font-size: 11px; color: var(--text3); }
+.stat-sub { font-size: 12px; color: var(--text3); }
 
 /* ── STUDENT LIST ── */
 .student-grid {
@@ -520,18 +537,18 @@ body {
 
 .codes-table th {
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text3);
-  padding: 10px 14px;
+  padding: 12px 16px;
   text-align: left;
   border-bottom: 1px solid var(--border);
   background: var(--surface-alt);
 }
 
 .codes-table td {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   font-size: 12.5px;
   vertical-align: middle;
@@ -639,7 +656,7 @@ body {
 .form-label {
   display: block;
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: 10.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text3);
@@ -735,7 +752,7 @@ body {
   background: var(--surface-alt);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 7px 12px 7px 32px;
+  padding: 8px 12px 8px 32px;
   color: var(--text);
   font-size: 13px;
   width: 220px;
@@ -877,6 +894,34 @@ body {
 
 .hidden { display: none !important; }
 
+.ui-section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.ui-filter-chip {
+  padding: 5px 11px;
+  border-radius: 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+}
+
+.ui-data-table th {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.ui-data-table td {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+
 /* ── RESPONSIVE / TABLET ── */
 
 /* Tablet (768px - 1024px) — shrink sidebar, keep layout */
@@ -888,8 +933,8 @@ body {
   .sidebar-logo .logo-name { font-size: 14px; }
   .nav-btn { font-size: 11px; padding: 7px 10px; }
   .nav-icon { font-size: 12px; }
-  .topbar { padding: 10px 14px; }
-  .content { padding: 12px 14px; }
+  .topbar { padding: 12px 16px; }
+  .content { padding: 14px 16px; }
   .detail-header { padding: 12px 14px; }
   .stats-row { grid-template-columns: repeat(3, 1fr) !important; }
 }
@@ -971,7 +1016,7 @@ body {
 
   /* Topbar — wrap */
   .topbar { flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
-  .topbar-title { font-size: 15px; }
+  .topbar-title { font-size: 18px; }
 
   /* Tables — horizontal scroll */
   .card { overflow-x: auto; }

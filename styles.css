@@ -47,11 +47,11 @@
   --text-lg: 15px;
   --base-font-size: 16px;
   --base-line-height: 1.5;
-  --dense-header-size: 11.5px;
+  --dense-header-size: 13px;
   --dense-body-size: 14px;
   --dense-line-height: 1.45;
   --helper-size: 13.5px;
-  --label-size: 12px;
+  --label-size: 13px;
 
   --status-neutral-text: var(--neutral);
   --status-neutral-bg: var(--neutral-dim);
@@ -144,11 +144,11 @@ body {
 
 body[data-text-size="large"] {
   --base-font-size: 17px;
-  --dense-header-size: 12.5px;
+  --dense-header-size: 13.5px;
   --dense-body-size: 15px;
   --dense-line-height: 1.55;
   --helper-size: 14.5px;
-  --label-size: 13px;
+  --label-size: 14px;
 }
 
 /* ── LAYOUT ── */
@@ -178,7 +178,7 @@ body[data-text-size="large"] {
 
 .logo-sub {
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: var(--label-size);
   letter-spacing: 0.15em;
   color: var(--text3);
   text-transform: uppercase;
@@ -195,7 +195,7 @@ body[data-text-size="large"] {
 
 .nav-section {
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: var(--label-size);
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text3);
@@ -231,7 +231,7 @@ body[data-text-size="large"] {
 
 .sync-status {
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: var(--label-size);
   letter-spacing: 0.1em;
   color: var(--text3);
   display: flex;
@@ -882,7 +882,7 @@ body[data-text-size="large"] {
 
 .theme-label {
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: var(--label-size);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text3);
@@ -976,7 +976,20 @@ body[data-text-size="large"] {
 #main-content[data-view="coverage"] [style*="font-size:10px"],
 #main-content[data-view="standards-judgments"] [style*="font-size:10px"],
 #main-content[data-view="progression-placement"] [style*="font-size:10px"] {
-  font-size: var(--dense-header-size) !important;
+  font-size: var(--label-size) !important;
+}
+
+#main-content[data-view="overview"] [style*="font-size:8px"],
+#main-content[data-view="bulk-assess"] [style*="font-size:8px"],
+#main-content[data-view="coverage"] [style*="font-size:8px"],
+#main-content[data-view="standards-judgments"] [style*="font-size:8px"],
+#main-content[data-view="progression-placement"] [style*="font-size:8px"],
+#main-content[data-view="overview"] [style*="font-size:9px"],
+#main-content[data-view="bulk-assess"] [style*="font-size:9px"],
+#main-content[data-view="coverage"] [style*="font-size:9px"],
+#main-content[data-view="standards-judgments"] [style*="font-size:9px"],
+#main-content[data-view="progression-placement"] [style*="font-size:9px"] {
+  font-size: var(--label-size) !important;
 }
 
 #main-content[data-view="overview"] [style*="font-size:11px"],
@@ -985,6 +998,35 @@ body[data-text-size="large"] {
 #main-content[data-view="standards-judgments"] [style*="font-size:11px"],
 #main-content[data-view="progression-placement"] [style*="font-size:11px"] {
   font-size: var(--helper-size) !important;
+}
+
+#main-content[data-view="overview"] [style*="font-size:12px"],
+#main-content[data-view="bulk-assess"] [style*="font-size:12px"],
+#main-content[data-view="coverage"] [style*="font-size:12px"],
+#main-content[data-view="standards-judgments"] [style*="font-size:12px"],
+#main-content[data-view="progression-placement"] [style*="font-size:12px"],
+#main-content[data-view="overview"] [style*="font-size:12.5px"],
+#main-content[data-view="bulk-assess"] [style*="font-size:12.5px"],
+#main-content[data-view="coverage"] [style*="font-size:12.5px"],
+#main-content[data-view="standards-judgments"] [style*="font-size:12.5px"],
+#main-content[data-view="progression-placement"] [style*="font-size:12.5px"] {
+  font-size: var(--helper-size) !important;
+}
+
+#main-content[data-view="overview"] .topbar-actions > span,
+#main-content[data-view="bulk-assess"] .topbar-actions > span,
+#main-content[data-view="coverage"] .topbar-actions > span,
+#main-content[data-view="standards-judgments"] .topbar-actions > span,
+#main-content[data-view="progression-placement"] .topbar-actions > span {
+  font-size: var(--label-size) !important;
+}
+
+#main-content[data-view="overview"] .topbar-actions button,
+#main-content[data-view="bulk-assess"] .topbar-actions button,
+#main-content[data-view="coverage"] .topbar-actions button,
+#main-content[data-view="standards-judgments"] .topbar-actions button,
+#main-content[data-view="progression-placement"] .topbar-actions button {
+  font-size: var(--label-size) !important;
 }
 
 

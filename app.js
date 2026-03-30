@@ -24,8 +24,9 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.7.6';
+const APP_VERSION = '1.7.8';
 const THEME_STORAGE_KEY = 'app_theme';
+const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 let systemThemeMediaQuery = null;
 
 function getSystemTheme() {
@@ -72,10 +73,35 @@ function initTheme() {
   });
 }
 
-document.addEventListener('change', (e) => {
-  if (e.target?.id === 'theme-select') {
-    applyTheme(e.target.value);
+function normalizeTextSizePreference(value) {
+  return value === 'large' || value === 'standard' ? value : 'standard';
+}
+
+function updateTextSizeUI(preference) {
+  const select = document.getElementById('text-size-select');
+  if (select && select.value !== preference) select.value = preference;
+  const currentLabel = document.getElementById('text-size-current');
+  if (currentLabel) {
+    currentLabel.textContent = `Current text size: ${preference === 'large' ? 'Large' : 'Standard'}`;
   }
+}
+
+function applyTextSize(preference, { persist = true } = {}) {
+  const normalized = normalizeTextSizePreference(preference);
+  document.body.setAttribute('data-text-size', normalized);
+  state.textSizePreference = normalized;
+  if (persist) localStorage.setItem(TEXT_SIZE_STORAGE_KEY, normalized);
+  updateTextSizeUI(normalized);
+}
+
+function initTextSize() {
+  const savedPreference = normalizeTextSizePreference(localStorage.getItem(TEXT_SIZE_STORAGE_KEY) || 'standard');
+  applyTextSize(savedPreference, { persist: false });
+}
+
+document.addEventListener('change', (e) => {
+  if (e.target?.id === 'theme-select') applyTheme(e.target.value);
+  if (e.target?.id === 'text-size-select') applyTextSize(e.target.value);
 });
 
 // ── GLOBAL CONSTANTS ──
@@ -144,6 +170,7 @@ let state = {
   classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
   planLog: loadPlanLogState(),
   themePreference: 'auto',
+  textSizePreference: 'standard',
   adminAccordion: {
     classGroups: false,
     appearance: false,
@@ -591,6 +618,7 @@ function showView(v) {
 
 function renderView() {
   const main = document.getElementById('main-content');
+  if (main) main.setAttribute('data-view', state.currentView || 'dashboard');
   switch(state.currentView) {
     case 'dashboard':               renderDashboard(main); break;
     case 'students':                renderStudents(main); break;
@@ -3953,6 +3981,7 @@ document.addEventListener('change', function(e) {
 function renderAdmin(main) {
   const scale = getScale();
   const themePreference = normalizeThemePreference(state.themePreference || localStorage.getItem(THEME_STORAGE_KEY) || 'auto');
+  const textSizePreference = normalizeTextSizePreference(state.textSizePreference || localStorage.getItem(TEXT_SIZE_STORAGE_KEY) || 'standard');
   const appliedTheme = resolveTheme(themePreference);
   const csvUploadRows = [
     ['Content Descriptors', 'icon-cd', 'nav-load-cd', "loadCurriculumCSV(this)"],
@@ -4000,6 +4029,16 @@ function renderAdmin(main) {
               </select>
               <div id="theme-current" class="theme-current">
                 Current: ${themePreference === 'auto' ? 'Auto (System)' : themePreference[0].toUpperCase() + themePreference.slice(1)} → ${appliedTheme[0].toUpperCase() + appliedTheme.slice(1)}
+              </div>
+            </div>
+            <div class="theme-control" style="max-width:320px;margin-top:10px">
+              <label for="text-size-select" class="theme-label">Text size</label>
+              <select id="text-size-select" class="theme-select" aria-label="Text size">
+                <option value="standard" ${textSizePreference === 'standard' ? 'selected' : ''}>Standard</option>
+                <option value="large" ${textSizePreference === 'large' ? 'selected' : ''}>Large</option>
+              </select>
+              <div id="text-size-current" class="theme-current">
+                Current text size: ${textSizePreference === 'large' ? 'Large' : 'Standard'}
               </div>
             </div>
           </div>
@@ -5610,6 +5649,7 @@ async function init() {
   const verEl = document.getElementById('sidebar-version');
   if (verEl) verEl.textContent = APP_VERSION;
   initTheme();
+  initTextSize();
   loadAssessmentScale();
 
   // Show loading message

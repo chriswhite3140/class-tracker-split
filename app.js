@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.7.1
+ * THIS FILE IS VERSION: 1.7.2
  * Last updated: 2026-03-30
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.7.2 - Data & Settings accordion sections for cleaner scanning (Class & Teacher Groups open by default)
  * v1.7.1 - Data & Settings layout cleanup: moved theme + CSV uploads into the main settings view
  * v1.7.0 - Light/Dark/Auto theme toggle with persistent display preference
  * v1.6.0 - Plan and Log Learning workflow with suggested/confirmed code flow and taught/assessment actions
@@ -22,7 +23,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.7.1';
+const APP_VERSION = '1.7.2';
 const THEME_STORAGE_KEY = 'app_theme';
 let systemThemeMediaQuery = null;
 
@@ -142,6 +143,11 @@ let state = {
   classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
   planLog: loadPlanLogState(),
   themePreference: 'auto',
+  adminAccordion: {
+    classGroups: true,
+    appearance: false,
+    dataUploads: false,
+  },
 };
 
 // ── GOOGLE SHEETS API ──
@@ -3751,11 +3757,7 @@ function buildClassSettingsSection() {
     ? `<div style="color:var(--text3);font-size:12px;padding:16px 0">Load curriculum CSV files first to configure subjects and strands.</div>`
     : '';
 
-  return `<div class="card" id="class-settings-card" style="margin-bottom:20px">
-    <div class="card-head">
-      <div class="card-title">Class &amp; Teacher Groups</div>
-    </div>
-    <div style="padding:16px 18px">
+  return `<div style="padding:16px 18px">
       <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
         Configure which subjects, strands and curriculum areas each teacher or group is responsible for.
         Untick any option to hide it across Dashboard, Class Overview, Student Detail, Bulk Assess, Standards and reports.
@@ -3791,8 +3793,40 @@ function buildClassSettingsSection() {
       </div>
       ${noCodesMsg}
       ${allSubjects.map(subjectBlock).join('')}
+    </div>`;
+}
+
+function isAdminAccordionOpen(key) {
+  if (!state.adminAccordion) {
+    state.adminAccordion = { classGroups: true, appearance: false, dataUploads: false };
+  }
+  return !!state.adminAccordion[key];
+}
+
+function buildAdminAccordionSection({ key, title, content }) {
+  const open = isAdminAccordionOpen(key);
+  return `<div class="card accordion-card ${open ? 'open' : ''}" id="admin-accordion-${key}">
+    <div class="card-head">
+      <button class="accordion-trigger" type="button" onclick="toggleAdminAccordion('${key}')" aria-expanded="${open}" aria-controls="admin-accordion-panel-${key}">
+        <span class="accordion-title">${title}</span>
+        <span class="accordion-chevron">▶</span>
+      </button>
+    </div>
+    <div class="accordion-panel" id="admin-accordion-panel-${key}">
+      ${content}
     </div>
   </div>`;
+}
+
+function toggleAdminAccordion(key) {
+  if (!state.adminAccordion) state.adminAccordion = {};
+  state.adminAccordion[key] = !state.adminAccordion[key];
+
+  const card = document.getElementById(`admin-accordion-${key}`);
+  if (!card) return;
+  card.classList.toggle('open', state.adminAccordion[key]);
+  const trigger = card.querySelector('.accordion-trigger');
+  if (trigger) trigger.setAttribute('aria-expanded', String(state.adminAccordion[key]));
 }
 
 function applyClassSettingAction(action, { val, key, enabled, checked } = {}) {
@@ -3921,28 +3955,35 @@ function renderAdmin(main) {
     <div class="content">
 
       <!-- Class & Teacher Groups -->
-      ${buildClassSettingsSection()}
+      ${buildAdminAccordionSection({
+        key: 'classGroups',
+        title: 'Class &amp; Teacher Groups',
+        content: buildClassSettingsSection()
+      })}
 
       <!-- Appearance -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-head"><div class="card-title">Appearance</div></div>
-        <div style="padding:16px 18px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
-            Choose how ClassTracker appears for this browser. Auto follows your device setting.
-          </div>
-          <div class="theme-control" style="max-width:320px">
-            <label for="theme-select" class="theme-label">Theme</label>
-            <select id="theme-select" class="theme-select" aria-label="Theme">
-              <option value="auto" ${themePreference === 'auto' ? 'selected' : ''}>Auto (System)</option>
-              <option value="light" ${themePreference === 'light' ? 'selected' : ''}>Light</option>
-              <option value="dark" ${themePreference === 'dark' ? 'selected' : ''}>Dark</option>
-            </select>
-            <div id="theme-current" class="theme-current">
-              Current: ${themePreference === 'auto' ? 'Auto (System)' : themePreference[0].toUpperCase() + themePreference.slice(1)} → ${appliedTheme[0].toUpperCase() + appliedTheme.slice(1)}
+      ${buildAdminAccordionSection({
+        key: 'appearance',
+        title: 'Appearance',
+        content: `
+          <div style="padding:16px 18px">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
+              Choose how ClassTracker appears for this browser. Auto follows your device setting.
+            </div>
+            <div class="theme-control" style="max-width:320px">
+              <label for="theme-select" class="theme-label">Theme</label>
+              <select id="theme-select" class="theme-select" aria-label="Theme">
+                <option value="auto" ${themePreference === 'auto' ? 'selected' : ''}>Auto (System)</option>
+                <option value="light" ${themePreference === 'light' ? 'selected' : ''}>Light</option>
+                <option value="dark" ${themePreference === 'dark' ? 'selected' : ''}>Dark</option>
+              </select>
+              <div id="theme-current" class="theme-current">
+                Current: ${themePreference === 'auto' ? 'Auto (System)' : themePreference[0].toUpperCase() + themePreference.slice(1)} → ${appliedTheme[0].toUpperCase() + appliedTheme.slice(1)}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        `
+      })}
 
       <!-- Assessment Scale configurator -->
       <div class="card" style="margin-bottom:20px">
@@ -3966,24 +4007,27 @@ function renderAdmin(main) {
       </div>
 
       <!-- Data / CSV Uploads -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-head"><div class="card-title">Data / CSV Uploads</div></div>
-        <div style="padding:14px 18px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
-            Upload curriculum CSV files here. Status dots show what has already been loaded in this session.
+      ${buildAdminAccordionSection({
+        key: 'dataUploads',
+        title: 'Data / CSV Uploads',
+        content: `
+          <div style="padding:14px 18px">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+              Upload curriculum CSV files here. Status dots show what has already been loaded in this session.
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+              ${csvUploadRows.map(([label, iconId, navId, handler]) => {
+                const loaded = loadedByNavId[navId];
+                return `<label class="nav-btn" style="cursor:pointer;font-size:12px;justify-content:flex-start;gap:8px;min-height:40px;color:${loaded ? 'var(--green)' : 'var(--text2)'}" id="${navId}">
+                  <span class="nav-icon" id="${iconId}" style="color:${loaded ? 'var(--green)' : 'var(--text3)'}">${loaded ? '●' : '○'}</span>
+                  <span>${label}</span>
+                  <input type="file" accept=".csv" style="display:none" onchange="${handler}">
+                </label>`;
+              }).join('')}
+            </div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
-            ${csvUploadRows.map(([label, iconId, navId, handler]) => {
-              const loaded = loadedByNavId[navId];
-              return `<label class="nav-btn" style="cursor:pointer;font-size:12px;justify-content:flex-start;gap:8px;min-height:40px;color:${loaded ? 'var(--green)' : 'var(--text2)'}" id="${navId}">
-                <span class="nav-icon" id="${iconId}" style="color:${loaded ? 'var(--green)' : 'var(--text3)'}">${loaded ? '●' : '○'}</span>
-                <span>${label}</span>
-                <input type="file" accept=".csv" style="display:none" onchange="${handler}">
-              </label>`;
-            }).join('')}
-          </div>
-        </div>
-      </div>
+        `
+      })}
 
       <!-- Data Export -->
       <div class="card" style="margin-bottom:20px">

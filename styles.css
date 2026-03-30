@@ -235,6 +235,59 @@ body {
   font-weight: 400;
 }
 
+/* ── ADMIN ACCORDION ── */
+.accordion-card {
+  margin-bottom: 20px;
+}
+
+.accordion-trigger {
+  width: 100%;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.accordion-trigger:hover .accordion-title {
+  color: var(--blue);
+}
+
+.accordion-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 400;
+  transition: color 0.15s;
+}
+
+.accordion-chevron {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  color: var(--text3);
+  transition: transform 0.2s ease, color 0.15s;
+}
+
+.accordion-card.open .accordion-chevron {
+  transform: rotate(90deg);
+  color: var(--blue);
+}
+
+.accordion-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.accordion-card.open .accordion-panel {
+  max-height: 10000px;
+  opacity: 1;
+}
+
 /* ── DASHBOARD ── */
 .stats-row {
   display: grid;

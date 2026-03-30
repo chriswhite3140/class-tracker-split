@@ -922,10 +922,49 @@ body[data-text-size="large"] {
 }
 
 .ui-filter-chip {
-  padding: 5px 11px;
+  padding: 6px 12px;
   border-radius: 5px;
   font-family: 'DM Mono', monospace;
   font-size: var(--dense-header-size);
+}
+
+.tt-ellipsis {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  position: relative;
+}
+
+.tt-ellipsis.tt-block {
+  display: block;
+}
+
+.tt-ellipsis[data-tooltip]:hover::after,
+.tt-ellipsis[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  box-shadow: var(--shadow-soft);
+  padding: 6px 8px;
+  max-width: min(420px, 70vw);
+  white-space: normal;
+  line-height: 1.35;
+  font-size: var(--helper-size);
+  pointer-events: none;
+}
+
+.tt-ellipsis:focus-visible {
+  outline: 2px solid var(--status-info-border);
+  outline-offset: 1px;
 }
 
 .ui-data-table th {
@@ -950,6 +989,8 @@ body[data-text-size="large"] {
 #main-content[data-view="progression-placement"] table th {
   font-size: var(--dense-header-size) !important;
   line-height: 1.35 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
 }
 
 #main-content[data-view="overview"] table td,

@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.7.3
+ * THIS FILE IS VERSION: 1.8.0
  * Last updated: 2026-03-30
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.8.0 - Added accessible tooltips for truncated text in dense views + spacing polish for filter controls
  * v1.7.3 - Unified Data & Settings accordion: all major sections collapsible and closed by default
  * v1.7.2 - Data & Settings accordion sections for cleaner scanning (Class & Teacher Groups open by default)
  * v1.7.1 - Data & Settings layout cleanup: moved theme + CSV uploads into the main settings view
@@ -24,7 +25,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.7.9';
+const APP_VERSION = '1.8.0';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 let systemThemeMediaQuery = null;
@@ -131,6 +132,23 @@ function subjectShort(subj) {
   return subj;
 }
 function csvYear(yr) { return YLM[yr] || yr; }
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function truncateWithTooltip(text, maxChars = 80, extraClass = '', focusable = false) {
+  const fullText = String(text || '—').trim() || '—';
+  const shortText = fullText.length > maxChars ? `${fullText.slice(0, maxChars)}…` : fullText;
+  const className = `tt-ellipsis${extraClass ? ` ${extraClass}` : ''}`;
+  const tabindexAttr = focusable ? ' tabindex="0"' : '';
+  return `<span class="${className}" title="${escapeHtml(fullText)}" data-tooltip="${escapeHtml(fullText)}"${tabindexAttr} aria-label="${escapeHtml(fullText)}">${escapeHtml(shortText)}</span>`;
+}
 
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzbS0mCTPLmcTDECGSmGbdK6Wd75lpinKDLs7wtvlKg-xo00IpZqNiQGF6RoR9Xpy2I/exec';
@@ -855,7 +873,7 @@ function renderClassOverview(main) {
       <thead><tr style="background:var(--surface-alt)">
         <th style="padding:12px 16px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:180px;position:sticky;left:0;background:var(--surface-alt);z-index:2">Student</th>
         <th style="padding:12px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:80px">Overall</th>
-        ${allStrands.map(strand => `<th style="padding:12px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;cursor:pointer" onclick="state.overviewFilter.strand='${strand}';renderClassOverview(document.getElementById('main-content'))">${strand}<br><span style="font-size:9px;opacity:0.7;font-weight:500">click to filter</span></th>`).join('')}
+        ${allStrands.map(strand => `<th style="padding:12px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;cursor:pointer" onclick="state.overviewFilter.strand='${strand}';renderClassOverview(document.getElementById('main-content'))" title="${escapeHtml(strand)}" tabindex="0" aria-label="${escapeHtml(`Filter by strand ${strand}`)}">${truncateWithTooltip(strand, 24, '', true)}<br><span style="font-size:9px;opacity:0.7;font-weight:500">click to filter</span></th>`).join('')}
         <th style="padding:12px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:60px">Gaps</th>
       </tr></thead>
       <tbody>
@@ -880,7 +898,7 @@ function renderClassOverview(main) {
               <div style="display:flex;align-items:center;gap:10px">
                 <div class="sc-avatar ${getAvClass(si)}" style="width:30px;height:30px;font-size:12px;flex-shrink:0">${getInitials(s)}</div>
                 <div>
-                  <div style="font-size:13px;font-weight:600;color:var(--text)">${s.last_name}, ${s.first_name}</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text)" title="${escapeHtml(`${s.last_name}, ${s.first_name}`)}">${truncateWithTooltip(`${s.last_name}, ${s.first_name}`, 28, '', true)}</div>
                   <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">Yr ${normaliseYear(s.year_level)} · ${allCodes.length} codes</div>
                 </div>
               </div>
@@ -915,7 +933,8 @@ function renderClassOverview(main) {
         ${availableSubjects.map(subj => {
           const active = ovf.subject === subj;
           return `<button onclick="state.overviewFilter.subject='${subj}';state.overviewFilter.strand='all';renderClassOverview(document.getElementById('main-content'))"
-            style="padding:4px 10px;border-radius:4px;border:1px solid ${active?'var(--gold)':'var(--border2)'};background:${active?'var(--gold-dim)':'none'};color:${active?'var(--gold)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">
+            title="${escapeHtml(subj)}" aria-label="${escapeHtml(`Filter subject ${subj}`)}"
+            style="padding:5px 11px;border-radius:4px;border:1px solid ${active?'var(--gold)':'var(--border2)'};background:${active?'var(--gold-dim)':'none'};color:${active?'var(--gold)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">
             ${subjectShort(subj)}
           </button>`;
         }).join('')}
@@ -923,10 +942,10 @@ function renderClassOverview(main) {
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">YEAR</span>
         ${['all','F','1','2','3','4','5','6'].map(yr => `
           <button onclick="state.overviewFilter.year='${yr}';renderClassOverview(document.getElementById('main-content'))"
-            style="padding:4px 10px;border-radius:4px;border:1px solid ${ovf.year===yr?'var(--blue)':'var(--border2)'};background:${ovf.year===yr?'var(--blue-dim)':'none'};color:${ovf.year===yr?'var(--blue)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">
+            style="padding:5px 11px;border-radius:4px;border:1px solid ${ovf.year===yr?'var(--blue)':'var(--border2)'};background:${ovf.year===yr?'var(--blue-dim)':'none'};color:${ovf.year===yr?'var(--blue)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">
             ${yr === 'all' ? 'All' : 'Yr '+yr}
           </button>`).join('')}
-        ${ovf.strand !== 'all' ? `<button onclick="state.overviewFilter.strand='all';renderClassOverview(document.getElementById('main-content'))" style="padding:4px 10px;border-radius:4px;border:1px solid var(--teal);background:var(--teal-dim);color:var(--teal);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">✕ ${ovf.strand}</button>` : ''}
+        ${ovf.strand !== 'all' ? `<button onclick="state.overviewFilter.strand='all';renderClassOverview(document.getElementById('main-content'))" style="padding:5px 11px;border-radius:4px;border:1px solid var(--teal);background:var(--teal-dim);color:var(--teal);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer" title="${escapeHtml(ovf.strand)}">✕ ${truncateWithTooltip(ovf.strand, 20)}</button>` : ''}
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">${APP_VERSION}</span>
       </div>
     </div>
@@ -1390,8 +1409,8 @@ function renderCurriculum(main) {
                     ? `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text3)">No codes match your filters</td></tr>`
                     : codes.map(c => `<tr style="cursor:pointer" onclick="openCodeDetail('${c.Code}',null)">
                         <td><span class="code-pill" style="background:var(--blue-dim);color:var(--blue);font-size:11px">${c.Code}</span></td>
-                        <td style="color:var(--text-muted);font-size:12px;line-height:1.4;padding-right:12px">${c.Descriptor||c.Aspect||'—'}</td>
-                        <td><span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;background:var(--surface-alt);color:var(--text3);white-space:nowrap">${c.Strand||'—'}</span></td>
+                        <td style="color:var(--text-muted);font-size:12px;line-height:1.4;padding-right:12px">${truncateWithTooltip(c.Descriptor||c.Aspect||'—', 110, 'tt-block', true)}</td>
+                        <td><span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;background:var(--surface-alt);color:var(--text3);white-space:nowrap" title="${escapeHtml(c.Strand||'—')}">${truncateWithTooltip(c.Strand||'—', 24)}</span></td>
                         <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${c['Year Level']||'—'}</td>
                       </tr>`).join('')}
                 </tbody>
@@ -2864,7 +2883,8 @@ function renderCoverage(main) {
     // Use data attributes + dedicated handler instead of data-ba-fn eval
     const extraAttr = extra ? ` data-cv-extra="${extra}"` : '';
     return `<button data-cv-action="${action}" data-cv-value="${value}"${extraAttr}
-      style="padding:4px 10px;border-radius:4px;border:1px solid ${active?col:'var(--border2)'};background:${active?col+'22':'none'};color:${active?col:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
+      title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"
+      style="padding:5px 11px;border-radius:4px;border:1px solid ${active?col:'var(--border2)'};background:${active?col+'22':'none'};color:${active?col:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
   }
 
   // Build the grid
@@ -2909,7 +2929,7 @@ function renderCoverage(main) {
     const bodyRows = codesByStrand.map(({strand, codes: sCodes}) => {
       const strandRow = `<tr>
         <td colspan="${students.length + 2}" style="padding:6px 10px;background:var(--surface-alt);font-family:'DM Mono',monospace;font-size:9px;color:${col};text-transform:uppercase;letter-spacing:0.1em;border-bottom:1px solid var(--border)">
-          ${strand} · ${sCodes.length} codes
+          ${truncateWithTooltip(`${strand} · ${sCodes.length} codes`, 60)}
         </td>
       </tr>`;
       const codeRows = sCodes.map((c, ci) => {
@@ -2937,7 +2957,7 @@ function renderCoverage(main) {
           onmouseleave="hideCoverageTooltip()">
           <td style="padding:7px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(ci)}">
             <div style="font-family:'DM Mono',monospace;font-size:10px;color:${col}">${c.Code}</div>
-            <div style="font-size:11px;color:var(--text3);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(c.Descriptor||c.Aspect||'').slice(0,42)}…</div>
+            <div style="font-size:11px;color:var(--text3);max-width:220px">${truncateWithTooltip(c.Descriptor||c.Aspect||'—', 42, '', true)}</div>
           </td>
           ${cells}
           <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap">
@@ -2952,9 +2972,9 @@ function renderCoverage(main) {
       <table style="border-collapse:collapse;min-width:${250+students.length*26}px">
         <thead style="position:sticky;top:0;z-index:5;background:var(--surface)">
           <tr>
-            <th style="padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface);z-index:6;min-width:220px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Code</th>
+            <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface);z-index:6;min-width:220px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Code</th>
             ${studentHeaders}
-            <th style="padding:4px 8px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;text-align:right">Taught</th>
+            <th style="padding:6px 10px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;text-align:right">Taught</th>
           </tr>
         </thead>
         <tbody>${bodyRows}</tbody>
@@ -3054,7 +3074,8 @@ function renderStandardsJudgments(main) {
 
   function fBtn(label, active, action, value) {
     return `<button data-sj-action="${action}" data-sj-value="${value}"
-      style="padding:4px 10px;border-radius:4px;border:1px solid ${active?col:'var(--border2)'};background:${active?col+'22':'none'};color:${active?col:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
+      title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"
+      style="padding:5px 11px;border-radius:4px;border:1px solid ${active?col:'var(--border2)'};background:${active?col+'22':'none'};color:${active?col:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
   }
 
   // Build the judgment grid
@@ -3076,7 +3097,7 @@ function renderStandardsJudgments(main) {
       const hasLinks = !getStandardReadiness(students[0]?.id || '', sid).noLinks;
       return `<th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);min-width:170px;max-width:220px;vertical-align:bottom;border-left:1px solid var(--border)">
         <div style="font-family:'DM Mono',monospace;font-size:9px;color:${col};margin-bottom:3px">${sid}</div>
-        <div style="font-size:9px;color:var(--text-muted);line-height:1.3;margin-bottom:4px">${(std['Standard Text']||'').slice(0,80)}${(std['Standard Text']||'').length>80?'…':''}</div>
+        <div style="font-size:9px;color:var(--text-muted);line-height:1.3;margin-bottom:4px">${truncateWithTooltip(std['Standard Text']||'—', 80, 'tt-block', true)}</div>
         ${readyCount > 0 ? `<div style="font-size:9px;color:var(--gold)">⚡ ${readyCount} student${readyCount>1?'s':''} ready</div>` : ''}
         ${!hasLinks ? `<div style="font-size:9px;color:var(--text3);font-style:italic">No linked codes in CSV</div>` : ''}
       </th>`;
@@ -3108,9 +3129,10 @@ function renderStandardsJudgments(main) {
           </div>` : ''}
           <!-- Judgment button — disabled if locked -->
           <button ${isLocked ? '' : `data-sj-open="${s.id}|${sid}"`}
-            style="width:100%;padding:6px 7px;border-radius:4px;border:1px solid ${scaleItem?scaleItem.colour:'var(--border2)'};background:${scaleItem?scaleItem.bg:'none'};color:${scaleItem?scaleItem.colour:'var(--text3)'};font-size:9px;cursor:${isLocked?'default':'pointer'};text-align:left;display:flex;align-items:center;gap:4px;opacity:${isLocked?'0.85':'1'}">
+            title="${escapeHtml(scaleItem ? scaleItem.label : 'Rate this standard')}"
+            style="width:100%;padding:7px 8px;border-radius:4px;border:1px solid ${scaleItem?scaleItem.colour:'var(--border2)'};background:${scaleItem?scaleItem.bg:'none'};color:${scaleItem?scaleItem.colour:'var(--text3)'};font-size:9px;cursor:${isLocked?'default':'pointer'};text-align:left;display:flex;align-items:center;gap:4px;opacity:${isLocked?'0.85':'1'}">
             ${isLocked ? '<span style="font-size:8px" title="Locked for reporting">🔒</span>' : ''}
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${scaleItem ? scaleItem.label : '— Rate'}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${truncateWithTooltip(scaleItem ? scaleItem.label : '— Rate', 20)}</span>
           </button>
           ${j?.date ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);margin-top:2px">${j.date}</div>` : ''}
           ${isLocked ? '' : ''}
@@ -3142,7 +3164,7 @@ function renderStandardsJudgments(main) {
         <table style="border-collapse:collapse;min-width:${180+visibleStandards.length*170}px">
           <thead style="position:sticky;top:0;z-index:5;background:var(--surface)">
             <tr style="background:var(--surface-alt)">
-              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
+              <th style="padding:9px 11px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
               ${stdHeaders}
             </tr>
           </thead>

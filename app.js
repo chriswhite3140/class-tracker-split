@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.8.0
+ * THIS FILE IS VERSION: 1.9.0
  * Last updated: 2026-03-30
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.9.0 - Weekly Planner (timetable grid, drag/drop, duplicate, week navigation, day view)
  * v1.8.0 - Added accessible tooltips for truncated text in dense views + spacing polish for filter controls
  * v1.7.3 - Unified Data & Settings accordion: all major sections collapsible and closed by default
  * v1.7.2 - Data & Settings accordion sections for cleaner scanning (Class & Teacher Groups open by default)
@@ -25,7 +26,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 let systemThemeMediaQuery = null;
@@ -187,6 +188,7 @@ let state = {
   assessmentScale: null, // loaded in init
   classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
   planLog: loadPlanLogState(),
+  weeklyPlanner: loadWeeklyPlannerState(),
   themePreference: 'auto',
   textSizePreference: 'standard',
   adminAccordion: {
@@ -645,6 +647,7 @@ function renderView() {
     case 'bulk-assess':             renderBulkAssess(main); break;
     case 'daily-log':               renderDailyLog(main); break;
     case 'plan-log':                renderPlanLog(main); break;
+    case 'weekly-planner':          renderWeeklyPlanner(main); break;
     case 'coverage':                renderCoverage(main); break;
     case 'standards-judgments':     renderStandardsJudgments(main); break;
     case 'progression-placement':   renderProgressionPlacement(main); break;
@@ -5653,6 +5656,513 @@ function renderPlanLog(main) {
           <textarea class="form-input" style="min-height:120px" readonly>${active.assessmentPrompt || 'Assessment prompt will appear here after clicking Use for Assessment.'}</textarea>
         </div>
       </div>` : ''}
+    </div>
+  `;
+}
+
+
+// ════════════════════════════════════════════════════
+// ── WEEKLY PLANNER ──
+// timetable-style weekly planning with quick blocks, drag/drop, duplicate, and day view
+// ════════════════════════════════════════════════════
+
+const WEEKLY_PLANNER_STORAGE_KEY = 'ct_weekly_planner_v1';
+const PLANNER_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+function toIsoDate(date) {
+  return date.toISOString().split('T')[0];
+}
+
+function getWeekStart(dateLike = new Date()) {
+  const d = new Date(dateLike);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function addDaysToDate(isoDate, days) {
+  const d = new Date(`${isoDate}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toIsoDate(d);
+}
+
+function normalizePlannerSettings(raw = {}) {
+  const periodsPerDay = Math.min(12, Math.max(3, Number(raw.periodsPerDay) || 6));
+  const recessAfter = Math.min(periodsPerDay - 1, Math.max(0, Number(raw.recessAfter) || 2));
+  const lunchAfter = Math.min(periodsPerDay - 1, Math.max(0, Number(raw.lunchAfter) || 4));
+  const dayStart = /^\d{2}:\d{2}$/.test(raw.dayStart || '') ? raw.dayStart : '09:00';
+  const periodLength = Math.min(120, Math.max(20, Number(raw.periodLength) || 50));
+  return { dayStart, periodLength, periodsPerDay, recessAfter, lunchAfter };
+}
+
+function loadWeeklyPlannerState() {
+  const defaults = {
+    settings: normalizePlannerSettings(),
+    currentWeekStart: toIsoDate(getWeekStart()),
+    weeks: {},
+    dayViewDay: null,
+    draggingBlockId: null,
+  };
+  try {
+    const raw = localStorage.getItem(WEEKLY_PLANNER_STORAGE_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    return {
+      settings: normalizePlannerSettings(parsed?.settings || {}),
+      currentWeekStart: parsed?.currentWeekStart || defaults.currentWeekStart,
+      weeks: parsed?.weeks && typeof parsed.weeks === 'object' ? parsed.weeks : {},
+      dayViewDay: Number.isInteger(parsed?.dayViewDay) ? parsed.dayViewDay : null,
+      draggingBlockId: null,
+    };
+  } catch (e) {
+    return defaults;
+  }
+}
+
+function saveWeeklyPlannerState() {
+  const wp = state.weeklyPlanner || loadWeeklyPlannerState();
+  const payload = {
+    settings: normalizePlannerSettings(wp.settings),
+    currentWeekStart: wp.currentWeekStart,
+    weeks: wp.weeks || {},
+    dayViewDay: Number.isInteger(wp.dayViewDay) ? wp.dayViewDay : null,
+  };
+  try { localStorage.setItem(WEEKLY_PLANNER_STORAGE_KEY, JSON.stringify(payload)); } catch (e) {}
+}
+
+function getPlannerWeekKey() {
+  if (!state.weeklyPlanner) state.weeklyPlanner = loadWeeklyPlannerState();
+  return state.weeklyPlanner.currentWeekStart || toIsoDate(getWeekStart());
+}
+
+function getPlannerWeekData() {
+  const wp = state.weeklyPlanner;
+  const key = getPlannerWeekKey();
+  if (!wp.weeks[key]) wp.weeks[key] = { blocks: [] };
+  if (!Array.isArray(wp.weeks[key].blocks)) wp.weeks[key].blocks = [];
+  return wp.weeks[key];
+}
+
+function getPlannerBlocks() {
+  return getPlannerWeekData().blocks;
+}
+
+function findPlannerBlock(blockId) {
+  return getPlannerBlocks().find(b => b.id === blockId);
+}
+
+function getPlannerBlockAt(day, period, skipId = null) {
+  return getPlannerBlocks().find(b => b.day === day && b.period === period && b.id !== skipId);
+}
+
+function plannerWeekLabel() {
+  const start = new Date(`${getPlannerWeekKey()}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 4);
+  const fmt = { day: 'numeric', month: 'short' };
+  return `${start.toLocaleDateString('en-AU', fmt)} – ${end.toLocaleDateString('en-AU', fmt)}`;
+}
+
+function plannerGetTimeForPeriod(periodNumber) {
+  const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
+  const [h, m] = settings.dayStart.split(':').map(Number);
+  const startMinutes = h * 60 + m + ((periodNumber - 1) * settings.periodLength);
+  const endMinutes = startMinutes + settings.periodLength;
+  const toLabel = (mins) => {
+    const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+    const mm = String(mins % 60).padStart(2, '0');
+    return `${hh}:${mm}`;
+  };
+  return `${toLabel(startMinutes)}–${toLabel(endMinutes)}`;
+}
+
+function plannerChangeWeek(direction) {
+  const current = getPlannerWeekKey();
+  if (direction === 'current') {
+    state.weeklyPlanner.currentWeekStart = toIsoDate(getWeekStart());
+  } else {
+    const delta = direction === 'next' ? 7 : -7;
+    state.weeklyPlanner.currentWeekStart = addDaysToDate(current, delta);
+  }
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerUpdateSetting(field, value) {
+  if (!state.weeklyPlanner) state.weeklyPlanner = loadWeeklyPlannerState();
+  const next = { ...state.weeklyPlanner.settings, [field]: value };
+  state.weeklyPlanner.settings = normalizePlannerSettings(next);
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerOpenBlockModal(day, period, blockId = null) {
+  const existing = blockId ? findPlannerBlock(blockId) : null;
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:560px;width:95%">
+      <div class="modal-head">
+        <div class="modal-title">${existing ? 'Edit lesson block' : 'Quick add lesson block'}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Subject / title</label>
+          <input id="wp-title" class="form-input" placeholder="e.g. Literacy, Maths" value="${escapeHtml(existing?.title || '')}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Focus (main field)</label>
+          <input id="wp-focus" class="form-input" placeholder="What is the main learning focus?" value="${escapeHtml(existing?.focus || '')}">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Notes (optional)</label>
+          <textarea id="wp-notes" class="form-input" style="min-height:70px" placeholder="Optional notes">${escapeHtml(existing?.notes || '')}</textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="plannerSaveBlockFromModal(${day}, ${period}, ${blockId ? `'${blockId}'` : 'null'})">${existing ? 'Save changes' : 'Create block'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  const focusInput = document.getElementById('wp-focus');
+  if (focusInput) focusInput.focus();
+}
+
+function plannerSaveBlockFromModal(day, period, blockId = null) {
+  const title = document.getElementById('wp-title')?.value?.trim() || '';
+  const focus = document.getElementById('wp-focus')?.value?.trim() || '';
+  const notes = document.getElementById('wp-notes')?.value?.trim() || '';
+  if (!title && !focus) {
+    toast('Add at least a title or a focus', 'error');
+    return;
+  }
+
+  if (blockId) {
+    const block = findPlannerBlock(blockId);
+    if (!block) return;
+    block.title = title;
+    block.subject = title;
+    block.focus = focus;
+    block.notes = notes;
+  } else {
+    const clash = getPlannerBlockAt(day, period);
+    if (clash) {
+      toast('That slot already has a lesson block', 'error');
+      return;
+    }
+    getPlannerBlocks().push({
+      id: `wp_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+      day,
+      period,
+      subject: title,
+      title,
+      focus,
+      notes,
+    });
+  }
+
+  closeModal();
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerDeleteBlock(blockId) {
+  const blocks = getPlannerBlocks();
+  const idx = blocks.findIndex(b => b.id === blockId);
+  if (idx === -1) return;
+  if (!confirm('Delete this lesson block?')) return;
+  blocks.splice(idx, 1);
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerStartDrag(ev, blockId) {
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', blockId);
+  state.weeklyPlanner.draggingBlockId = blockId;
+  ev.currentTarget.classList.add('is-dragging');
+}
+
+function plannerEndDrag(ev) {
+  ev.currentTarget.classList.remove('is-dragging');
+  state.weeklyPlanner.draggingBlockId = null;
+  document.querySelectorAll('.planner-cell').forEach(cell => cell.classList.remove('drop-over'));
+}
+
+function plannerDragOver(ev) {
+  ev.preventDefault();
+  ev.currentTarget.classList.add('drop-over');
+}
+
+function plannerDragLeave(ev) {
+  ev.currentTarget.classList.remove('drop-over');
+}
+
+function plannerDrop(ev, day, period) {
+  ev.preventDefault();
+  ev.currentTarget.classList.remove('drop-over');
+  const blockId = ev.dataTransfer.getData('text/plain') || state.weeklyPlanner.draggingBlockId;
+  if (!blockId) return;
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  const clash = getPlannerBlockAt(day, period, blockId);
+  if (clash) {
+    toast('Target slot is already occupied. Use Duplicate or Move instead.', 'error');
+    return;
+  }
+  block.day = day;
+  block.period = period;
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerOpenDuplicateModal(blockId) {
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:520px;width:94%">
+      <div class="modal-head">
+        <div class="modal-title">Duplicate lesson block</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Block</label><div style="font-size:13px;color:var(--text)">${escapeHtml(block.title || 'Untitled')}</div><div style="font-size:12px;color:var(--text3)">${escapeHtml(block.focus || 'No focus set')}</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label class="form-label">Target day</label>
+            <select id="wp-dup-day" class="form-input">${PLANNER_DAYS.map((name, idx) => `<option value="${idx}" ${idx===block.day?'selected':''}>${name}</option>`).join('')}</select>
+          </div>
+          <div class="form-group"><label class="form-label">Target period</label>
+            <select id="wp-dup-period" class="form-input">${Array.from({length: settings.periodsPerDay}, (_, i) => i + 1).map(p => `<option value="${p}" ${p===block.period?'selected':''}>Period ${p}</option>`).join('')}</select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="plannerConfirmDuplicate('${blockId}')">Duplicate</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function plannerConfirmDuplicate(blockId) {
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  const day = Number(document.getElementById('wp-dup-day')?.value || 0);
+  const period = Number(document.getElementById('wp-dup-period')?.value || 1);
+  if (getPlannerBlockAt(day, period)) {
+    toast('Target slot already has a lesson block', 'error');
+    return;
+  }
+  getPlannerBlocks().push({
+    ...block,
+    id: `wp_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+    day,
+    period,
+  });
+  closeModal();
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerOpenMoveModal(blockId) {
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px;width:94%">
+      <div class="modal-head">
+        <div class="modal-title">Move lesson block</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label class="form-label">Day</label>
+          <select id="wp-move-day" class="form-input">${PLANNER_DAYS.map((name, idx) => `<option value="${idx}" ${idx===block.day?'selected':''}>${name}</option>`).join('')}</select>
+        </div>
+        <div class="form-group"><label class="form-label">Period</label>
+          <select id="wp-move-period" class="form-input">${Array.from({length: settings.periodsPerDay}, (_, i) => i + 1).map(p => `<option value="${p}" ${p===block.period?'selected':''}>Period ${p}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="plannerConfirmMove('${blockId}')">Move block</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function plannerConfirmMove(blockId) {
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  const day = Number(document.getElementById('wp-move-day')?.value || 0);
+  const period = Number(document.getElementById('wp-move-period')?.value || 1);
+  const clash = getPlannerBlockAt(day, period, blockId);
+  if (clash) {
+    toast('Target slot already has a lesson block', 'error');
+    return;
+  }
+  block.day = day;
+  block.period = period;
+  closeModal();
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerToggleDayView(dayIndex) {
+  state.weeklyPlanner.dayViewDay = state.weeklyPlanner.dayViewDay === dayIndex ? null : dayIndex;
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerMoveWithinDay(blockId, direction) {
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
+  const targetPeriod = block.period + direction;
+  if (targetPeriod < 1 || targetPeriod > settings.periodsPerDay) return;
+  const clash = getPlannerBlockAt(block.day, targetPeriod, block.id);
+  if (clash) {
+    toast('That period already has a lesson block', 'error');
+    return;
+  }
+  block.period = targetPeriod;
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function renderWeeklyPlanner(main) {
+  if (!state.weeklyPlanner) state.weeklyPlanner = loadWeeklyPlannerState();
+  const wp = state.weeklyPlanner;
+  wp.settings = normalizePlannerSettings(wp.settings);
+
+  const settings = wp.settings;
+  const blocks = getPlannerBlocks();
+  const weekKey = getPlannerWeekKey();
+
+  const dayHeaders = PLANNER_DAYS.map((day, idx) => {
+    const dayDate = addDaysToDate(weekKey, idx);
+    return `<th><button class="planner-day-btn" onclick="plannerToggleDayView(${idx})">${day}<span>${new Date(`${dayDate}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span></button></th>`;
+  }).join('');
+
+  const bodyRows = [];
+  for (let period = 1; period <= settings.periodsPerDay; period++) {
+    const cells = PLANNER_DAYS.map((_, dayIdx) => {
+      const block = blocks.find(b => b.day === dayIdx && b.period === period);
+      if (!block) {
+        return `<td class="planner-cell planner-empty" ondragover="plannerDragOver(event)" ondragleave="plannerDragLeave(event)" ondrop="plannerDrop(event, ${dayIdx}, ${period})" onclick="plannerOpenBlockModal(${dayIdx}, ${period})"><span>+ Add</span></td>`;
+      }
+
+      const col = subjectCol(block.subject || block.title || 'English');
+      const bg = subjectBg(block.subject || block.title || 'English');
+      return `<td class="planner-cell" ondragover="plannerDragOver(event)" ondragleave="plannerDragLeave(event)" ondrop="plannerDrop(event, ${dayIdx}, ${period})">
+        <div class="planner-block" draggable="true" ondragstart="plannerStartDrag(event, '${block.id}')" ondragend="plannerEndDrag(event)" style="--planner-block-col:${col};--planner-block-bg:${bg}">
+          <div class="planner-block-top">
+            <button class="planner-block-title" onclick="plannerOpenBlockModal(${dayIdx}, ${period}, '${block.id}')">${escapeHtml(block.title || 'Untitled')}</button>
+            <div class="planner-block-actions">
+              <button class="planner-mini-btn" onclick="event.stopPropagation();plannerOpenDuplicateModal('${block.id}')">Duplicate</button>
+              <button class="planner-mini-btn" onclick="event.stopPropagation();plannerOpenMoveModal('${block.id}')">Move</button>
+            </div>
+          </div>
+          <div class="planner-focus">${escapeHtml(block.focus || 'Add focus')}</div>
+          ${block.notes ? `<div class="planner-notes">${escapeHtml(block.notes)}</div>` : ''}
+          <div class="planner-inline-actions">
+            <button class="planner-mini-btn" onclick="event.stopPropagation();plannerOpenBlockModal(${dayIdx}, ${period}, '${block.id}')">Edit</button>
+            <button class="planner-mini-btn" onclick="event.stopPropagation();plannerDeleteBlock('${block.id}')">Delete</button>
+          </div>
+        </div>
+      </td>`;
+    }).join('');
+
+    bodyRows.push(`<tr><td class="planner-period-col"><div>Period ${period}</div><span>${plannerGetTimeForPeriod(period)}</span></td>${cells}</tr>`);
+
+    if (settings.recessAfter === period) {
+      bodyRows.push(`<tr><td></td><td colspan="5" class="planner-break-row">Recess break</td></tr>`);
+    }
+    if (settings.lunchAfter === period) {
+      bodyRows.push(`<tr><td></td><td colspan="5" class="planner-break-row">Lunch break</td></tr>`);
+    }
+  }
+
+  const dayView = Number.isInteger(wp.dayViewDay) ? wp.dayViewDay : null;
+  const dayViewBlocks = dayView === null
+    ? []
+    : blocks.filter(b => b.day === dayView).sort((a, b) => a.period - b.period);
+
+  main.innerHTML = `
+    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
+      <div class="topbar-title">Weekly Planner</div>
+      <div class="planner-week-nav">
+        <button class="btn" onclick="plannerChangeWeek('prev')">← Previous week</button>
+        <button class="btn" onclick="plannerChangeWeek('current')">Current week</button>
+        <button class="btn" onclick="plannerChangeWeek('next')">Next week →</button>
+      </div>
+      <div class="planner-week-label">Week: ${plannerWeekLabel()}</div>
+    </div>
+    <div class="content">
+      <details class="card planner-settings">
+        <summary class="card-head" style="cursor:pointer;list-style:none">
+          <div class="card-title">Planner settings</div>
+          <div style="font-size:12px;color:var(--text3)">Adjust timetable structure</div>
+        </summary>
+        <div style="padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Day start time</label><input class="form-input" type="time" value="${settings.dayStart}" onchange="plannerUpdateSetting('dayStart', this.value)"></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Period length (minutes)</label><input class="form-input" type="number" min="20" max="120" value="${settings.periodLength}" onchange="plannerUpdateSetting('periodLength', this.value)"></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Periods per day</label><input class="form-input" type="number" min="3" max="12" value="${settings.periodsPerDay}" onchange="plannerUpdateSetting('periodsPerDay', this.value)"></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Recess after period</label><input class="form-input" type="number" min="0" max="${Math.max(1, settings.periodsPerDay - 1)}" value="${settings.recessAfter}" onchange="plannerUpdateSetting('recessAfter', this.value)"></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Lunch after period</label><input class="form-input" type="number" min="0" max="${Math.max(1, settings.periodsPerDay - 1)}" value="${settings.lunchAfter}" onchange="plannerUpdateSetting('lunchAfter', this.value)"></div>
+        </div>
+      </details>
+
+      <div class="card" style="overflow:auto">
+        <table class="planner-grid">
+          <thead>
+            <tr>
+              <th>Time</th>
+              ${dayHeaders}
+            </tr>
+          </thead>
+          <tbody>
+            ${bodyRows.join('')}
+          </tbody>
+        </table>
+      </div>
+
+      ${dayView === null ? '' : `
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">${PLANNER_DAYS[dayView]} day view</div>
+          <button class="btn" onclick="plannerToggleDayView(${dayView})">Close day view</button>
+        </div>
+        <div style="padding:14px">
+          ${dayViewBlocks.length ? dayViewBlocks.map(block => `
+            <div class="planner-day-item">
+              <div>
+                <div class="planner-day-item-title">Period ${block.period} · ${plannerGetTimeForPeriod(block.period)}</div>
+                <div style="font-size:13px;color:var(--text)">${escapeHtml(block.title || 'Untitled')}</div>
+                <div style="font-size:13px;color:var(--text-muted)">${escapeHtml(block.focus || 'No focus added')}</div>
+                ${block.notes ? `<div style="font-size:12px;color:var(--text3);margin-top:4px">${escapeHtml(block.notes)}</div>` : ''}
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+                <button class="btn" onclick="plannerMoveWithinDay('${block.id}', -1)">↑ Earlier</button>
+                <button class="btn" onclick="plannerMoveWithinDay('${block.id}', 1)">↓ Later</button>
+                <button class="btn" onclick="plannerOpenBlockModal(${block.day}, ${block.period}, '${block.id}')">Edit</button>
+                <button class="btn" onclick="plannerOpenMoveModal('${block.id}')">Move</button>
+              </div>
+            </div>
+          `).join('') : `<div style="font-size:13px;color:var(--text3)">No blocks yet for this day.</div>`}
+        </div>
+      </div>`}
     </div>
   `;
 }

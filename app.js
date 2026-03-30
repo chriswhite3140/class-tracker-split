@@ -24,7 +24,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.7.4';
+const APP_VERSION = '1.7.5';
 const THEME_STORAGE_KEY = 'app_theme';
 let systemThemeMediaQuery = null;
 
@@ -97,7 +97,7 @@ const YLM = {
   '4':'Year 4','5':'Year 5','6':'Year 6',
 };
 function subjectCol(subj)   { return (SUBJECT_COLOURS[subj] || {col:'var(--blue)'}).col; }
-function subjectBg(subj)    { return (SUBJECT_COLOURS[subj] || {bg:'var(--surface2)'}).bg; }
+function subjectBg(subj)    { return (SUBJECT_COLOURS[subj] || {bg:'var(--surface-alt)'}).bg; }
 function subjectShort(subj) {
   if (subj === 'Health and Physical Education') return 'HPE';
   if (subj === 'Design and Technologies')       return 'D&T';
@@ -455,10 +455,18 @@ function getProgressStats(sid) {
   return { achieved, developing, emerging, total, pct: Math.round((achieved/total)*100) };
 }
 
+function getStripedRowSurface(index) {
+  return index % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)';
+}
+
+function getReadableChipText(bgToken) {
+  return bgToken === 'var(--surface-alt)' ? 'var(--text3)' : 'var(--primary-contrast)';
+}
+
 // ── PARSE CSV ──
 // ── ASSESSMENT SCALE ──
 const DEFAULT_ASSESSMENT_SCALE = [
-  { id: 'not-evident',     label: 'Not Evident',     colour: 'var(--text3)',   bg: 'var(--surface2)',  description: 'No evidence of understanding yet' },
+  { id: 'not-evident',     label: 'Not Evident',     colour: 'var(--text3)',   bg: 'var(--surface-alt)',  description: 'No evidence of understanding yet' },
   { id: 'developing',      label: 'Developing',      colour: 'var(--rust)',    bg: 'var(--rust-dim)',  description: 'Beginning to show understanding with support' },
   { id: 'competent',       label: 'Competent',       colour: 'var(--gold)',    bg: 'var(--gold-dim)',  description: 'Demonstrates understanding at year level' },
   { id: 'highly-competent',label: 'Highly Competent',colour: 'var(--blue)',    bg: 'var(--blue-dim)',  description: 'Demonstrates thorough understanding at year level' },
@@ -671,7 +679,7 @@ function renderDashboard(main) {
         <!-- Taught progress bar -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
           <div style="font-size:10px;color:var(--text3);width:52px;flex-shrink:0">Taught</div>
-          <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+          <div style="flex:1;height:6px;background:var(--surface-alt);border-radius:3px;overflow:hidden">
             <div style="height:100%;width:${taughtPct}%;background:${col};border-radius:3px;transition:width 0.3s"></div>
           </div>
           <div style="font-family:'DM Mono',monospace;font-size:9px;color:${col};width:36px;text-align:right">${taughtCodes.size}/${codes.length}</div>
@@ -685,7 +693,7 @@ function renderDashboard(main) {
           const sp = sa.length ? Math.round(sa.filter(p=>p.mastery==='Achieved').length/sa.length*100) : 0;
           return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
             <div style="font-size:10px;color:var(--text3);width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${strand}</div>
-            <div style="flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:${sp}%;background:${col};border-radius:2px;transition:width 0.3s"></div></div>
+            <div style="flex:1;height:4px;background:var(--surface-alt);border-radius:2px;overflow:hidden"><div style="height:100%;width:${sp}%;background:${col};border-radius:2px;transition:width 0.3s"></div></div>
             <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);width:28px;text-align:right">${sa.length ? sp+'%' : '—'}</div>
           </div>`;
         }).join('')}
@@ -804,7 +812,7 @@ function renderClassOverview(main) {
     if (pct >= 80) return 'var(--green-dim)';
     if (pct >= 50) return 'var(--gold-dim)';
     if (pct > 0)   return 'var(--rust-dim)';
-    return 'var(--surface2)';
+    return 'var(--surface-alt)';
   }
 
   const visibleStudents = sortStudents(state.students.filter(s => ovf.year === 'all' || normaliseYear(s.year_level) === ovf.year));
@@ -816,8 +824,8 @@ function renderClassOverview(main) {
           .filter(strand => !state.classSettings || isStrandEnabled(ovf.subject, strand));
 
     return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px">
-      <thead><tr style="background:var(--surface2)">
-        <th style="padding:10px 16px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:180px;position:sticky;left:0;background:var(--surface2);z-index:2">Student</th>
+      <thead><tr style="background:var(--surface-alt)">
+        <th style="padding:10px 16px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:180px;position:sticky;left:0;background:var(--surface-alt);z-index:2">Student</th>
         <th style="padding:10px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:80px">Overall</th>
         ${allStrands.map(strand => `<th style="padding:10px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;cursor:pointer" onclick="state.overviewFilter.strand='${strand}';renderClassOverview(document.getElementById('main-content'))">${strand}<br><span style="font-size:8px;opacity:0.6;font-weight:400">click to filter</span></th>`).join('')}
         <th style="padding:10px 12px;text-align:center;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:var(--text3);text-transform:uppercase;width:60px">Gaps</th>
@@ -839,8 +847,8 @@ function renderClassOverview(main) {
               </div>
             </td>`;
           }).join('');
-          return `<tr style="border-bottom:1px solid var(--border);${si%2===1?'background:rgba(255,255,255,0.02)':''}">
-            <td style="padding:10px 16px;position:sticky;left:0;background:${si%2===1?'#1c2030':'var(--surface)'};z-index:1;cursor:pointer" onclick="openStudentDetail('${s.id}')">
+          return `<tr style="border-bottom:1px solid var(--border);background:${getStripedRowSurface(si)}">
+            <td style="padding:10px 16px;position:sticky;left:0;background:${getStripedRowSurface(si)};z-index:1;cursor:pointer" onclick="openStudentDetail('${s.id}')">
               <div style="display:flex;align-items:center;gap:10px">
                 <div class="sc-avatar ${getAvClass(si)}" style="width:30px;height:30px;font-size:12px;flex-shrink:0">${getInitials(s)}</div>
                 <div>
@@ -851,7 +859,7 @@ function renderClassOverview(main) {
             </td>
             <td style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">
               <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:${masteryColour(overallPct)}">${overallPct}%</div>
-              <div style="margin-top:4px;height:4px;background:var(--surface2);border-radius:2px;width:52px;margin-inline:auto;overflow:hidden"><div style="height:100%;width:${overallPct}%;background:${masteryColour(overallPct)};border-radius:2px"></div></div>
+              <div style="margin-top:4px;height:4px;background:var(--surface-alt);border-radius:2px;width:52px;margin-inline:auto;overflow:hidden"><div style="height:100%;width:${overallPct}%;background:${masteryColour(overallPct)};border-radius:2px"></div></div>
             </td>
             ${strandCells}
             <td style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">
@@ -863,7 +871,7 @@ function renderClassOverview(main) {
     </table></div>
     <div style="display:flex;gap:16px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap">
       <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-right:4px;align-self:center">Legend</div>
-      ${[['≥80%','var(--green)','var(--green-dim)'],['50–79%','var(--gold)','var(--gold-dim)'],['1–49%','var(--rust)','var(--rust-dim)'],['Not assessed','var(--border2)','var(--surface2)']].map(([label,col,bg]) => `
+      ${[['≥80%','var(--green)','var(--green-dim)'],['50–79%','var(--gold)','var(--gold-dim)'],['1–49%','var(--rust)','var(--rust-dim)'],['Not assessed','var(--border2)','var(--surface-alt)']].map(([label,col,bg]) => `
         <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;border-radius:50%;background:${bg};border:2px solid ${col}"></div><span style="font-size:11px;color:var(--text3)">${label}</span></div>
       `).join('')}
       <div style="margin-left:auto;font-size:11px;color:var(--text3)">Click any cell or name to open student profile · Click strand header to filter</div>
@@ -1122,7 +1130,7 @@ function renderStudentDetail(main) {
             <div style="font-size:12px;font-weight:600;color:var(--text);flex:1">${strand}</div>
             <div style="font-family:'DM Mono',monospace;font-size:9px;color:${activeCol}">${taughtHere}/${sCodes.length} taught</div>
             <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--green)">${achievedHere} achieved</div>
-            <div style="width:80px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
+            <div style="width:80px;height:4px;background:var(--surface-alt);border-radius:2px;overflow:hidden">
               <div style="height:100%;width:${pct}%;background:${activeCol};border-radius:2px"></div>
             </div>
           </div>
@@ -1133,11 +1141,11 @@ function renderStudentDetail(main) {
               const taught  = wasCodeTaughtToStudent(s.id, c.Code);
               const dates   = getTaughtDatesForCode(s.id, c.Code);
               let bg, col2, dot;
-              if      (mastery==='Achieved')   { bg='var(--green)';    col2='#0f1117'; dot='●'; }
-              else if (mastery==='Developing') { bg='var(--gold)';     col2='#0f1117'; dot='◐'; }
-              else if (mastery==='Emerging')   { bg='var(--rust)';     col2='#0f1117'; dot='○'; }
+              if      (mastery==='Achieved')   { bg='var(--green)';    col2='var(--primary-contrast)'; dot='●'; }
+              else if (mastery==='Developing') { bg='var(--gold)';     col2='var(--primary-contrast)'; dot='◐'; }
+              else if (mastery==='Emerging')   { bg='var(--rust)';     col2='var(--primary-contrast)'; dot='○'; }
               else if (taught)                 { bg='var(--blue-dim)'; col2='var(--blue)'; dot='·'; }
-              else                             { bg='var(--surface2)'; col2='var(--text3)'; dot=' '; }
+              else                             { bg='var(--surface-alt)'; col2='var(--text3)'; dot=' '; }
               const tip = mastery !== 'Not taught' ? mastery : taught ? 'Taught '+dates[0] : 'Not taught yet';
               return `<div onclick="openCodeDetail('${c.Code}','${s.id}')"
                 title="${c.Code} · ${tip}"
@@ -1168,7 +1176,7 @@ function renderStudentDetail(main) {
         ${elements.map(element => {
           const subEls = [...new Set(progs.filter(p => p.Element === element).map(p => p['Sub-element']).filter(Boolean))].sort();
           return `<div style="padding:8px 16px;border-bottom:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">${element}</div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px">${element}</div>
             <div style="display:flex;flex-direction:column;gap:6px">
               ${subEls.map(subEl => {
                 const items = progs.filter(p => p.Element === element && p['Sub-element'] === subEl);
@@ -1180,8 +1188,8 @@ function renderStudentDetail(main) {
                 const nextItem  = nextLevel ? items.find(i => String(i['Progression level']) === nextLevel) : null;
                 const extLabel  = placement?.ext_value ? `${placement.ext_label||''} ${placement.ext_value}`.trim() : null;
 
-                return `<div style="display:grid;grid-template-columns:160px 80px 1fr;gap:10px;align-items:start;padding:6px 8px;border-radius:6px;background:var(--surface2)">
-                  <div style="font-size:11px;color:var(--text2)">${subEl}</div>
+                return `<div style="display:grid;grid-template-columns:160px 80px 1fr;gap:10px;align-items:start;padding:6px 8px;border-radius:6px;background:var(--surface-alt)">
+                  <div style="font-size:11px;color:var(--text-muted)">${subEl}</div>
                   <div style="text-align:center">
                     <button data-pp-open="${s.id}" data-pp-element="${element.replace(/"/g,'&quot;')}" data-pp-subelement="${subEl.replace(/"/g,'&quot;')}"
                       style="padding:3px 10px;border-radius:4px;border:1px solid ${curLevel?colour:'var(--border2)'};background:${curLevel?colour+'22':'none'};color:${curLevel?colour:'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;font-weight:700">
@@ -1189,7 +1197,7 @@ function renderStudentDetail(main) {
                     </button>
                     ${extLabel ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--gold);margin-top:2px">${extLabel}</div>` : ''}
                   </div>
-                  <div style="font-size:11px;color:var(--text2);line-height:1.4">
+                  <div style="font-size:11px;color:var(--text-muted);line-height:1.4">
                     ${nextItem
                       ? `<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);background:var(--teal-dim);padding:1px 5px;border-radius:3px;margin-right:5px">L${nextLevel} ›</span>${nextItem['Indicator text (no examples)']||nextItem['Indicator text (verbatim)']||''}`
                       : curLevel
@@ -1238,8 +1246,8 @@ function renderStudentDetail(main) {
                   const taught = wasCodeTaughtToStudent(s.id, c.Code);
                   const taughtDates = getTaughtDatesForCode(s.id, c.Code);
                   return `<tr style="cursor:pointer" onclick="openCodeDetail('${c.Code}','${s.id}')">
-                    <td><span class="code-pill" style="background:var(--surface2);color:${activeCol}">${c.Code}</span></td>
-                    <td style="max-width:300px;color:var(--text2)">${c.Descriptor || c.Aspect || '—'}</td>
+                    <td><span class="code-pill" style="background:var(--surface-alt);color:${activeCol}">${c.Code}</span></td>
+                    <td style="max-width:300px;color:var(--text-muted)">${c.Descriptor || c.Aspect || '—'}</td>
                     <td><span class="aspect-tag">${c.Strand || '—'}</span></td>
                     <td onclick="event.stopPropagation()" style="white-space:nowrap">
                       ${taught
@@ -1312,7 +1320,7 @@ function renderCurriculum(main) {
   const strands  = ['all', ...new Set(allCodes.filter(c => cdFilters.subject === 'all' || c.Subject === cdFilters.subject).map(c => c.Strand).filter(Boolean))].sort();
 
   function sel(opts, val, onchange) {
-    return `<select onchange="${onchange}" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text2);font-size:12px;cursor:pointer;outline:none">
+    return `<select onchange="${onchange}" style="background:var(--surface-alt);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text-muted);font-size:12px;cursor:pointer;outline:none">
       ${opts.map(o => `<option value="${o}" ${val===o?'selected':''}>${o==='all'?'All':o}</option>`).join('')}
     </select>`;
   }
@@ -1337,7 +1345,7 @@ function renderCurriculum(main) {
         ? `<div class="empty-state"><div class="empty-icon">≡</div><div class="empty-title">No curriculum data loaded</div><div class="empty-sub">Open Data &amp; Settings to load your CSV files</div></div>`
         : `<div class="card">
             <div class="card-head" style="padding:10px 18px">
-              <div style="font-size:13px;color:var(--text2)">Showing <strong style="color:var(--text)">${codes.length}</strong> of ${allCodes.length} codes</div>
+              <div style="font-size:13px;color:var(--text-muted)">Showing <strong style="color:var(--text)">${codes.length}</strong> of ${allCodes.length} codes</div>
               ${codes.length !== allCodes.length ? `<button class="btn" onclick="cdFilters={subject:'English',year:'all',strand:'all',sort:'code',search:''};renderCurriculum(document.getElementById('main-content'))">✕ Clear filters</button>` : ''}
             </div>
             <div style="overflow-x:auto">
@@ -1354,8 +1362,8 @@ function renderCurriculum(main) {
                     ? `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text3)">No codes match your filters</td></tr>`
                     : codes.map(c => `<tr style="cursor:pointer" onclick="openCodeDetail('${c.Code}',null)">
                         <td><span class="code-pill" style="background:var(--blue-dim);color:var(--blue);font-size:11px">${c.Code}</span></td>
-                        <td style="color:var(--text2);font-size:12px;line-height:1.4;padding-right:12px">${c.Descriptor||c.Aspect||'—'}</td>
-                        <td><span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;background:var(--surface2);color:var(--text3);white-space:nowrap">${c.Strand||'—'}</span></td>
+                        <td style="color:var(--text-muted);font-size:12px;line-height:1.4;padding-right:12px">${c.Descriptor||c.Aspect||'—'}</td>
+                        <td><span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;background:var(--surface-alt);color:var(--text3);white-space:nowrap">${c.Strand||'—'}</span></td>
                         <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${c['Year Level']||'—'}</td>
                       </tr>`).join('')}
                 </tbody>
@@ -1393,7 +1401,7 @@ function renderStandards(main) {
       ${stds.length === 0
         ? `<div class="empty-state"><div class="empty-icon">◇</div><div class="empty-title">No standards data loaded</div><div class="empty-sub">Open Data &amp; Settings to load your CSV files</div></div>`
         : `<div class="card">
-            <div class="card-head" style="padding:10px 18px"><div style="font-size:13px;color:var(--text2)">Showing <strong style="color:var(--text)">${visibleStds.length}</strong> of ${filteredBySubject.length} ${sf.subject} standards</div></div>
+            <div class="card-head" style="padding:10px 18px"><div style="font-size:13px;color:var(--text-muted)">Showing <strong style="color:var(--text)">${visibleStds.length}</strong> of ${filteredBySubject.length} ${sf.subject} standards</div></div>
             <table class="codes-table" style="table-layout:fixed;width:100%">
               <colgroup><col style="width:150px"><col style="width:auto"><col style="width:110px"></colgroup>
               <thead><tr><th>Standard ID</th><th>Standard Text</th><th>Year</th></tr></thead>
@@ -1402,7 +1410,7 @@ function renderStandards(main) {
                   ? `<tr><td colspan="3" style="text-align:center;padding:30px;color:var(--text3)">No standards for this filter</td></tr>`
                   : visibleStds.map(s => `<tr>
                       <td><span class="code-pill" style="background:var(--gold-dim);color:var(--gold);font-size:10px">${s['Achievement Standard ID']||'—'}</span></td>
-                      <td style="color:var(--text2);font-size:12px;line-height:1.4;padding-right:12px">${s['Standard Text']||'—'}</td>
+                      <td style="color:var(--text-muted);font-size:12px;line-height:1.4;padding-right:12px">${s['Standard Text']||'—'}</td>
                       <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${s['Year Level']||'—'}</td>
                     </tr>`).join('')}
               </tbody>
@@ -1459,12 +1467,12 @@ function renderProgressionContent(progs, activeElem) {
         ${items.map(item => `<div style="display:flex;gap:10px;padding:8px 18px;border-bottom:1px solid var(--border);align-items:flex-start">
           <span class="pp-level">L${item['Progression level']||'?'}</span>
           <div style="flex:1">
-            <div style="font-size:12px;color:var(--text2);line-height:1.5">${item['Indicator text (no examples)']||item['Indicator text (verbatim)']||'—'}</div>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.5">${item['Indicator text (no examples)']||item['Indicator text (verbatim)']||'—'}</div>
             ${item['Example / elaboration'] ? `<div style="font-size:11px;color:var(--text3);margin-top:3px;font-style:italic">${item['Example / elaboration']}</div>` : ''}
             <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">
               ${['Foundation','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'].map(yr => {
                 const val = item['Relevant – '+yr];
-                return val && val.trim() ? `<span style="font-family:'DM Mono',monospace;font-size:8px;padding:1px 5px;border-radius:3px;background:var(--surface2);color:var(--text3)">${yr}</span>` : '';
+                return val && val.trim() ? `<span style="font-family:'DM Mono',monospace;font-size:8px;padding:1px 5px;border-radius:3px;background:var(--surface-alt);color:var(--text3)">${yr}</span>` : '';
               }).join('')}
             </div>
           </div>
@@ -1524,16 +1532,16 @@ function openCodeDetail(code, studentId) {
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
           <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--blue)">${code}</span>
-          ${cd['Year Level'] ? `<span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surface2);color:var(--text3)">${cd['Year Level']}</span>` : ''}
+          ${cd['Year Level'] ? `<span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surface-alt);color:var(--text3)">${cd['Year Level']}</span>` : ''}
           ${cd.Strand ? `<span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:var(--blue-dim);color:var(--blue)">${cd.Strand}</span>` : ''}
-          ${cd['Sub-strand'] ? `<span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surface2);color:var(--text3)">${cd['Sub-strand']}</span>` : ''}
+          ${cd['Sub-strand'] ? `<span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surface-alt);color:var(--text3)">${cd['Sub-strand']}</span>` : ''}
         </div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.5">${cd.Descriptor||cd.Aspect||'—'}</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">${cd.Descriptor||cd.Aspect||'—'}</div>
       </div>
       <button onclick="document.getElementById('code-detail-panel').remove()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px;line-height:1;flex-shrink:0">✕</button>
     </div>
     ${studentId ? `
-    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface2)">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface-alt)">
       <div>
         <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Current Mastery</div>
         <div class="mastery-badge ${masteryClass(mastery)}" style="cursor:pointer" onclick="document.getElementById('code-detail-panel').remove();openMasteryPicker('${studentId}','${code}','${mastery}')">
@@ -1542,9 +1550,9 @@ function openCodeDetail(code, studentId) {
       </div>
       <div>
         <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Last Assessed</div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2)">${prog ? prog.date.split('T')[0] : 'Not yet assessed'}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)">${prog ? prog.date.split('T')[0] : 'Not yet assessed'}</div>
       </div>
-      ${prog && prog.notes ? `<div style="max-width:140px"><div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Notes</div><div style="font-size:11px;color:var(--text2);line-height:1.4">${prog.notes}</div></div>` : ''}
+      ${prog && prog.notes ? `<div style="max-width:140px"><div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Notes</div><div style="font-size:11px;color:var(--text-muted);line-height:1.4">${prog.notes}</div></div>` : ''}
     </div>` : ''}
     <div style="flex:1;overflow-y:auto;padding:0">
       <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
@@ -1556,7 +1564,7 @@ function openCodeDetail(code, studentId) {
               return `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start">
                 <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);background:var(--gold-dim);padding:2px 7px;border-radius:3px;flex-shrink:0;margin-top:2px">${id}</span>
                 <div>
-                  <div style="font-size:12px;color:var(--text2);line-height:1.4">${std ? (std['Standard Text']||std.Aspect||'No text') : 'Standard not found'}</div>
+                  <div style="font-size:12px;color:var(--text-muted);line-height:1.4">${std ? (std['Standard Text']||std.Aspect||'No text') : 'Standard not found'}</div>
                   ${std ? `<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:3px">${std['Year Level']||''}</div>` : ''}
                 </div>
               </div>`;
@@ -1568,7 +1576,7 @@ function openCodeDetail(code, studentId) {
           ? `<div style="font-size:12px;color:var(--text3)">No related progressions found</div>`
           : relatedProgressions.map(p => `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start">
               <div style="flex-shrink:0"><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--purple);background:var(--purple-dim);padding:2px 6px;border-radius:3px;display:block;margin-bottom:3px">L${p['Progression level']||'?'}</span><span style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3)">${p['Indicator ID']||''}</span></div>
-              <div style="flex:1"><div style="font-size:11px;color:var(--text2);line-height:1.5">${p['Indicator text (no examples)']||p['Indicator text (verbatim)']||'—'}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${p['Sub-element']||''}</div></div>
+              <div style="flex:1"><div style="font-size:11px;color:var(--text-muted);line-height:1.5">${p['Indicator text (no examples)']||p['Indicator text (verbatim)']||'—'}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${p['Sub-element']||''}</div></div>
             </div>`).join('')}
       </div>
     </div>
@@ -1658,12 +1666,12 @@ function openAddStudentModal() {
         </div>
         <div id="modal-tab-csv" style="padding:20px 22px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div><div style="font-size:13px;color:var(--text2);margin-bottom:4px">Upload a CSV file with your class list.</div><div style="font-size:11px;color:var(--text3)">Columns needed: <span style="font-family:'DM Mono',monospace;color:var(--blue)">first_name, last_name, year_level</span></div></div>
+            <div><div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Upload a CSV file with your class list.</div><div style="font-size:11px;color:var(--text3)">Columns needed: <span style="font-family:'DM Mono',monospace;color:var(--blue)">first_name, last_name, year_level</span></div></div>
             <button class="btn" onclick="downloadStudentTemplate()" style="flex-shrink:0;margin-left:16px">⬇ Download Template</button>
           </div>
           <div id="csv-dropzone" style="border:2px dashed var(--border2);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:14px" onclick="document.getElementById('student-csv-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-dim)'" ondragleave="this.style.borderColor='var(--border2)';this.style.background='none'" ondrop="handleStudentCSVDrop(event)">
             <div style="font-size:28px;margin-bottom:8px;opacity:0.4">📋</div>
-            <div style="font-size:13px;color:var(--text2);margin-bottom:4px">Drop your CSV here or click to browse</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Drop your CSV here or click to browse</div>
             <div style="font-size:11px;color:var(--text3)">Accepts .csv files</div>
             <input type="file" id="student-csv-input" accept=".csv" style="display:none" onchange="handleStudentCSVFile(this)">
           </div>
@@ -1763,7 +1771,7 @@ function processStudentCSV(file) {
     const submitBtn = document.getElementById('modal-submit-btn');
     preview.style.display = 'block';
     label.textContent = `${valid.length} student${valid.length!==1?'s':''} ready to import${errors.length?' · '+errors.length+' skipped':''}`;
-    table.innerHTML = `<thead><tr style="background:var(--surface2)"><th style="padding:7px 12px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase">First Name</th><th style="padding:7px 12px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase">Last Name</th><th style="padding:7px 12px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase">Year</th><th style="padding:7px 12px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase">Status</th></tr></thead><tbody>${valid.map(s=>`<tr style="border-top:1px solid var(--border)"><td style="padding:7px 12px;font-size:12px">${s.first_name}</td><td style="padding:7px 12px;font-size:12px">${s.last_name}</td><td style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--blue)">${s.year_level}</td><td style="padding:7px 12px"><span style="font-size:10px;color:var(--green)">✓ Ready</span></td></tr>`).join('')}</tbody>`;
+    table.innerHTML = `<thead><tr style="background:var(--surface-alt)"><th style="padding:7px 12px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase">First Name</th><th style="padding:7px 12px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase">Last Name</th><th style="padding:7px 12px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase">Year</th><th style="padding:7px 12px;text-align:left;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase">Status</th></tr></thead><tbody>${valid.map(s=>`<tr style="border-top:1px solid var(--border)"><td style="padding:7px 12px;font-size:12px">${s.first_name}</td><td style="padding:7px 12px;font-size:12px">${s.last_name}</td><td style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--blue)">${s.year_level}</td><td style="padding:7px 12px"><span style="font-size:10px;color:var(--green)">✓ Ready</span></td></tr>`).join('')}</tbody>`;
     errDiv.innerHTML = errors.length ? errors.map(e=>`<div>⚠ ${e}</div>`).join('') : '';
     submitBtn.textContent = `Import ${valid.length} Student${valid.length!==1?'s':''}`;
     submitBtn.onclick = submitCSVImport;
@@ -1969,7 +1977,7 @@ function buildCodeListItem(c, selectedCode) {
   const active = c.Code === selectedCode;
   return `<div data-ba-action="setBulkCode" data-ba-val="${c.Code}" style="padding:8px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:10px;align-items:center;${active?'background:var(--blue-dim);':''}">
     <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue);flex-shrink:0;min-width:110px">${c.Code}</span>
-    <span style="font-size:11px;color:var(--text2);line-height:1.3">${c.Descriptor||c.Aspect||''}</span>
+    <span style="font-size:11px;color:var(--text-muted);line-height:1.3">${c.Descriptor||c.Aspect||''}</span>
   </div>`;
 }
 
@@ -2006,7 +2014,7 @@ function renderBulkAssess(main) {
     return `<button data-ba-action="${action}" data-ba-val="${value}" style="padding:4px 10px;border-radius:4px;border:1px solid ${active?'var(--blue)':'var(--border2)'};background:${active?'var(--blue-dim)':'none'};color:${active?'var(--blue)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">${label}</button>`;
   }
 
-  const masteryColours = { 'Achieved':['var(--green)','var(--green-dim)'], 'Developing':['var(--gold)','var(--gold-dim)'], 'Emerging':['var(--rust)','var(--rust-dim)'], 'Not taught':['var(--border2)','var(--surface2)'] };
+  const masteryColours = { 'Achieved':['var(--green)','var(--green-dim)'], 'Developing':['var(--gold)','var(--gold-dim)'], 'Emerging':['var(--rust)','var(--rust-dim)'], 'Not taught':['var(--border2)','var(--surface-alt)'] };
 
   function masteryBtns(key, current) {
     return ['Achieved','Developing','Emerging','Not taught'].map(m => {
@@ -2023,9 +2031,9 @@ function renderBulkAssess(main) {
     const rosterHtml = !code
       ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">⊞</div><div class="empty-title">Select a code on the left</div><div class="empty-sub">Then set mastery for each student</div></div>`
       : `<div style="display:flex;flex-direction:column;overflow:hidden;height:100%">
-          <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0">
+          <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface-alt);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0">
             <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue)">${code}</span>
-            <span style="font-size:12px;color:var(--text2);flex:1;line-height:1.3">${cd ? (cd.Descriptor||cd.Aspect||'') : ''}</span>
+            <span style="font-size:12px;color:var(--text-muted);flex:1;line-height:1.3">${cd ? (cd.Descriptor||cd.Aspect||'') : ''}</span>
             <button data-ba-action="applyMasteryToAll" data-ba-key="${code}" data-ba-val="Achieved" style="padding:4px 10px;border-radius:4px;border:1px solid var(--green);background:var(--green-dim);color:var(--green);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">✓ All Achieved</button>
             <button data-ba-action="applyMasteryToAll" data-ba-key="${code}" data-ba-val="Developing" style="padding:4px 10px;border-radius:4px;border:1px solid var(--gold);background:var(--gold-dim);color:var(--gold);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer">◐ All Developing</button>
           </div>
@@ -2036,7 +2044,7 @@ function renderBulkAssess(main) {
               const saved = getMasteryForCode(s.id, code);
               const current = pending !== undefined ? pending : (saved || 'Not taught');
               const changed = pending !== undefined && pending !== saved;
-              return `<tr style="${si%2===1?'background:rgba(255,255,255,0.02)':''}${changed?';box-shadow:inset 3px 0 0 var(--gold)':''}">
+              return `<tr style="background:${getStripedRowSurface(si)}${changed?';box-shadow:inset 3px 0 0 var(--gold)':''}">
                 <td style="padding:10px 16px;width:200px">
                   <div style="display:flex;align-items:center;gap:10px">
                     <div class="sc-avatar ${getAvClass(si)}" style="width:28px;height:28px;font-size:11px;flex-shrink:0">${getInitials(s)}</div>
@@ -2050,9 +2058,9 @@ function renderBulkAssess(main) {
         </div>`;
     return `<div style="display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 118px);overflow:hidden">
       <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
-        <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface-alt);flex-shrink:0">
           <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.1em">Select Code · ${filteredCodes.length} available</div>
-          <input id="ba-code-search" placeholder="Search codes…" oninput="filterBulkCodeList(this.value)" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:5px 10px;color:var(--text2);font-size:12px;outline:none">
+          <input id="ba-code-search" placeholder="Search codes…" oninput="filterBulkCodeList(this.value)" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:5px 10px;color:var(--text-muted);font-size:12px;outline:none">
         </div>
         <div id="ba-code-list" style="overflow-y:auto;flex:1">${codeListHtml}</div>
       </div>
@@ -2083,9 +2091,9 @@ function renderBulkAssess(main) {
         const saved = getMasteryForCode(student.id, c.Code);
         const current = pending !== undefined ? pending : (saved||'Not taught');
         const changed = pending !== undefined && pending !== saved;
-        return `<tr style="${ci%2===1?'background:rgba(255,255,255,0.02)':''}${changed?';box-shadow:inset 3px 0 0 var(--gold)':''}">
+        return `<tr style="background:${getStripedRowSurface(ci)}${changed?';box-shadow:inset 3px 0 0 var(--gold)':''}">
           <td style="padding:8px 16px;width:130px;vertical-align:top;padding-top:12px"><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue)">${c.Code}</span></td>
-          <td style="padding:8px 8px;font-size:11px;color:var(--text2);line-height:1.4;max-width:300px;vertical-align:top;padding-top:12px">${c.Descriptor||c.Aspect||'—'}</td>
+          <td style="padding:8px 8px;font-size:11px;color:var(--text-muted);line-height:1.4;max-width:300px;vertical-align:top;padding-top:12px">${c.Descriptor||c.Aspect||'—'}</td>
           <td style="padding:8px 16px;vertical-align:top;padding-top:8px"><div style="display:flex;gap:4px;flex-wrap:wrap">${masteryBtns(key, current)}</div></td>
         </tr>`;
       }).join('');
@@ -2093,13 +2101,13 @@ function renderBulkAssess(main) {
 
     return `<div style="display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 118px);overflow:hidden">
       <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
-        <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;flex-shrink:0">Select Student · ${filteredStudents.length} shown</div>
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface-alt);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;flex-shrink:0">Select Student · ${filteredStudents.length} shown</div>
         <div style="overflow-y:auto;flex:1">${studentListHtml}</div>
       </div>
       <div style="overflow:hidden;display:flex;flex-direction:column">
         ${!student
           ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">◎</div><div class="empty-title">Select a student on the left</div></div>`
-          : `<div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:10px;flex-shrink:0">
+          : `<div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface-alt);display:flex;align-items:center;gap:10px;flex-shrink:0">
               <div class="sc-avatar ${getAvClass(0)}" style="width:28px;height:28px;font-size:11px">${getInitials(student)}</div>
               <div><div style="font-size:13px;font-weight:600">${student.first_name} ${student.last_name}</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">Year ${student.year_level} · ${ba.subjectFilter}</div></div>
             </div>
@@ -2122,9 +2130,9 @@ function renderBulkAssess(main) {
       <div style="width:1px;height:18px;background:var(--border2);margin:0 3px"></div>
       ${availStrands.map(st => filterBtn(st==='all'?'All strands':st, ba.strandFilter===st, 'setBulkStrand', st)).join('')}
       <div style="width:1px;height:18px;background:var(--border2);margin:0 3px;margin-left:auto"></div>
-      <input type="date" value="${ba.date}" onchange="state.bulkAssess.date=this.value" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;outline:none">
+      <input type="date" value="${ba.date}" onchange="state.bulkAssess.date=this.value" style="background:var(--surface-alt);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text-muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;outline:none">
       ${pendingCount > 0 ? `
-        <button onclick="saveBulkAssess()" style="padding:5px 16px;border-radius:6px;border:none;background:var(--green);color:#0f1117;font-family:'DM Mono',monospace;font-size:11px;font-weight:700;cursor:pointer">↑ Save ${pendingCount} change${pendingCount>1?'s':''}</button>
+        <button onclick="saveBulkAssess()" style="padding:5px 16px;border-radius:6px;border:none;background:var(--green);color:var(--primary-contrast);font-family:'DM Mono',monospace;font-size:11px;font-weight:700;cursor:pointer">↑ Save ${pendingCount} change${pendingCount>1?'s':''}</button>
         <button onclick="discardBulkChanges()" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border2);background:none;color:var(--text3);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer">✕ Discard</button>` : ''}
     </div>
     <div style="overflow:hidden">${modeContent}</div>
@@ -2437,12 +2445,12 @@ function openPrintOptionsModal(studentId) {
         <div class="form-group">
           <label class="form-label">Subject scope</label>
           <div style="display:flex;flex-direction:column;gap:8px" id="print-subject-opts">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text-muted)">
               <input type="radio" name="print-subject" value="all" ${!currentSubject?'checked':''} onchange="updatePrintStrandOpts()" style="accent-color:var(--blue)">
               All subjects (full report)
             </label>
             ${availableSubjects.map(subj => `
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text-muted)">
                 <input type="radio" name="print-subject" value="${subj}" ${currentSubject===subj?'checked':''} onchange="updatePrintStrandOpts()" style="accent-color:var(--blue)">
                 ${subj} only
               </label>`).join('')}
@@ -2457,7 +2465,7 @@ function openPrintOptionsModal(studentId) {
           </div>
         </div>
 
-        <div style="padding:10px 14px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);font-size:11px;color:var(--text3)">
+        <div style="padding:10px 14px;background:var(--surface-alt);border-radius:6px;border:1px solid var(--border);font-size:11px;color:var(--text3)">
           <span id="print-scope-preview">Calculating…</span>
         </div>
       </div>
@@ -2473,12 +2481,12 @@ function openPrintOptionsModal(studentId) {
 }
 
 function buildPrintStrandOpts(strands, selectedStrand) {
-  return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
+  return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text-muted)">
     <input type="radio" name="print-strand" value="all" ${!selectedStrand?'checked':''} onchange="updatePrintScopePreview()" style="accent-color:var(--blue)">
     All strands
   </label>
   ${strands.map(st => `
-    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text-muted)">
       <input type="radio" name="print-strand" value="${st}" ${selectedStrand===st?'checked':''} onchange="updatePrintScopePreview()" style="accent-color:var(--blue)">
       ${st} only
     </label>`).join('')}`;
@@ -2584,7 +2592,7 @@ function openBulkPrintModal() {
         <!-- Year group headers with students -->
         ${buildBulkStudentList()}
 
-        <div style="margin-top:14px;padding:10px 14px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);font-size:11px;color:var(--text3)" id="bulk-print-summary">
+        <div style="margin-top:14px;padding:10px 14px;background:var(--surface-alt);border-radius:6px;border:1px solid var(--border);font-size:11px;color:var(--text3)" id="bulk-print-summary">
           Select students above to continue
         </div>
       </div>
@@ -2616,7 +2624,7 @@ function buildBulkStudentList() {
     html += `<div style="margin-bottom:12px">
       <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px">${yearLabel[yr] || 'Year '+yr}</div>
       ${group.map((s,si) => `
-        <label style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:5px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">
+        <label style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:5px;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='var(--surface-alt)'" onmouseout="this.style.background='none'">
           <input type="checkbox" class="bulk-student-cb" value="${s.id}" checked style="accent-color:var(--blue);width:15px;height:15px;flex-shrink:0">
           <div class="sc-avatar ${getAvClass(si)}" style="width:26px;height:26px;font-size:11px;flex-shrink:0">${getInitials(s)}</div>
           <div style="flex:1">
@@ -2764,7 +2772,7 @@ function showCoverageTooltip(event, code, descriptor, subject, strand) {
       <span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:${col}">${code}</span>
       ${strand ? `<span style="font-size:9px;background:${col}22;color:${col};padding:1px 6px;border-radius:3px;font-family:'DM Mono',monospace">${strand}</span>` : ''}
     </div>
-    <div style="font-size:12px;color:var(--text2);line-height:1.5">${descriptor}</div>
+    <div style="font-size:12px;color:var(--text-muted);line-height:1.5">${descriptor}</div>
   `;
   document.body.appendChild(tip);
 
@@ -2851,11 +2859,11 @@ function renderCoverage(main) {
       if (mastery === 'Developing') return 'background:var(--gold);title=Developing';
       if (mastery === 'Emerging')   return 'background:var(--rust);title=Emerging';
       if (taught)                   return 'background:var(--blue-dim);border:1px solid var(--blue);title=Taught · not assessed';
-      return 'background:var(--surface2);title=Not taught yet';
+      return 'background:var(--surface-alt);title=Not taught yet';
     }
 
     const studentHeaders = students.map(s =>
-      `<th style="padding:4px 6px;text-align:center;border-bottom:1px solid var(--border);writing-mode:vertical-rl;transform:rotate(180deg);height:80px;vertical-align:bottom;font-size:10px;color:var(--text2);font-weight:600;cursor:pointer;white-space:nowrap" onclick="openStudentDetail('${s.id}')" title="${s.first_name} ${s.last_name}">
+      `<th style="padding:4px 6px;text-align:center;border-bottom:1px solid var(--border);writing-mode:vertical-rl;transform:rotate(180deg);height:80px;vertical-align:bottom;font-size:10px;color:var(--text-muted);font-weight:600;cursor:pointer;white-space:nowrap" onclick="openStudentDetail('${s.id}')" title="${s.first_name} ${s.last_name}">
         ${s.first_name} ${s.last_name[0]}.
       </th>`
     ).join('');
@@ -2872,7 +2880,7 @@ function renderCoverage(main) {
 
     const bodyRows = codesByStrand.map(({strand, codes: sCodes}) => {
       const strandRow = `<tr>
-        <td colspan="${students.length + 2}" style="padding:6px 10px;background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;color:${col};text-transform:uppercase;letter-spacing:0.1em;border-bottom:1px solid var(--border)">
+        <td colspan="${students.length + 2}" style="padding:6px 10px;background:var(--surface-alt);font-family:'DM Mono',monospace;font-size:9px;color:${col};text-transform:uppercase;letter-spacing:0.1em;border-bottom:1px solid var(--border)">
           ${strand} · ${sCodes.length} codes
         </td>
       </tr>`;
@@ -2892,14 +2900,14 @@ function renderCoverage(main) {
           else if (taught)                   { bg='var(--blue-dim)'; cellTitle=`Taught ${lastDate} · not assessed`;            dot='·'; }
           else                               { bg='transparent';     cellTitle='Not taught yet';                               dot=' '; }
           return `<td style="padding:2px;text-align:center;border-bottom:1px solid var(--border);border-right:1px solid var(--border)" title="${s.first_name} ${s.last_name} · ${cellTitle}">
-            <div style="width:20px;height:20px;border-radius:3px;background:${bg};margin:auto;display:flex;align-items:center;justify-content:center;font-size:10px;color:${mastery!=='Not taught'?'#0f1117':'var(--text3)'}">${dot}</div>
+            <div style="width:20px;height:20px;border-radius:3px;background:${bg};margin:auto;display:flex;align-items:center;justify-content:center;font-size:10px;color:${mastery!=='Not taught'?'var(--primary-contrast)':'var(--text3)'}">${dot}</div>
           </td>`;
         }).join('');
 
-        return `<tr style="${ci%2===1?'background:rgba(255,255,255,0.01)':''}"
+        return `<tr style="background:${getStripedRowSurface(ci)}"
           onmouseenter="showCoverageTooltip(event,'${c.Code}','${fullDesc}','${c.Subject||''}','${c.Strand||''}')"
           onmouseleave="hideCoverageTooltip()">
-          <td style="padding:5px 8px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${ci%2===1?'#1c2030':'var(--surface)'}">
+          <td style="padding:5px 8px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(ci)}">
             <div style="font-family:'DM Mono',monospace;font-size:10px;color:${col}">${c.Code}</div>
             <div style="font-size:10px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(c.Descriptor||c.Aspect||'').slice(0,42)}…</div>
           </td>
@@ -2932,9 +2940,9 @@ function renderCoverage(main) {
         ['◐','var(--gold)','Developing'],
         ['○','var(--rust)','Emerging'],
         ['·','var(--blue)','Taught · not assessed'],
-        [' ','var(--surface2)','Not taught yet'],
+        [' ','var(--surface-alt)','Not taught yet'],
       ].map(([dot,bg,label]) => `<div style="display:flex;align-items:center;gap:6px">
-        <div style="width:18px;height:18px;border-radius:3px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;color:${bg==='var(--surface2)'?'var(--text3)':'#0f1117'}">${dot}</div>
+        <div style="width:18px;height:18px;border-radius:3px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;color:${bg==='var(--surface-alt)'?'var(--text3)':'var(--primary-contrast)'}">${dot}</div>
         <span style="font-size:11px;color:var(--text3)">${label}</span>
       </div>`).join('')}
     </div>`;
@@ -3040,7 +3048,7 @@ function renderStandardsJudgments(main) {
       const hasLinks = !getStandardReadiness(students[0]?.id || '', sid).noLinks;
       return `<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);min-width:160px;max-width:200px;vertical-align:bottom;border-left:1px solid var(--border)">
         <div style="font-family:'DM Mono',monospace;font-size:9px;color:${col};margin-bottom:3px">${sid}</div>
-        <div style="font-size:9px;color:var(--text2);line-height:1.3;margin-bottom:4px">${(std['Standard Text']||'').slice(0,80)}${(std['Standard Text']||'').length>80?'…':''}</div>
+        <div style="font-size:9px;color:var(--text-muted);line-height:1.3;margin-bottom:4px">${(std['Standard Text']||'').slice(0,80)}${(std['Standard Text']||'').length>80?'…':''}</div>
         ${readyCount > 0 ? `<div style="font-size:9px;color:var(--gold)">⚡ ${readyCount} student${readyCount>1?'s':''} ready</div>` : ''}
         ${!hasLinks ? `<div style="font-size:9px;color:var(--text3);font-style:italic">No linked codes in CSV</div>` : ''}
       </th>`;
@@ -3067,7 +3075,7 @@ function renderStandardsJudgments(main) {
 
         return `<td style="padding:4px 6px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);vertical-align:top">
           <!-- Readiness bar — only show if there are linked codes -->
-          ${!readiness.noLinks ? `<div style="height:3px;background:var(--surface2);border-radius:2px;margin-bottom:4px;overflow:hidden">
+          ${!readiness.noLinks ? `<div style="height:3px;background:var(--surface-alt);border-radius:2px;margin-bottom:4px;overflow:hidden">
             <div style="height:100%;width:${readiness.pct}%;background:${readiness.pct>=60?'var(--gold)':'var(--border2)'};border-radius:2px"></div>
           </div>` : ''}
           <!-- Judgment button — disabled if locked -->
@@ -3081,8 +3089,8 @@ function renderStandardsJudgments(main) {
         </td>`;
       }).join('');
 
-      return `<tr style="${si%2===1?'background:rgba(255,255,255,0.02)':''}">
-        <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${si%2===1?'#1c2030':'var(--surface)'};min-width:160px">
+      return `<tr style="background:${getStripedRowSurface(si)}">
+        <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(si)};min-width:160px">
           <div style="display:flex;align-items:center;gap:8px">
             <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0;cursor:pointer" onclick="openStudentDetail('${s.id}')">${getInitials(s)}</div>
             <div>
@@ -3105,8 +3113,8 @@ function renderStandardsJudgments(main) {
       <div style="overflow:auto;max-height:calc(100vh - 220px)">
         <table style="border-collapse:collapse;min-width:${180+visibleStandards.length*170}px">
           <thead style="position:sticky;top:0;z-index:5;background:var(--surface)">
-            <tr style="background:var(--surface2)">
-              <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface2);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
+            <tr style="background:var(--surface-alt)">
+              <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);z-index:6;min-width:160px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Student</th>
               ${stdHeaders}
             </tr>
           </thead>
@@ -3167,7 +3175,7 @@ function openJudgmentPicker(studentId, standardId) {
       </div>
       <div class="modal-body">
         <!-- Standard text -->
-        <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--gold)">
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;padding:10px 12px;background:var(--surface-alt);border-radius:6px;border-left:3px solid var(--gold)">
           ${std ? std['Standard Text'] : 'Standard text not available'}
         </div>
 
@@ -3178,7 +3186,7 @@ function openJudgmentPicker(studentId, standardId) {
             <span style="margin-left:8px;color:${readiness.pct>=60?'var(--gold)':'var(--text3)'}">${readiness.pct}% coverage</span>
           </div>
           <!-- Readiness bar -->
-          <div style="height:6px;background:var(--surface2);border-radius:3px;margin-bottom:8px;overflow:hidden">
+          <div style="height:6px;background:var(--surface-alt);border-radius:3px;margin-bottom:8px;overflow:hidden">
             <div style="height:100%;width:${readiness.pct}%;background:${readiness.pct>=60?'var(--gold)':'var(--border2)'};border-radius:3px;transition:width 0.3s"></div>
           </div>
           <!-- Code mastery breakdown -->
@@ -3187,7 +3195,7 @@ function openJudgmentPicker(studentId, standardId) {
               const m = getMasteryForCode(studentId, c.Code);
               const t = wasCodeTaughtToStudent(studentId, c.Code);
               const col = m==='Achieved'?'var(--green)':m==='Developing'?'var(--gold)':m==='Emerging'?'var(--rust)':t?'var(--blue)':'var(--text3)';
-              const bg  = m==='Achieved'?'var(--green-dim)':m==='Developing'?'var(--gold-dim)':m==='Emerging'?'var(--rust-dim)':t?'var(--blue-dim)':'var(--surface2)';
+              const bg  = m==='Achieved'?'var(--green-dim)':m==='Developing'?'var(--gold-dim)':m==='Emerging'?'var(--rust-dim)':t?'var(--blue-dim)':'var(--surface-alt)';
               return `<div style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:${bg};color:${col}" title="${m}">${c.Code}</div>`;
             }).join('')}
             ${!readiness.codes?.length ? '<span style="font-size:11px;color:var(--text3)">No linked codes found</span>' : ''}
@@ -3205,7 +3213,7 @@ function openJudgmentPicker(studentId, standardId) {
               text-align:left;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:10px">
               <div style="width:12px;height:12px;border-radius:50%;background:${active?item.colour:'var(--border2)'};flex-shrink:0"></div>
               <div>
-                <div style="font-size:13px;font-weight:600;color:${active?item.colour:'var(--text2)'}">${item.label}</div>
+                <div style="font-size:13px;font-weight:600;color:${active?item.colour:'var(--text-muted)'}">${item.label}</div>
                 <div style="font-size:11px;color:var(--text3);margin-top:1px">${item.description}</div>
               </div>
             </button>`;
@@ -3228,7 +3236,7 @@ function openJudgmentPicker(studentId, standardId) {
         </div>
       </div>
       <div class="modal-foot" style="justify-content:space-between">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-muted)">
           <input type="checkbox" id="j-locked" ${j?.locked?'checked':''} style="accent-color:var(--gold)">
           🔒 Lock for reporting
         </label>
@@ -3253,7 +3261,7 @@ function selectJudgment(itemId) {
     const dot = btn.querySelector('div');
     if (dot) dot.style.background = active ? item.colour : 'var(--border2)';
     const label = btn.querySelectorAll('div')[1]?.querySelector('div');
-    if (label) label.style.color = active ? item.colour : 'var(--text2)';
+    if (label) label.style.color = active ? item.colour : 'var(--text-muted)';
     btn.dataset.selected = active ? 'true' : '';
   });
   document.getElementById('judgment-scale').dataset.selected = itemId;
@@ -3322,8 +3330,8 @@ function renderProgressionPlacement(main) {
           : null;
 
         // Encode element and subElement safely as data attributes
-        return `<tr style="${si%2===1?'background:rgba(255,255,255,0.02)':''}">
-          <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${si%2===1?'#1c2030':'var(--surface)'}">
+        return `<tr style="background:${getStripedRowSurface(si)}">
+          <td style="padding:6px 10px;border-bottom:1px solid var(--border);position:sticky;left:0;background:${getStripedRowSurface(si)}">
             <div style="display:flex;align-items:center;gap:8px">
               <div class="sc-avatar ${getAvClass(si)}" style="width:24px;height:24px;font-size:10px;flex-shrink:0;cursor:pointer" onclick="openStudentDetail('${s.id}')">${getInitials(s)}</div>
               <div style="font-size:12px;font-weight:600;cursor:pointer" onclick="openStudentDetail('${s.id}')">${s.first_name} ${s.last_name}</div>
@@ -3340,7 +3348,7 @@ function renderProgressionPlacement(main) {
             ${placement?.date ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);margin-top:2px">${placement.date}</div>` : ''}
           </td>
           <!-- Next step -->
-          <td style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);line-height:1.4;max-width:320px">
+          <td style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-muted);line-height:1.4;max-width:320px">
             ${nextIndicator
               ? `<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);background:var(--teal-dim);padding:1px 5px;border-radius:3px;margin-right:5px">L${nextLevel} next</span>${nextIndicator['Indicator text (no examples)']||nextIndicator['Indicator text (verbatim)']||''}`
               : currentLevel
@@ -3357,7 +3365,7 @@ function renderProgressionPlacement(main) {
       }).join('');
 
       return `<div style="margin-bottom:20px">
-        <div style="padding:8px 14px;background:var(--surface2);font-family:'DM Mono',monospace;font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.1em;border-bottom:1px solid var(--border)">
+        <div style="padding:8px 14px;background:var(--surface-alt);font-family:'DM Mono',monospace;font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.1em;border-bottom:1px solid var(--border)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <span>${subEl} · ${levels.length} levels</span>
             <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">${placedCount}/${students.length} students placed</span>
@@ -3379,8 +3387,8 @@ function renderProgressionPlacement(main) {
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;min-width:600px">
             <thead>
-              <tr style="background:var(--surface2)">
-                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;min-width:160px">Student</th>
+              <tr style="background:var(--surface-alt)">
+                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;min-width:160px">Student</th>
                 <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:100px">Current Level</th>
                 <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase">Next Step Indicator</th>
                 <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;width:100px">External</th>
@@ -3455,7 +3463,7 @@ function openPlacementPicker(studentId, element, subElement) {
                 <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--purple);background:var(--purple-dim);padding:1px 7px;border-radius:3px;font-weight:700">L${lvl}</span>
                 <span style="font-size:9px;color:var(--text3)">${indicator?.['Indicator ID']||''}</span>
               </div>
-              <div style="font-size:11px;color:var(--text2);line-height:1.4">${indicator?.['Indicator text (no examples)']||indicator?.['Indicator text (verbatim)']||'—'}</div>
+              <div style="font-size:11px;color:var(--text-muted);line-height:1.4">${indicator?.['Indicator text (no examples)']||indicator?.['Indicator text (verbatim)']||'—'}</div>
             </button>`;
           }).join('')}
         </div>
@@ -3719,7 +3727,7 @@ function buildClassSettingsSection() {
         const areaEnabled = isCurriculumAreaEnabled(subject, strand, area);
         const areaKey = subject + '|' + strand + '|' + area;
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0 5px 12px">
-          <label style="font-size:11px;color:${areaEnabled ? 'var(--text2)' : 'var(--text3)'};display:flex;align-items:center;gap:8px;cursor:pointer">
+          <label style="font-size:11px;color:${areaEnabled ? 'var(--text-muted)' : 'var(--text3)'};display:flex;align-items:center;gap:8px;cursor:pointer">
             <input type="checkbox" data-cs-action="toggleArea" data-cs-key="${areaKey}" ${areaEnabled ? 'checked' : ''}
               style="accent-color:var(--teal)">
             <span>↳ ${area}</span>
@@ -3782,7 +3790,7 @@ function buildClassSettingsSection() {
       </div>
 
       <!-- Active group meta -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 12px;background:var(--surface2);border-radius:6px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 12px;background:var(--surface-alt);border-radius:6px;flex-wrap:wrap">
         <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)">NAME</span>
         <input id="cs-group-name" value="${activeGroup.name}"
           style="background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:4px 10px;color:var(--text);font-size:12px;outline:none;width:160px">
@@ -4034,7 +4042,7 @@ function renderAdmin(main) {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
               ${csvUploadRows.map(([label, iconId, navId, handler]) => {
                 const loaded = loadedByNavId[navId];
-                return `<label class="nav-btn" style="cursor:pointer;font-size:12px;justify-content:flex-start;gap:8px;min-height:40px;color:${loaded ? 'var(--green)' : 'var(--text2)'}" id="${navId}">
+                return `<label class="nav-btn" style="cursor:pointer;font-size:12px;justify-content:flex-start;gap:8px;min-height:40px;color:${loaded ? 'var(--green)' : 'var(--text-muted)'}" id="${navId}">
                   <span class="nav-icon" id="${iconId}" style="color:${loaded ? 'var(--green)' : 'var(--text3)'}">${loaded ? '●' : '○'}</span>
                   <span>${label}</span>
                   <input type="file" accept=".csv" style="display:none" onchange="${handler}">
@@ -4064,7 +4072,7 @@ function renderAdmin(main) {
                 ↓ ${label}
               </button>`).join('')}
               <button onclick="exportAll()"
-                style="padding:8px 16px;border-radius:6px;border:none;background:var(--blue);color:#0f1117;font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer">
+                style="padding:8px 16px;border-radius:6px;border:none;background:var(--blue);color:var(--primary-contrast);font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer">
                 ↓ Export All
               </button>
             </div>
@@ -4088,8 +4096,8 @@ function renderAdmin(main) {
               ['Taught log entries', state.taughtLog.length],
               ['Standards judgments', state.standardsJudgments.length],
               ['Progression placements', state.progressionPlacements.length],
-            ].map(([label, count]) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:6px">
-              <span style="font-size:12px;color:var(--text2)">${label}</span>
+            ].map(([label, count]) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-alt);border-radius:6px">
+              <span style="font-size:12px;color:var(--text-muted)">${label}</span>
               <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${count>0?'var(--green)':'var(--text3)'}">${count}</span>
             </div>`).join('')}
           </div>
@@ -4102,7 +4110,7 @@ function renderAdmin(main) {
         title: 'Google Sheets Setup',
         content: `
           <div style="padding:14px 18px;font-size:12px;color:var(--text3);line-height:1.6">
-            <p style="margin-bottom:8px">Make sure your Apps Script has been updated with the new <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">getStandardsJudgments</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">saveStandardsJudgment</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">getProgressionPlacements</code> and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">saveProgressionPlacement</code> functions.</p>
+            <p style="margin-bottom:8px">Make sure your Apps Script has been updated with the new <code style="background:var(--surface-alt);padding:1px 5px;border-radius:3px;color:var(--blue)">getStandardsJudgments</code>, <code style="background:var(--surface-alt);padding:1px 5px;border-radius:3px;color:var(--blue)">saveStandardsJudgment</code>, <code style="background:var(--surface-alt);padding:1px 5px;border-radius:3px;color:var(--blue)">getProgressionPlacements</code> and <code style="background:var(--surface-alt);padding:1px 5px;border-radius:3px;color:var(--blue)">saveProgressionPlacement</code> functions.</p>
             <p>Open your browser console (F12) for the complete Apps Script code to copy.</p>
           </div>
         `
@@ -4116,7 +4124,7 @@ function renderAdmin(main) {
 function buildScaleEditor(scale) {
   const COLOURS = ['var(--text3)','var(--rust)','var(--gold)','var(--blue)','var(--green)','var(--teal)','var(--purple)'];
   return scale.map((item, i) => `
-    <div style="display:grid;grid-template-columns:auto 1fr 1fr 2fr auto;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:var(--surface2);border-radius:6px;border-left:3px solid ${item.colour}">
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr 2fr auto;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:var(--surface-alt);border-radius:6px;border-left:3px solid ${item.colour}">
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);width:20px;text-align:center">${i+1}</div>
       <input class="form-input" value="${item.label}" id="scale-label-${i}" placeholder="Label" style="font-size:12px;padding:5px 8px">
       <select class="form-input" id="scale-colour-${i}" style="font-size:12px;padding:5px 8px">
@@ -4205,7 +4213,7 @@ function renderDlModal() {
     const active  = dlState.step === n;
     const done    = dlState.step > n;
     const col     = done ? 'var(--green)' : active ? 'var(--blue)' : 'var(--text3)';
-    const bg      = done ? 'var(--green-dim)' : active ? 'var(--blue-dim)' : 'var(--surface2)';
+    const bg      = done ? 'var(--green-dim)' : active ? 'var(--blue-dim)' : 'var(--surface-alt)';
     return `<div style="display:flex;align-items:center;gap:6px;flex:1;${n < 3 ? 'margin-right:8px' : ''}">
       <div style="width:22px;height:22px;border-radius:50%;background:${bg};border:1.5px solid ${col};display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:9px;color:${col};flex-shrink:0">${done ? '✓' : n}</div>
       <span style="font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:${col}">${s}</span>
@@ -4236,7 +4244,7 @@ function renderDlModal() {
           <div style="font-family:'Fraunces',serif;font-size:17px">Log Teaching Session</div>
           <div style="display:flex;align-items:center;gap:10px">
             <input type="date" value="${dlState.date}" onchange="dlState.date=this.value"
-              style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;outline:none">
+              style="background:var(--surface-alt);border:1px solid var(--border2);border-radius:5px;padding:4px 8px;color:var(--text-muted);font-family:'DM Mono',monospace;font-size:11px;outline:none">
             <button onclick="closeDlModal()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1">✕</button>
           </div>
         </div>
@@ -4254,7 +4262,7 @@ function renderDlModal() {
         </button>
         <div style="display:flex;gap:8px">
           ${dlState.step === 3 ? `<button onclick="dlSkipMastery()" style="padding:8px 18px;border-radius:6px;border:1px solid var(--border2);background:none;color:var(--text3);font-family:'Instrument Sans',sans-serif;font-size:13px;cursor:pointer">Skip mastery</button>` : ''}
-          <button onclick="dlNext()" style="padding:8px 20px;border-radius:6px;border:none;background:var(--blue);color:#0f1117;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">
+          <button onclick="dlNext()" style="padding:8px 20px;border-radius:6px;border:none;background:var(--blue);color:var(--primary-contrast);font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">
             ${nextLabel}
           </button>
         </div>
@@ -4350,7 +4358,7 @@ function buildDlStep2() {
     </div>
 
     <!-- AI describe box -->
-    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+    <div style="background:var(--surface-alt);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;margin-bottom:14px">
       <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--purple);margin-bottom:8px">✦ AI Code Suggester</div>
       <div style="display:flex;gap:8px">
         <input id="dl-ai-input" placeholder="Describe everything taught today across all subjects… e.g. '2 times tables and doubling, phonics blending, narrative writing openers, living vs non-living things'"
@@ -4369,20 +4377,20 @@ function buildDlStep2() {
       <div style="position:relative;flex:1;min-width:160px">
         <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px">⌕</span>
         <input id="dl-code-search" placeholder="Search codes…"
-          style="width:100%;padding:6px 10px 6px 30px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box"
+          style="width:100%;padding:6px 10px 6px 30px;background:var(--surface-alt);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box"
           oninput="dlFilterCodes()">
       </div>
       <select id="dl-subj-filter" onchange="dlFilterCodes()"
-        style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:6px 8px;color:var(--text2);font-size:12px;cursor:pointer;outline:none">
+        style="background:var(--surface-alt);border:1px solid var(--border2);border-radius:5px;padding:6px 8px;color:var(--text-muted);font-size:12px;cursor:pointer;outline:none">
         <option value="all">All subjects</option>
         ${availSubjects.map(s => `<option value="${s}">${s}</option>`).join('')}
       </select>
       <select id="dl-strand-filter" onchange="dlFilterCodes()"
-        style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:6px 8px;color:var(--text2);font-size:12px;cursor:pointer;outline:none">
+        style="background:var(--surface-alt);border:1px solid var(--border2);border-radius:5px;padding:6px 8px;color:var(--text-muted);font-size:12px;cursor:pointer;outline:none">
         <option value="all">All strands</option>
       </select>
       <select id="dl-year-filter" onchange="dlFilterCodes()"
-        style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:6px 8px;color:var(--text2);font-size:12px;cursor:pointer;outline:none">
+        style="background:var(--surface-alt);border:1px solid var(--border2);border-radius:5px;padding:6px 8px;color:var(--text-muted);font-size:12px;cursor:pointer;outline:none">
         <option value="all">All years</option>
         ${['Foundation','Year 1','Year 2','Year 3','Year 4','Year 5','Year 6'].map(y => `<option value="${y}">${y}</option>`).join('')}
       </select>
@@ -4453,17 +4461,17 @@ function buildDlCodeListHtml(codes) {
     const selected = dlState.selectedCodes.includes(c.Code);
     return `<div onclick="dlToggleCode('${c.Code}')" data-dl-code="${c.Code}"
       style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;${selected?'background:var(--blue-dim);':''}"
-      onmouseover="if(!${selected})this.style.background='var(--surface2)'" onmouseout="if(!${selected})this.style.background='transparent'">
+      onmouseover="if(!${selected})this.style.background='var(--surface-alt)'" onmouseout="if(!${selected})this.style.background='transparent'">
       <div style="width:16px;height:16px;border-radius:3px;border:1.5px solid ${selected?'var(--blue)':'var(--border2)'};background:${selected?'var(--blue)':'none'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
-        ${selected ? '<span style="color:#0f1117;font-size:10px;font-weight:700">✓</span>' : ''}
+        ${selected ? '<span style="color:var(--primary-contrast);font-size:10px;font-weight:700">✓</span>' : ''}
       </div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span style="font-family:'DM Mono',monospace;font-size:10px;color:${selected?'var(--blue)':'var(--text3)'}">${c.Code}</span>
-          <span style="font-size:9px;background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--text3)">${c.Subject||''}</span>
+          <span style="font-size:9px;background:var(--surface-alt);padding:1px 5px;border-radius:3px;color:var(--text3)">${c.Subject||''}</span>
           <span style="font-size:9px;color:var(--text3)">${c.Strand||''}</span>
         </div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:2px">${c.Descriptor||c.Aspect||'—'}</div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.4;margin-top:2px">${c.Descriptor||c.Aspect||'—'}</div>
       </div>
     </div>`;
   }).join('');
@@ -4485,7 +4493,7 @@ function dlToggleCode(code) {
     if (box) {
       box.style.borderColor = selected ? 'var(--blue)' : 'var(--border2)';
       box.style.background  = selected ? 'var(--blue)' : 'none';
-      box.innerHTML = selected ? '<span style="color:#0f1117;font-size:10px;font-weight:700">✓</span>' : '';
+      box.innerHTML = selected ? '<span style="color:var(--primary-contrast);font-size:10px;font-weight:700">✓</span>' : '';
     }
   }
   // Update footer
@@ -4715,14 +4723,14 @@ Return up to 12 codes covering all subjects mentioned. Be generous — include a
     const subjColours = {'English':'var(--blue)','Mathematics':'var(--green)','Science':'var(--teal)','HASS':'var(--gold)','Health and Physical Education':'var(--rust)','Design and Technologies':'var(--purple)','Digital Technologies':'var(--purple)'};
 
     const groupedHtml = Object.entries(bySubject).map(([subj, items]) => {
-      const col = subjColours[subj] || 'var(--text2)';
+      const col = subjColours[subj] || 'var(--text-muted)';
       return `<div style="margin-bottom:10px">
         <div style="font-family:'DM Mono',monospace;font-size:9px;color:${col};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">${subj}</div>
         <div style="display:flex;flex-direction:column;gap:5px">
           ${items.map(({code, cd}) => {
             const selected = dlState.selectedCodes.includes(code);
             const btnCol = selected ? 'var(--green)' : col;
-            const btnBg  = selected ? 'var(--green-dim)' : 'var(--surface2)';
+            const btnBg  = selected ? 'var(--green-dim)' : 'var(--surface-alt)';
             const descriptor = cd ? (cd.Descriptor || cd.Aspect || '') : '';
             return `<button onclick="dlAddAISuggested('${code}')" id="dl-ai-chip-${code}"
               style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;
@@ -4731,7 +4739,7 @@ Return up to 12 codes covering all subjects mentioned. Be generous — include a
               <!-- Tick / Plus indicator -->
               <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${btnCol};
                 background:${selected?btnCol:'none'};display:flex;align-items:center;justify-content:center;
-                flex-shrink:0;margin-top:1px;font-size:11px;color:${selected?'#0f1117':btnCol}">
+                flex-shrink:0;margin-top:1px;font-size:11px;color:${selected?'var(--primary-contrast)':btnCol}">
                 ${selected ? '✓' : '+'}
               </div>
               <div style="flex:1;min-width:0">
@@ -4741,7 +4749,7 @@ Return up to 12 codes covering all subjects mentioned. Be generous — include a
                   ${cd?.Strand ? `<span style="font-size:9px;background:${col}22;color:${col};padding:1px 6px;border-radius:3px;font-family:'DM Mono',monospace">${cd.Strand}</span>` : ''}
                 </div>
                 <!-- Full descriptor -->
-                <div style="font-size:11px;color:var(--text2);line-height:1.5">${descriptor || '—'}</div>
+                <div style="font-size:11px;color:var(--text-muted);line-height:1.5">${descriptor || '—'}</div>
               </div>
             </button>`;
           }).join('')}
@@ -4772,7 +4780,7 @@ function dlAddAISuggested(code) {
   const subjColours = {'English':'var(--blue)','Mathematics':'var(--green)','Science':'var(--teal)','HASS':'var(--gold)','Health and Physical Education':'var(--rust)','Design and Technologies':'var(--purple)','Digital Technologies':'var(--purple)'};
   const col    = subjColours[cd?.Subject] || 'var(--purple)';
   const btnCol = selected ? 'var(--green)' : col;
-  const btnBg  = selected ? 'var(--green-dim)' : 'var(--surface2)';
+  const btnBg  = selected ? 'var(--green-dim)' : 'var(--surface-alt)';
 
   // Update the card button appearance
   const chip = document.getElementById('dl-ai-chip-' + code);
@@ -4784,7 +4792,7 @@ function dlAddAISuggested(code) {
     if (circle) {
       circle.style.borderColor = btnCol;
       circle.style.background  = selected ? btnCol : 'none';
-      circle.style.color       = selected ? '#0f1117' : btnCol;
+      circle.style.color       = selected ? 'var(--primary-contrast)' : btnCol;
       circle.textContent       = selected ? '✓' : '+';
     }
     // Update code text colour
@@ -4808,7 +4816,7 @@ function dlAddAISuggested(code) {
     if (box) {
       box.style.borderColor = selected ? 'var(--blue)' : 'var(--border2)';
       box.style.background  = selected ? 'var(--blue)' : 'none';
-      box.innerHTML = selected ? '<span style="color:#0f1117;font-size:10px;font-weight:700">✓</span>' : '';
+      box.innerHTML = selected ? '<span style="color:var(--primary-contrast);font-size:10px;font-weight:700">✓</span>' : '';
     }
   }
 }
@@ -4842,7 +4850,7 @@ function buildDlStep3() {
           ${cd?.Strand ? `<span style="font-size:8px;color:var(--text3)">${cd.Strand}</span>` : ''}
         </div>
         <!-- Full descriptor — grows to fill space -->
-        <div style="font-size:10px;color:var(--text2);line-height:1.4;flex:1;font-weight:400;font-family:'Instrument Sans',sans-serif">${descriptor}</div>
+        <div style="font-size:10px;color:var(--text-muted);line-height:1.4;flex:1;font-weight:400;font-family:'Instrument Sans',sans-serif">${descriptor}</div>
         <!-- Mark all buttons — always at bottom -->
         <div style="display:flex;flex-direction:column;gap:3px;margin-top:8px">
           ${[
@@ -4888,11 +4896,11 @@ function buildDlStep3() {
       </td>`;
     }).join('');
 
-    return `<tr style="${si%2===1?'background:rgba(255,255,255,0.02)':''}">
-      <td style="padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;left:0;background:${si%2===1?'#1c2030':'var(--surface)'}">
+    return `<tr style="background:${getStripedRowSurface(si)}">
+      <td style="padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;left:0;background:${getStripedRowSurface(si)}">
         <div style="display:flex;align-items:center;gap:7px">
           <div class="sc-avatar ${getAvClass(si)}" style="width:22px;height:22px;font-size:9px;flex-shrink:0">${getInitials(s)}</div>
-          <span style="font-size:12px;color:var(--text2)">${s.first_name} ${s.last_name}</span>
+          <span style="font-size:12px;color:var(--text-muted)">${s.first_name} ${s.last_name}</span>
         </div>
       </td>
       ${cells}
@@ -4906,8 +4914,8 @@ function buildDlStep3() {
     <div style="overflow-x:auto;border:1px solid var(--border);border-radius:6px">
       <table style="width:100%;border-collapse:collapse;min-width:${200 + codes.length * 200}px">
         <thead>
-          <tr style="background:var(--surface2)">
-            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;min-width:160px;vertical-align:bottom">Student</th>
+          <tr style="background:var(--surface-alt)">
+            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-alt);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;min-width:160px;vertical-align:bottom">Student</th>
             ${codeHeaders}
           </tr>
         </thead>
@@ -5115,7 +5123,7 @@ function renderDailyLog(main) {
                         const sCodes = sEntries.map(e => e.code);
                         const sMastery = sEntries.filter(e => e.notes && e.notes !== '');
                         return `<tr style="border-bottom:1px solid var(--border)">
-                          <td style="padding:6px 8px;color:var(--text2)">${s.first_name} ${s.last_name}</td>
+                          <td style="padding:6px 8px;color:var(--text-muted)">${s.first_name} ${s.last_name}</td>
                           <td style="padding:6px 8px">
                             <div style="display:flex;gap:4px;flex-wrap:wrap">
                               ${sCodes.map(c => `<span style="font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--blue-dim);color:var(--blue)">${c}</span>`).join('')}
@@ -5452,7 +5460,7 @@ function renderPlanLog(main) {
         <input type="checkbox" onchange="this.checked?confirmSuggestedCode('${s.code}'):removeConfirmedCode('${s.code}')" ${(active.confirmedCodes||[]).includes(s.code)?'checked':''}>
         ${s.code}
       </label>
-      <div style="font-size:11px;color:var(--text2)">${s.description || '—'}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${s.description || '—'}</div>
       <button class="btn" style="padding:3px 8px" onclick="removeSuggestedCode('${s.code}')">Remove</button>
     </div>`).join('');
 
@@ -5493,7 +5501,7 @@ function renderPlanLog(main) {
           <div style="overflow-x:auto">
             <table style="width:100%;border-collapse:collapse;min-width:720px">
               <thead>
-                <tr style="background:var(--surface2)">
+                <tr style="background:var(--surface-alt)">
                   <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Date</th>
                   <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Class</th>
                   <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">Subject</th>
@@ -5509,7 +5517,7 @@ function renderPlanLog(main) {
                   <td style="padding:8px">${className(e.classId)}</td>
                   <td style="padding:8px">${e.subject || '—'}</td>
                   <td style="padding:8px">${e.title || '<span style=\"color:var(--text3)\">Untitled plan</span>'}</td>
-                  <td style="padding:8px"><span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface2)">${e.status || 'Draft'}</span></td>
+                  <td style="padding:8px"><span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface-alt)">${e.status || 'Draft'}</span></td>
                   <td style="padding:8px;text-align:center;font-family:'DM Mono',monospace">${(e.confirmedCodes||[]).length}</td>
                   <td style="padding:8px;text-align:right">
                     <button class="btn" style="padding:2px 8px" onclick="selectPlanEntry('${e.id}')">Open/Edit</button>
@@ -5553,11 +5561,11 @@ function renderPlanLog(main) {
             <span style="font-size:11px;color:var(--text3)">Suggestions are never auto-confirmed. Tick only what you approve.</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px">
+            <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;padding:10px">
               <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Suggested codes</div>
               ${suggestedRows || `<div style="font-size:11px;color:var(--text3)">No suggestions yet. Click <strong>Suggest Curriculum Codes</strong>.</div>`}
             </div>
-            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px">
+            <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;padding:10px">
               <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Confirmed codes (${(active.confirmedCodes||[]).length})</div>
               ${confirmedRows || `<div style="font-size:11px;color:var(--text3)">No confirmed codes yet.</div>`}
               <div style="display:flex;gap:6px;margin-top:8px">

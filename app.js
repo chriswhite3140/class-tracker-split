@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.7.0
+ * THIS FILE IS VERSION: 1.7.1
  * Last updated: 2026-03-30
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.7.1 - Data & Settings layout cleanup: moved theme + CSV uploads into the main settings view
  * v1.7.0 - Light/Dark/Auto theme toggle with persistent display preference
  * v1.6.0 - Plan and Log Learning workflow with suggested/confirmed code flow and taught/assessment actions
  * v1.5.0 - Visible class settings entry + teacher-friendly checkboxes + filtering polish
@@ -21,7 +22,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.1';
 const THEME_STORAGE_KEY = 'app_theme';
 let systemThemeMediaQuery = null;
 
@@ -61,11 +62,6 @@ function initTheme() {
   const savedPreference = normalizeThemePreference(localStorage.getItem(THEME_STORAGE_KEY) || 'auto');
   applyTheme(savedPreference, { persist: false });
 
-  const select = document.getElementById('theme-select');
-  if (select) {
-    select.addEventListener('change', (e) => applyTheme(e.target.value));
-  }
-
   systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   systemThemeMediaQuery.addEventListener('change', () => {
     if ((state.themePreference || 'auto') === 'auto') {
@@ -73,6 +69,12 @@ function initTheme() {
     }
   });
 }
+
+document.addEventListener('change', (e) => {
+  if (e.target?.id === 'theme-select') {
+    applyTheme(e.target.value);
+  }
+});
 
 // ── GLOBAL CONSTANTS ──
 const SUBJECT_COLOURS = {
@@ -1321,7 +1323,7 @@ function renderCurriculum(main) {
     </div>
     <div class="content">
       ${allCodes.length === 0
-        ? `<div class="empty-state"><div class="empty-icon">≡</div><div class="empty-title">No curriculum data loaded</div><div class="empty-sub">Use the sidebar to load your CSV</div></div>`
+        ? `<div class="empty-state"><div class="empty-icon">≡</div><div class="empty-title">No curriculum data loaded</div><div class="empty-sub">Open Data &amp; Settings to load your CSV files</div></div>`
         : `<div class="card">
             <div class="card-head" style="padding:10px 18px">
               <div style="font-size:13px;color:var(--text2)">Showing <strong style="color:var(--text)">${codes.length}</strong> of ${allCodes.length} codes</div>
@@ -1378,7 +1380,7 @@ function renderStandards(main) {
     </div>
     <div class="content">
       ${stds.length === 0
-        ? `<div class="empty-state"><div class="empty-icon">◇</div><div class="empty-title">No standards data loaded</div><div class="empty-sub">Use the sidebar to load your CSV</div></div>`
+        ? `<div class="empty-state"><div class="empty-icon">◇</div><div class="empty-title">No standards data loaded</div><div class="empty-sub">Open Data &amp; Settings to load your CSV files</div></div>`
         : `<div class="card">
             <div class="card-head" style="padding:10px 18px"><div style="font-size:13px;color:var(--text2)">Showing <strong style="color:var(--text)">${visibleStds.length}</strong> of ${filteredBySubject.length} ${sf.subject} standards</div></div>
             <table class="codes-table" style="table-layout:fixed;width:100%">
@@ -1427,7 +1429,7 @@ function renderProgressions(main) {
     </div>
     <div class="content">
       ${progs.length === 0
-        ? `<div class="empty-state"><div class="empty-icon">⟡</div><div class="empty-title">No ${progType} progressions loaded</div><div class="empty-sub">Load your ${progType === 'numeracy' ? 'Numeracy' : 'Literacy'} Progressions CSV using the sidebar button</div></div>`
+        ? `<div class="empty-state"><div class="empty-icon">⟡</div><div class="empty-title">No ${progType} progressions loaded</div><div class="empty-sub">Load your ${progType === 'numeracy' ? 'Numeracy' : 'Literacy'} Progressions CSV in Data &amp; Settings</div></div>`
         : `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">${elemButtons}</div>
            <div id="prog-content">${renderProgressionContent(progs, activeElem)}</div>`}
     </div>
@@ -3126,7 +3128,7 @@ function renderStandardsJudgments(main) {
     </div>
     <div class="card" style="border-radius:0;border-left:none;border-right:none;border-top:none">
       ${state.standards.length === 0
-        ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">◇</div><div class="empty-title">Standards not loaded</div><div class="empty-sub">Load your Achievement Standards CSV from the Admin menu</div></div>`
+        ? `<div class="empty-state" style="padding:60px"><div class="empty-icon">◇</div><div class="empty-title">Standards not loaded</div><div class="empty-sub">Load your Achievement Standards CSV in Data &amp; Settings</div></div>`
         : buildGrid()}
     </div>
   `;
@@ -3895,15 +3897,52 @@ document.addEventListener('change', function(e) {
 
 function renderAdmin(main) {
   const scale = getScale();
+  const themePreference = normalizeThemePreference(state.themePreference || localStorage.getItem(THEME_STORAGE_KEY) || 'auto');
+  const appliedTheme = resolveTheme(themePreference);
+  const csvUploadRows = [
+    ['Content Descriptors', 'icon-cd', 'nav-load-cd', "loadCurriculumCSV(this)"],
+    ['Achievement Standards', 'icon-st', 'nav-load-st', "loadStandardsCSV(this)"],
+    ['Literacy Progressions', 'icon-pr', 'nav-load-pr', "loadProgressionsCSV(this,'literacy')"],
+    ['Numeracy Progressions', 'icon-np', 'nav-load-np', "loadProgressionsCSV(this,'numeracy')"],
+    ['English Aspect Links', 'icon-lk', 'nav-load-lk', "loadLinksCSV(this)"],
+  ];
+  const loadedByNavId = {
+    'nav-load-cd': state.curriculumCodes.length > 0,
+    'nav-load-st': state.standards.length > 0,
+    'nav-load-pr': state.progressions.length > 0,
+    'nav-load-np': state.numeracyProgressions.length > 0,
+    'nav-load-lk': state.aspectLinks.length > 0,
+  };
 
   main.innerHTML = `
     <div class="topbar">
-      <div class="topbar-title">Admin &amp; Settings</div>
+      <div class="topbar-title">Data &amp; Settings</div>
     </div>
     <div class="content">
 
       <!-- Class & Teacher Groups -->
       ${buildClassSettingsSection()}
+
+      <!-- Appearance -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-head"><div class="card-title">Appearance</div></div>
+        <div style="padding:16px 18px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
+            Choose how ClassTracker appears for this browser. Auto follows your device setting.
+          </div>
+          <div class="theme-control" style="max-width:320px">
+            <label for="theme-select" class="theme-label">Theme</label>
+            <select id="theme-select" class="theme-select" aria-label="Theme">
+              <option value="auto" ${themePreference === 'auto' ? 'selected' : ''}>Auto (System)</option>
+              <option value="light" ${themePreference === 'light' ? 'selected' : ''}>Light</option>
+              <option value="dark" ${themePreference === 'dark' ? 'selected' : ''}>Dark</option>
+            </select>
+            <div id="theme-current" class="theme-current">
+              Current: ${themePreference === 'auto' ? 'Auto (System)' : themePreference[0].toUpperCase() + themePreference.slice(1)} → ${appliedTheme[0].toUpperCase() + appliedTheme.slice(1)}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Assessment Scale configurator -->
       <div class="card" style="margin-bottom:20px">
@@ -3922,6 +3961,26 @@ function renderAdmin(main) {
           <div style="display:flex;gap:8px;margin-top:14px">
             <button class="btn btn-primary" onclick="saveScaleFromEditor()">✓ Save Scale</button>
             <button class="btn" onclick="addScaleItem()">+ Add Level</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data / CSV Uploads -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-head"><div class="card-title">Data / CSV Uploads</div></div>
+        <div style="padding:14px 18px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+            Upload curriculum CSV files here. Status dots show what has already been loaded in this session.
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+            ${csvUploadRows.map(([label, iconId, navId, handler]) => {
+              const loaded = loadedByNavId[navId];
+              return `<label class="nav-btn" style="cursor:pointer;font-size:12px;justify-content:flex-start;gap:8px;min-height:40px;color:${loaded ? 'var(--green)' : 'var(--text2)'}" id="${navId}">
+                <span class="nav-icon" id="${iconId}" style="color:${loaded ? 'var(--green)' : 'var(--text3)'}">${loaded ? '●' : '○'}</span>
+                <span>${label}</span>
+                <input type="file" accept=".csv" style="display:none" onchange="${handler}">
+              </label>`;
+            }).join('')}
           </div>
         </div>
       </div>
@@ -3982,6 +4041,7 @@ function renderAdmin(main) {
 
     </div>
   `;
+  updateThemeUI(themePreference, appliedTheme);
 }
 
 function buildScaleEditor(scale) {
@@ -5505,7 +5565,6 @@ async function init() {
   state.loading = false;
   renderView();
   checkDailyLogBadge();
-  checkAdminMenuState();
 
   const today = new Date().toISOString().split('T')[0];
   const loggedToday = state.taughtLog.some(t => t.date === today);
@@ -5518,36 +5577,12 @@ async function init() {
   }
 }
 
-function toggleAdminMenu() {
-  const menu     = document.getElementById('admin-menu');
-  const chevron  = document.getElementById('admin-chevron');
-  const btn      = document.getElementById('nav-admin');
-  if (!menu) return;
-  const open = menu.style.display === 'flex';
-  menu.style.display  = open ? 'none' : 'flex';
-  if (chevron) chevron.textContent = open ? '▸' : '▾';
-  if (btn) btn.style.background = open ? '' : 'var(--surface2)';
-}
-
 function openClassSettings() {
   showView('admin');
   setTimeout(() => {
     const card = document.getElementById('class-settings-card');
     if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 0);
-}
-
-// Auto-open admin menu if any CSV file hasn't loaded yet
-function checkAdminMenuState() {
-  const allLoaded = state.curriculumCodes.length > 0
-    && state.standards.length > 0
-    && state.progressions.length > 0;
-  if (!allLoaded) {
-    const menu    = document.getElementById('admin-menu');
-    const chevron = document.getElementById('admin-chevron');
-    if (menu)    menu.style.display = 'flex';
-    if (chevron) chevron.textContent = '▾';
-  }
 }
 
 function checkDailyLogBadge() {

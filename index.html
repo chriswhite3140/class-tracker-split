@@ -61,52 +61,9 @@
         <span class="nav-icon">⟡</span> Progressions
       </button>
       <div class="nav-section">Admin</div>
-      <button class="nav-btn" onclick="toggleAdminMenu()" id="nav-admin">
+      <button class="nav-btn" onclick="showView('admin')" id="nav-admin">
         <span class="nav-icon">⚙</span> Data &amp; Settings
-        <span id="admin-chevron" style="margin-left:auto;font-size:10px;color:var(--text3)">▸</span>
       </button>
-      <div id="admin-menu" style="display:none;flex-direction:column;gap:2px;padding-left:8px">
-        <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:8px 10px 4px">Class Settings</div>
-        <button class="nav-btn" style="font-size:12px" onclick="openClassSettings()" id="nav-class-settings">
-          <span class="nav-icon">☑</span>
-          <span>Subjects &amp; Strands</span>
-        </button>
-        <div class="theme-control">
-          <label for="theme-select" class="theme-label">Theme</label>
-          <select id="theme-select" class="theme-select" aria-label="Theme">
-            <option value="auto">Auto (System)</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-          <div id="theme-current" class="theme-current">Current: Auto (System)</div>
-        </div>
-        <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:8px 10px 4px">Load CSV Files</div>
-        <label class="nav-btn" style="cursor:pointer;font-size:12px" id="nav-load-cd">
-          <span class="nav-icon" id="icon-cd">○</span>
-          <span>Content Descriptors</span>
-          <input type="file" accept=".csv" style="display:none" onchange="loadCurriculumCSV(this)">
-        </label>
-        <label class="nav-btn" style="cursor:pointer;font-size:12px" id="nav-load-st">
-          <span class="nav-icon" id="icon-st">○</span>
-          <span>Standards</span>
-          <input type="file" accept=".csv" style="display:none" onchange="loadStandardsCSV(this)">
-        </label>
-        <label class="nav-btn" style="cursor:pointer;font-size:12px" id="nav-load-pr">
-          <span class="nav-icon" id="icon-pr">○</span>
-          <span>Literacy Progressions</span>
-          <input type="file" accept=".csv" style="display:none" onchange="loadProgressionsCSV(this,'literacy')">
-        </label>
-        <label class="nav-btn" style="cursor:pointer;font-size:12px" id="nav-load-np">
-          <span class="nav-icon" id="icon-np">○</span>
-          <span>Numeracy Progressions</span>
-          <input type="file" accept=".csv" style="display:none" onchange="loadProgressionsCSV(this,'numeracy')">
-        </label>
-        <label class="nav-btn" style="cursor:pointer;font-size:12px" id="nav-load-lk">
-          <span class="nav-icon" id="icon-lk">○</span>
-          <span>Aspect Links</span>
-          <input type="file" accept=".csv" style="display:none" onchange="loadLinksCSV(this)">
-        </label>
-      </div>
     </div>
     <div class="sidebar-footer">
       <div class="sync-status">

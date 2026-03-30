@@ -45,6 +45,13 @@
   --text-sm: 12px;
   --text-md: 13px;
   --text-lg: 15px;
+  --base-font-size: 16px;
+  --base-line-height: 1.5;
+  --dense-header-size: 11.5px;
+  --dense-body-size: 14px;
+  --dense-line-height: 1.45;
+  --helper-size: 13.5px;
+  --label-size: 12px;
 
   --status-neutral-text: var(--neutral);
   --status-neutral-bg: var(--neutral-dim);
@@ -77,9 +84,9 @@ body[data-theme="dark"] {
   --border: #2a3044;
   --border2: #353d55;
   --text: #e8eaf0;
-  --text-muted: #8b92a8;
+  --text-muted: #a9b1c5;
   --text2: var(--text-muted);
-  --text3: #555e7a;
+  --text3: #8a93ad;
   --overlay: rgba(0,0,0,0.7);
   --shadow-soft: 0 4px 20px rgba(0,0,0,0.35);
   --shadow-modal: 0 20px 60px rgba(0,0,0,0.5);
@@ -126,11 +133,22 @@ body[data-theme="dark"] {
 
 body {
   font-family: 'Instrument Sans', sans-serif;
+  font-size: var(--base-font-size);
+  line-height: var(--base-line-height);
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+body[data-text-size="large"] {
+  --base-font-size: 17px;
+  --dense-header-size: 12.5px;
+  --dense-body-size: 15px;
+  --dense-line-height: 1.55;
+  --helper-size: 14.5px;
+  --label-size: 13px;
 }
 
 /* ── LAYOUT ── */
@@ -656,7 +674,7 @@ body {
 .form-label {
   display: block;
   font-family: 'DM Mono', monospace;
-  font-size: 10.5px;
+  font-size: var(--label-size);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text3);
@@ -671,7 +689,8 @@ body {
   padding: 9px 12px;
   color: var(--text);
   font-family: 'Instrument Sans', sans-serif;
-  font-size: 13px;
+  font-size: var(--dense-body-size);
+  line-height: var(--dense-line-height);
   outline: none;
   transition: border-color 0.15s;
 }
@@ -754,7 +773,7 @@ body {
   border-radius: 6px;
   padding: 8px 12px 8px 32px;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--dense-body-size);
   width: 220px;
   outline: none;
   transition: border-color 0.15s;
@@ -863,7 +882,7 @@ body {
 
 .theme-label {
   font-family: 'DM Mono', monospace;
-  font-size: 8px;
+  font-size: 9px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text3);
@@ -876,13 +895,13 @@ body {
   border-radius: 6px;
   background: var(--surface);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--dense-body-size);
   font-family: 'Instrument Sans', sans-serif;
 }
 
 .theme-current {
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: var(--helper-size);
   letter-spacing: 0.08em;
   color: var(--text3);
 }
@@ -896,7 +915,7 @@ body {
 
 .ui-section-label {
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: var(--dense-header-size);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text3);
@@ -906,19 +925,66 @@ body {
   padding: 5px 11px;
   border-radius: 5px;
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: var(--dense-header-size);
 }
 
 .ui-data-table th {
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: var(--dense-header-size);
   letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
 .ui-data-table td {
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: var(--dense-body-size);
+  line-height: var(--dense-line-height);
+}
+
+.codes-table th { font-size: var(--dense-header-size); }
+.codes-table td { font-size: var(--dense-body-size); line-height: var(--dense-line-height); }
+
+#main-content[data-view="overview"] table th,
+#main-content[data-view="bulk-assess"] table th,
+#main-content[data-view="coverage"] table th,
+#main-content[data-view="standards-judgments"] table th,
+#main-content[data-view="progression-placement"] table th {
+  font-size: var(--dense-header-size) !important;
+  line-height: 1.35 !important;
+}
+
+#main-content[data-view="overview"] table td,
+#main-content[data-view="bulk-assess"] table td,
+#main-content[data-view="coverage"] table td,
+#main-content[data-view="standards-judgments"] table td,
+#main-content[data-view="progression-placement"] table td {
+  font-size: var(--dense-body-size) !important;
+  line-height: var(--dense-line-height) !important;
+}
+
+#main-content[data-view="overview"] .empty-sub,
+#main-content[data-view="bulk-assess"] .empty-sub,
+#main-content[data-view="coverage"] .empty-sub,
+#main-content[data-view="standards-judgments"] .empty-sub,
+#main-content[data-view="progression-placement"] .empty-sub,
+#main-content[data-view="admin"] .theme-current {
+  font-size: var(--helper-size);
+  line-height: var(--dense-line-height);
+}
+
+#main-content[data-view="overview"] [style*="font-size:10px"],
+#main-content[data-view="bulk-assess"] [style*="font-size:10px"],
+#main-content[data-view="coverage"] [style*="font-size:10px"],
+#main-content[data-view="standards-judgments"] [style*="font-size:10px"],
+#main-content[data-view="progression-placement"] [style*="font-size:10px"] {
+  font-size: var(--dense-header-size) !important;
+}
+
+#main-content[data-view="overview"] [style*="font-size:11px"],
+#main-content[data-view="bulk-assess"] [style*="font-size:11px"],
+#main-content[data-view="coverage"] [style*="font-size:11px"],
+#main-content[data-view="standards-judgments"] [style*="font-size:11px"],
+#main-content[data-view="progression-placement"] [style*="font-size:11px"] {
+  font-size: var(--helper-size) !important;
 }
 
 

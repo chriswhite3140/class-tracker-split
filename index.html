@@ -71,6 +71,15 @@
           <span class="nav-icon">☑</span>
           <span>Subjects &amp; Strands</span>
         </button>
+        <div class="theme-control">
+          <label for="theme-select" class="theme-label">Theme</label>
+          <select id="theme-select" class="theme-select" aria-label="Theme">
+            <option value="auto">Auto (System)</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+          <div id="theme-current" class="theme-current">Current: Auto (System)</div>
+        </div>
         <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:8px 10px 4px">Load CSV Files</div>
         <label class="nav-btn" style="cursor:pointer;font-size:12px" id="nav-load-cd">
           <span class="nav-icon" id="icon-cd">○</span>

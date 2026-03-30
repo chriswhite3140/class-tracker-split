@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.6.0
+ * THIS FILE IS VERSION: 1.7.0
  * Last updated: 2026-03-30
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.7.0 - Light/Dark/Auto theme toggle with persistent display preference
  * v1.6.0 - Plan and Log Learning workflow with suggested/confirmed code flow and taught/assessment actions
  * v1.5.0 - Visible class settings entry + teacher-friendly checkboxes + filtering polish
  * v1.4.0 - Class/teacher group settings with subject+strand toggles
@@ -20,7 +21,58 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
+const THEME_STORAGE_KEY = 'app_theme';
+let systemThemeMediaQuery = null;
+
+function getSystemTheme() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function normalizeThemePreference(value) {
+  return value === 'light' || value === 'dark' || value === 'auto' ? value : 'auto';
+}
+
+function resolveTheme(preference) {
+  return preference === 'auto' ? getSystemTheme() : preference;
+}
+
+function updateThemeUI(preference, appliedTheme) {
+  const select = document.getElementById('theme-select');
+  if (select && select.value !== preference) select.value = preference;
+  const currentLabel = document.getElementById('theme-current');
+  if (currentLabel) {
+    const source = preference === 'auto' ? 'Auto (System)' : preference[0].toUpperCase() + preference.slice(1);
+    currentLabel.textContent = `Current: ${source} → ${appliedTheme[0].toUpperCase() + appliedTheme.slice(1)}`;
+  }
+}
+
+function applyTheme(preference, { persist = true } = {}) {
+  const normalized = normalizeThemePreference(preference);
+  const resolvedTheme = resolveTheme(normalized);
+  document.body.setAttribute('data-theme', resolvedTheme);
+  state.themePreference = normalized;
+
+  if (persist) localStorage.setItem(THEME_STORAGE_KEY, normalized);
+  updateThemeUI(normalized, resolvedTheme);
+}
+
+function initTheme() {
+  const savedPreference = normalizeThemePreference(localStorage.getItem(THEME_STORAGE_KEY) || 'auto');
+  applyTheme(savedPreference, { persist: false });
+
+  const select = document.getElementById('theme-select');
+  if (select) {
+    select.addEventListener('change', (e) => applyTheme(e.target.value));
+  }
+
+  systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  systemThemeMediaQuery.addEventListener('change', () => {
+    if ((state.themePreference || 'auto') === 'auto') {
+      applyTheme('auto', { persist: false });
+    }
+  });
+}
 
 // ── GLOBAL CONSTANTS ──
 const SUBJECT_COLOURS = {
@@ -87,6 +139,7 @@ let state = {
   assessmentScale: null, // loaded in init
   classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
   planLog: loadPlanLogState(),
+  themePreference: 'auto',
 };
 
 // ── GOOGLE SHEETS API ──
@@ -5419,6 +5472,7 @@ console.info(
 async function init() {
   const verEl = document.getElementById('sidebar-version');
   if (verEl) verEl.textContent = APP_VERSION;
+  initTheme();
   loadAssessmentScale();
 
   // Show loading message

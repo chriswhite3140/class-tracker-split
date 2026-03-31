@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.10.0
+ * THIS FILE IS VERSION: 1.11.0
  * Last updated: 2026-03-31
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.11.0 - Assessable Components layer for partial/cumulative descriptor mastery
  * v1.10.0 - Weekly Planner Phase 2 (weekly focus, rollover, multi-period blocks, multi-day duplication)
  * v1.8.0 - Added accessible tooltips for truncated text in dense views + spacing polish for filter controls
  * v1.7.3 - Unified Data & Settings accordion: all major sections collapsible and closed by default
@@ -26,7 +27,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.11.0';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 let systemThemeMediaQuery = null;
@@ -170,6 +171,8 @@ let state = {
   taughtLog: [],              // { id, date, student_id, code, notes }
   standardsJudgments: [],     // { id, student_id, standard_id, judgment, locked, date, notes, period }
   progressionPlacements: [],  // { id, student_id, element, sub_element, level, date, notes, ext_label, ext_value }
+  components: loadComponentsState(),          // [{ id, description, contentDescriptorCode }]
+  componentProgress: loadComponentProgressState(), // [{ id, student_id, component_id, code, mastery, date, notes }]
   curriculumCodes: [],
   standards: [],
   progressions: [],
@@ -479,7 +482,68 @@ function toggleStudentSort() {
   renderView();
 }
 function getStudentProgress(sid) { return state.progress.filter(p => p.student_id === sid); }
+function loadComponentsState() {
+  try {
+    const raw = localStorage.getItem('ct_components');
+    const rows = raw ? JSON.parse(raw) : [];
+    return Array.isArray(rows) ? rows : [];
+  } catch(e) { return []; }
+}
+function saveComponentsState() {
+  try { localStorage.setItem('ct_components', JSON.stringify(state.components || [])); } catch(e) {}
+}
+function loadComponentProgressState() {
+  try {
+    const raw = localStorage.getItem('ct_component_progress');
+    const rows = raw ? JSON.parse(raw) : [];
+    return Array.isArray(rows) ? rows : [];
+  } catch(e) { return []; }
+}
+function saveComponentProgressState() {
+  try { localStorage.setItem('ct_component_progress', JSON.stringify(state.componentProgress || [])); } catch(e) {}
+}
+function getComponentsForCode(code) {
+  return (state.components || []).filter(c => c.contentDescriptorCode === code);
+}
+function addComponentForCode(code, description) {
+  const clean = String(description || '').trim();
+  if (!clean) return null;
+  const duplicate = state.components.find(c =>
+    c.contentDescriptorCode === code && c.description.toLowerCase() === clean.toLowerCase()
+  );
+  if (duplicate) return duplicate;
+  const component = {
+    id: `cmp_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+    description: clean,
+    contentDescriptorCode: code
+  };
+  state.components.push(component);
+  saveComponentsState();
+  return component;
+}
+function componentLabelToLegacyMastery(label) {
+  if (label === 'Highly Competent' || label === 'Competent') return 'Achieved';
+  if (label === 'Developing') return 'Developing';
+  if (label === 'Emerging') return 'Emerging';
+  return 'Not taught';
+}
+function getComponentMasterySummary(studentId, code) {
+  const comps = getComponentsForCode(code);
+  if (!comps.length) return null;
+  const achievedCount = comps.filter(c => {
+    const cp = state.componentProgress.find(p => p.student_id === studentId && p.component_id === c.id);
+    return cp && (cp.mastery === 'Achieved' || cp.mastery === 'Competent' || cp.mastery === 'Highly Competent');
+  }).length;
+  const pct = Math.round((achievedCount / comps.length) * 100);
+  let label = 'Emerging';
+  if (pct >= 85) label = 'Highly Competent';
+  else if (pct >= 60) label = 'Competent';
+  else if (pct >= 30) label = 'Developing';
+  return { total: comps.length, achieved: achievedCount, pct, label };
+}
 function getMasteryForCode(sid, code) {
+  const summary = getComponentMasterySummary(sid, code);
+  if (summary) return componentLabelToLegacyMastery(summary.label);
   const p = state.progress.find(x => x.student_id === sid && x.code === code);
   return p ? p.mastery : 'Not taught';
 }
@@ -1291,6 +1355,7 @@ function renderStudentDetail(main) {
               <tbody>
                 ${filteredCodes.map(c => {
                   const mastery = getMasteryForCode(s.id, c.Code);
+                  const componentSummary = getComponentMasterySummary(s.id, c.Code);
                   const prog = state.progress.find(p => p.student_id === s.id && p.code === c.Code);
                   const date = prog ? prog.date.split('T')[0] : '—';
                   const taught = wasCodeTaughtToStudent(s.id, c.Code);
@@ -1305,9 +1370,10 @@ function renderStudentDetail(main) {
                         : `<span style="font-size:11px;color:var(--text3)">— Not yet</span>`}
                     </td>
                     <td onclick="event.stopPropagation()">
-                      <div class="mastery-badge ${masteryClass(mastery)}" onclick="openMasteryPicker('${s.id}','${c.Code}','${mastery}')">
+                      <div class="mastery-badge ${masteryClass(mastery)}" title="${componentSummary ? `${componentSummary.achieved}/${componentSummary.total} components achieved (${componentSummary.pct}%)` : ''}" onclick="openMasteryPicker('${s.id}','${c.Code}','${mastery}')">
                         ${masteryDot(mastery)} ${mastery}
                       </div>
+                      ${componentSummary ? `<div style="font-size:10px;color:var(--text3);margin-top:3px">${componentSummary.achieved}/${componentSummary.total} components · ${componentSummary.label}</div>` : ''}
                     </td>
                     <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${date}</td>
                   </tr>`;
@@ -1568,6 +1634,16 @@ function getCodeDetails(code) {
 function openCodeDetail(code, studentId) {
   const { cd, linkedStandards, relatedProgressions, linkedIds } = getCodeDetails(code);
   const mastery = studentId ? getMasteryForCode(studentId, code) : null;
+  const componentSummary = studentId ? getComponentMasterySummary(studentId, code) : null;
+  const componentRows = studentId
+    ? getComponentsForCode(code).map(cmp => {
+        const rec = state.componentProgress.find(p => p.student_id === studentId && p.component_id === cmp.id);
+        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:11px;color:var(--text-muted)">${cmp.description}</span>
+          <span style="font-size:10px;color:var(--text3)">${rec?.mastery || 'Not assessed'}</span>
+        </div>`;
+      }).join('')
+    : '';
   const prog = studentId ? state.progress.find(p => p.student_id === studentId && p.code === code) : null;
 
   const existing = document.getElementById('code-detail-panel');
@@ -1597,12 +1673,20 @@ function openCodeDetail(code, studentId) {
         <div class="mastery-badge ${masteryClass(mastery)}" style="cursor:pointer" onclick="document.getElementById('code-detail-panel').remove();openMasteryPicker('${studentId}','${code}','${mastery}')">
           ${masteryDot(mastery)} ${mastery}
         </div>
+        ${componentSummary ? `<div style="font-size:10px;color:var(--text3);margin-top:4px">${componentSummary.achieved}/${componentSummary.total} components achieved · ${componentSummary.pct}% (${componentSummary.label})</div>` : ''}
       </div>
       <div>
         <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Last Assessed</div>
         <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)">${prog ? prog.date.split('T')[0] : 'Not yet assessed'}</div>
       </div>
       ${prog && prog.notes ? `<div style="max-width:140px"><div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Notes</div><div style="font-size:11px;color:var(--text-muted);line-height:1.4">${prog.notes}</div></div>` : ''}
+    </div>` : ''}
+    ${studentId && getComponentsForCode(code).length ? `
+    <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface)">
+      <details>
+        <summary style="font-size:11px;color:var(--text3);cursor:pointer">Component-level detail (${getComponentsForCode(code).length})</summary>
+        <div style="margin-top:8px">${componentRows}</div>
+      </details>
     </div>` : ''}
     <div style="flex:1;overflow-y:auto;padding:0">
       <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
@@ -1854,6 +1938,21 @@ async function submitAddStudent() {
 }
 
 function openMasteryPicker(studentId, code, currentMastery) {
+  const components = getComponentsForCode(code);
+  const summary = getComponentMasterySummary(studentId, code);
+  const componentRows = components.map(cmp => {
+    const rec = state.componentProgress.find(p => p.student_id === studentId && p.component_id === cmp.id);
+    const current = rec?.mastery || '';
+    return `<div data-component-row="${cmp.id}" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;background:var(--surface)">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${cmp.description}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${['Achieved','Developing','Emerging','Not taught'].map(m => `<button class="btn" data-component-btn="${cmp.id}|${m}" onclick="selectComponentMastery('${cmp.id}','${m}')"
+          style="padding:3px 8px;border-color:${current===m?'var(--blue)':'var(--border2)'};background:${current===m?'var(--blue-dim)':'var(--surface-alt)'};color:${current===m?'var(--blue)':'var(--text3)'}">${masteryDot(m)} ${m}</button>`).join('')}
+      </div>
+      <input type="hidden" data-component-mastery="${cmp.id}" value="${current}">
+    </div>`;
+  }).join('');
+
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.id = 'modal-overlay';
@@ -1868,6 +1967,12 @@ function openMasteryPicker(studentId, code, currentMastery) {
             ${['Achieved','Developing','Emerging','Not taught'].map(m => `<button class="mp-option ${currentMastery===m?'selected-'+m.toLowerCase().replace(' ',''):''}" onclick="selectMastery(this,'${m}')" data-mastery="${m}">${masteryDot(m)}<br>${m}</button>`).join('')}
           </div>
         </div>
+        <div class="form-group">
+          <label class="form-label">Assessable Components (optional)</label>
+          ${components.length
+            ? `<div style="font-size:11px;color:var(--text3);margin-bottom:6px">${summary ? `${summary.achieved}/${summary.total} achieved (${summary.pct}%) → ${summary.label}` : 'Select component mastery to track cumulative progress.'}</div>${componentRows}`
+            : `<div style="font-size:11px;color:var(--text3);background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;padding:8px">No components linked to this descriptor yet. Add components in Plan and Log Learning.</div>`}
+        </div>
         <div class="form-group"><label class="form-label">Date Assessed</label><input class="form-input" type="date" id="f-date" value="${new Date().toISOString().split('T')[0]}"></div>
         <div class="form-group"><label class="form-label">Notes (optional)</label><textarea class="form-textarea" id="f-notes" placeholder="Teacher observations…"></textarea></div>
       </div>
@@ -1878,6 +1983,22 @@ function openMasteryPicker(studentId, code, currentMastery) {
     </div>
   `;
   document.body.appendChild(modal);
+}
+
+function selectComponentMastery(componentId, mastery) {
+  document.querySelectorAll(`[data-component-btn^="${componentId}|"]`).forEach(btn => {
+    btn.style.borderColor = 'var(--border2)';
+    btn.style.background = 'var(--surface-alt)';
+    btn.style.color = 'var(--text3)';
+  });
+  const active = document.querySelector(`[data-component-btn="${componentId}|${mastery}"]`);
+  if (active) {
+    active.style.borderColor = 'var(--blue)';
+    active.style.background = 'var(--blue-dim)';
+    active.style.color = 'var(--blue)';
+  }
+  const input = document.querySelector(`[data-component-mastery="${componentId}"]`);
+  if (input) input.value = mastery;
 }
 
 function selectMastery(btn, mastery) {
@@ -1891,6 +2012,31 @@ async function submitMastery(studentId, code) {
   const mastery = selected.dataset.mastery;
   const date = document.getElementById('f-date').value;
   const notes = document.getElementById('f-notes').value;
+
+  const componentInputs = [...document.querySelectorAll('[data-component-mastery]')];
+  componentInputs.forEach(input => {
+    const componentId = input.getAttribute('data-component-mastery');
+    const componentMastery = input.value;
+    if (!componentId || !componentMastery) return;
+    const existing = state.componentProgress.find(p => p.student_id === studentId && p.component_id === componentId);
+    if (existing) {
+      existing.mastery = componentMastery;
+      existing.date = date;
+      existing.notes = notes || existing.notes || '';
+      existing.code = code;
+    } else {
+      state.componentProgress.push({
+        id: `cprog_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+        student_id: studentId,
+        component_id: componentId,
+        code,
+        mastery: componentMastery,
+        date,
+        notes: notes || ''
+      });
+    }
+  });
+  saveComponentProgressState();
   closeModal();
   await saveProgress({ student_id:studentId, content_descriptor_code:code, mastery_level:mastery, date_assessed:date, teacher_notes:notes });
 }
@@ -5285,6 +5431,7 @@ function blankPlanEntry() {
     actuallyTaught: '',
     suggestedCodes: [],
     confirmedCodes: [],
+    selectedComponentsByCode: {},
     assessmentPrompt: '',
     lastUpdated: new Date().toISOString()
   };
@@ -5297,6 +5444,9 @@ function getActivePlanEntry() {
   if (!entry) {
     entry = pl.entries[0];
     pl.activeEntryId = entry.id;
+  }
+  if (!entry.selectedComponentsByCode || typeof entry.selectedComponentsByCode !== 'object') {
+    entry.selectedComponentsByCode = {};
   }
   return entry;
 }
@@ -5388,6 +5538,42 @@ function removeConfirmedCode(code) {
   const entry = getActivePlanEntry();
   if (!entry) return;
   entry.confirmedCodes = entry.confirmedCodes.filter(c => c !== code);
+  if (entry.selectedComponentsByCode) delete entry.selectedComponentsByCode[code];
+  savePlanLogState();
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function togglePlanComponent(code, componentId, checked) {
+  const entry = getActivePlanEntry();
+  if (!entry) return;
+  if (!entry.selectedComponentsByCode) entry.selectedComponentsByCode = {};
+  const selected = [...(entry.selectedComponentsByCode[code] || [])];
+  const idx = selected.indexOf(componentId);
+  if (checked && idx === -1) {
+    if (selected.length >= 3) { toast('Select up to 3 components per content descriptor', 'error'); return; }
+    selected.push(componentId);
+  }
+  if (!checked && idx >= 0) selected.splice(idx, 1);
+  entry.selectedComponentsByCode[code] = selected;
+  entry.lastUpdated = new Date().toISOString();
+  savePlanLogState();
+  renderPlanLog(document.getElementById('main-content'));
+}
+
+function addPlanComponent(code) {
+  const input = document.getElementById(`pl-new-component-${code}`);
+  const entry = getActivePlanEntry();
+  if (!input || !entry) return;
+  const text = input.value.trim();
+  if (!text) return;
+  const component = addComponentForCode(code, text);
+  if (!component) return;
+  if (!entry.selectedComponentsByCode) entry.selectedComponentsByCode = {};
+  const selected = [...(entry.selectedComponentsByCode[code] || [])];
+  if (!selected.includes(component.id) && selected.length < 3) selected.push(component.id);
+  entry.selectedComponentsByCode[code] = selected;
+  entry.lastUpdated = new Date().toISOString();
+  input.value = '';
   savePlanLogState();
   renderPlanLog(document.getElementById('main-content'));
 }
@@ -5417,7 +5603,14 @@ async function markPlanAsTaught(entryId = null) {
   state.students.forEach(s => {
     entry.confirmedCodes.forEach(code => {
       const dup = state.taughtLog.some(t => t.student_id === s.id && t.code === code && t.date === date);
-      if (!dup) entries.push({ date, student_id: s.id, code, notes: entry.actuallyTaught || 'Logged via Plan and Log Learning' });
+      if (!dup) {
+        const selectedComponents = (entry.selectedComponentsByCode?.[code] || [])
+          .map(id => state.components.find(c => c.id === id)?.description)
+          .filter(Boolean)
+          .slice(0, 3);
+        const componentNote = selectedComponents.length ? ` | Components: ${selectedComponents.join(' | ')}` : '';
+        entries.push({ date, student_id: s.id, code, notes: `${entry.actuallyTaught || 'Logged via Plan and Log Learning'}${componentNote}` });
+      }
     });
   });
 
@@ -5445,7 +5638,11 @@ function generateAssessmentPrompt(entry) {
   const codeLines = entry.confirmedCodes
     .map(code => {
       const row = state.curriculumCodes.find(c => c.Code === code);
-      return `- ${code}: ${row?.Description || 'Curriculum code'}`;
+      const selected = (entry.selectedComponentsByCode?.[code] || [])
+        .map(id => state.components.find(c => c.id === id)?.description)
+        .filter(Boolean);
+      const componentText = selected.length ? `\n  Components: ${selected.join(' | ')}` : '';
+      return `- ${code}: ${row?.Description || row?.Descriptor || 'Curriculum code'}${componentText}`;
     })
     .join('\n');
   return [
@@ -5530,10 +5727,32 @@ function renderPlanLog(main) {
 
   const confirmedRows = (active?.confirmedCodes || []).map(code => {
     const row = state.curriculumCodes.find(c => c.Code === code);
+    const codeComponents = getComponentsForCode(code);
+    const selectedComponents = active.selectedComponentsByCode?.[code] || [];
     return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-      <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:10px">${code}</span>
-      <span style="font-size:11px;color:var(--text3)">${row?.Description || ''}</span>
-      <button class="btn" style="margin-left:auto;padding:2px 8px" onclick="removeConfirmedCode('${code}')">✕</button>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:10px">${code}</span>
+          <span style="font-size:11px;color:var(--text3)">${row?.Description || row?.Descriptor || ''}</span>
+          <button class="btn" style="margin-left:auto;padding:2px 8px" onclick="removeConfirmedCode('${code}')">✕</button>
+        </div>
+        <details style="margin-top:6px">
+          <summary style="font-size:11px;color:var(--text3);cursor:pointer">Assessable components (optional, choose 1–3)</summary>
+          <div style="margin-top:6px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface)">
+            ${codeComponents.length
+              ? codeComponents.map(cmp => `<label style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;font-size:11px;color:var(--text-muted)">
+                  <input type="checkbox" ${selectedComponents.includes(cmp.id) ? 'checked' : ''} onchange="togglePlanComponent('${code}','${cmp.id}',this.checked)">
+                  <span>${cmp.description}</span>
+                </label>`).join('')
+              : `<div style="font-size:11px;color:var(--text3);margin-bottom:6px">No components yet. Add one below.</div>`}
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <input id="pl-new-component-${code}" class="form-input" placeholder="Add component for ${code}">
+              <button class="btn" onclick="addPlanComponent('${code}')">Add</button>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Selected: ${selectedComponents.length}/3</div>
+          </div>
+        </details>
+      </div>
     </div>`;
   }).join('');
 

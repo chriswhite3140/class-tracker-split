@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.11.0
+ * THIS FILE IS VERSION: 1.12.0
  * Last updated: 2026-03-31
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.0 - Weekly Planner persistence and app view restore improvements
  * v1.11.0 - Assessable Components layer for partial/cumulative descriptor mastery
  * v1.10.0 - Weekly Planner Phase 2 (weekly focus, rollover, multi-period blocks, multi-day duplication)
  * v1.8.0 - Added accessible tooltips for truncated text in dense views + spacing polish for filter controls
@@ -27,10 +28,38 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.12.0';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
+const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
+const RESTORABLE_VIEWS = new Set([
+  'dashboard', 'students', 'overview', 'bulk-assess', 'daily-log', 'plan-log', 'weekly-planner',
+  'coverage', 'standards-judgments', 'progression-placement', 'admin', 'curriculum', 'standards', 'progressions'
+]);
 let systemThemeMediaQuery = null;
+
+function loadUIState() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(APP_UI_STATE_STORAGE_KEY) || '{}');
+    const currentView = RESTORABLE_VIEWS.has(parsed?.currentView) ? parsed.currentView : 'dashboard';
+    return { currentView };
+  } catch (e) {
+    return { currentView: 'dashboard' };
+  }
+}
+
+function saveUIState() {
+  try {
+    localStorage.setItem(APP_UI_STATE_STORAGE_KEY, JSON.stringify({
+      currentView: state.currentView || 'dashboard',
+    }));
+  } catch (e) {}
+}
+
+function setCurrentView(v, { persist = true } = {}) {
+  state.currentView = v;
+  if (persist) saveUIState();
+}
 
 function getSystemTheme() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -693,7 +722,7 @@ function showView(v) {
       state.bulkAssess.pendingChanges = {};
     }
   }
-  state.currentView = v;
+  setCurrentView(v);
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const nb = document.getElementById('nav-' + v);
   if (nb) nb.classList.add('active');
@@ -1080,7 +1109,7 @@ function filterStudents(q) {
 // ── STUDENT DETAIL ──
 function openStudentDetail(studentId) {
   state.selectedStudent = studentId;
-  state.currentView = 'student-detail';
+  setCurrentView('student-detail');
   state.detailFilter = 'all';
   state.detailSection = 'curriculum'; // always reset to curriculum tab
   const student = state.students.find(x => x.id === studentId);
@@ -6689,6 +6718,13 @@ async function init() {
   initTheme();
   initTextSize();
   loadAssessmentScale();
+
+  const uiState = loadUIState();
+  setCurrentView(uiState.currentView, { persist: false });
+
+  const hasStoredPlanner = !!localStorage.getItem(WEEKLY_PLANNER_STORAGE_KEY);
+  state.weeklyPlanner = loadWeeklyPlannerState();
+  if (!hasStoredPlanner) saveWeeklyPlannerState();
 
   // Show loading message
   const main = document.getElementById('main-content');

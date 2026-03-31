@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.0
+ * THIS FILE IS VERSION: 1.12.1
  * Last updated: 2026-03-31
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.1 - Weekly Planner regression fix (week navigation + drag/drop reliability after persistence restore)
  * v1.12.0 - Weekly Planner persistence and app view restore improvements
  * v1.11.0 - Assessable Components layer for partial/cumulative descriptor mastery
  * v1.10.0 - Weekly Planner Phase 2 (weekly focus, rollover, multi-period blocks, multi-day duplication)
@@ -28,7 +29,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.0';
+const APP_VERSION = '1.12.1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -5937,6 +5938,15 @@ function addDaysToDate(isoDate, days) {
   return toIsoDate(d);
 }
 
+function isValidIsoDate(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
+}
+
+function plannerNormalizeWeekStart(value) {
+  if (!isValidIsoDate(value)) return toIsoDate(getWeekStart());
+  return toIsoDate(getWeekStart(new Date(`${value}T00:00:00`)));
+}
+
 function normalizePlannerSettings(raw = {}) {
   const periodsPerDay = Math.min(12, Math.max(3, Number(raw.periodsPerDay) || 6));
   const recessAfter = Math.min(periodsPerDay - 1, Math.max(0, Number(raw.recessAfter) || 2));
@@ -5998,7 +6008,7 @@ function loadWeeklyPlannerState() {
     const parsed = JSON.parse(raw);
     return {
       settings: normalizePlannerSettings(parsed?.settings || {}),
-      currentWeekStart: parsed?.currentWeekStart || defaults.currentWeekStart,
+      currentWeekStart: plannerNormalizeWeekStart(parsed?.currentWeekStart || defaults.currentWeekStart),
       weeks: parsed?.weeks && typeof parsed.weeks === 'object' ? parsed.weeks : {},
       dayViewDay: Number.isInteger(parsed?.dayViewDay) ? parsed.dayViewDay : null,
       draggingBlockId: null,
@@ -6021,7 +6031,12 @@ function saveWeeklyPlannerState() {
 
 function getPlannerWeekKey() {
   if (!state.weeklyPlanner) state.weeklyPlanner = loadWeeklyPlannerState();
-  return state.weeklyPlanner.currentWeekStart || toIsoDate(getWeekStart());
+  const normalized = plannerNormalizeWeekStart(state.weeklyPlanner.currentWeekStart || toIsoDate(getWeekStart()));
+  if (state.weeklyPlanner.currentWeekStart !== normalized) {
+    state.weeklyPlanner.currentWeekStart = normalized;
+    saveWeeklyPlannerState();
+  }
+  return normalized;
 }
 
 function getPlannerWeekData(weekKey = null) {
@@ -6113,10 +6128,13 @@ function plannerChangeWeek(direction) {
   const current = getPlannerWeekKey();
   if (direction === 'current') {
     state.weeklyPlanner.currentWeekStart = toIsoDate(getWeekStart());
-  } else {
+  } else if (direction === 'next' || direction === 'prev') {
     const delta = direction === 'next' ? 7 : -7;
     state.weeklyPlanner.currentWeekStart = addDaysToDate(current, delta);
+  } else {
+    return;
   }
+  state.weeklyPlanner.currentWeekStart = plannerNormalizeWeekStart(state.weeklyPlanner.currentWeekStart);
   saveWeeklyPlannerState();
   renderView();
 }
@@ -6231,8 +6249,10 @@ function plannerDeleteBlock(blockId) {
 }
 
 function plannerStartDrag(ev, blockId) {
-  ev.dataTransfer.effectAllowed = 'move';
-  ev.dataTransfer.setData('text/plain', blockId);
+  if (ev.dataTransfer) {
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', blockId);
+  }
   state.weeklyPlanner.draggingBlockId = blockId;
   ev.currentTarget.classList.add('is-dragging');
 }
@@ -6259,6 +6279,7 @@ function plannerDrop(ev, day, period) {
   if (!blockId) return;
   const block = findPlannerBlock(blockId);
   if (!block) return;
+  if (block.day === day && block.period === period) return;
   if (!plannerCanPlaceBlock(day, period, block.duration || 1, blockId)) {
     toast('Target slot is already occupied. Use Duplicate or Move instead.', 'error');
     return;
@@ -6538,6 +6559,35 @@ function plannerRemoveWeeklyFocusEntry(entryId) {
   renderView();
 }
 
+
+function plannerBindInteractions(main) {
+  if (!main) return;
+
+  main.querySelectorAll('[data-planner-week-nav]').forEach(btn => {
+    btn.addEventListener('click', () => plannerChangeWeek(btn.dataset.plannerWeekNav));
+  });
+
+  main.querySelectorAll('[data-planner-cell]').forEach(cell => {
+    const day = Number(cell.dataset.day);
+    const period = Number(cell.dataset.period);
+    cell.addEventListener('dragover', (ev) => plannerDragOver(ev));
+    cell.addEventListener('dragleave', (ev) => plannerDragLeave(ev));
+    cell.addEventListener('drop', (ev) => plannerDrop(ev, day, period));
+  });
+
+  main.querySelectorAll('[data-planner-empty-cell]').forEach(cell => {
+    const day = Number(cell.dataset.day);
+    const period = Number(cell.dataset.period);
+    cell.addEventListener('click', () => plannerOpenBlockModal(day, period));
+  });
+
+  main.querySelectorAll('[data-planner-block-id]').forEach(blockEl => {
+    const blockId = blockEl.dataset.plannerBlockId;
+    blockEl.addEventListener('dragstart', (ev) => plannerStartDrag(ev, blockId));
+    blockEl.addEventListener('dragend', (ev) => plannerEndDrag(ev));
+  });
+}
+
 function renderWeeklyPlanner(main) {
   if (!state.weeklyPlanner) state.weeklyPlanner = loadWeeklyPlannerState();
   const wp = state.weeklyPlanner;
@@ -6563,7 +6613,7 @@ function renderWeeklyPlanner(main) {
       }
       const block = blocks.find(b => b.day === dayIdx && b.period === period);
       if (!block) {
-        return `<td class="planner-cell planner-empty" ondragover="plannerDragOver(event)" ondragleave="plannerDragLeave(event)" ondrop="plannerDrop(event, ${dayIdx}, ${period})" onclick="plannerOpenBlockModal(${dayIdx}, ${period})"><span>+ Add</span></td>`;
+        return `<td class="planner-cell planner-empty" data-planner-cell="1" data-planner-empty-cell="1" data-day="${dayIdx}" data-period="${period}"><span>+ Add</span></td>`;
       }
 
       const duration = block.duration || 1;
@@ -6573,8 +6623,8 @@ function renderWeeklyPlanner(main) {
       const col = subjectCol(block.subject || block.title || 'English');
       const bg = subjectBg(block.subject || block.title || 'English');
       const focusDisplay = plannerGetDisplayFocus(block, weekData);
-      return `<td class="planner-cell" ondragover="plannerDragOver(event)" ondragleave="plannerDragLeave(event)" ondrop="plannerDrop(event, ${dayIdx}, ${period})">
-        <div class="planner-block ${duration === 2 ? 'planner-block-span-2' : ''}" draggable="true" ondragstart="plannerStartDrag(event, '${block.id}')" ondragend="plannerEndDrag(event)" style="--planner-block-col:${col};--planner-block-bg:${bg}">
+      return `<td class="planner-cell" data-planner-cell="1" data-day="${dayIdx}" data-period="${period}">
+        <div class="planner-block ${duration === 2 ? 'planner-block-span-2' : ''}" draggable="true" data-planner-block-id="${block.id}" style="--planner-block-col:${col};--planner-block-bg:${bg}">
           <div class="planner-block-top">
             <button class="planner-block-title" onclick="plannerOpenBlockModal(${dayIdx}, ${period}, '${block.id}')">${escapeHtml(block.title || 'Untitled')}</button>
             <div class="planner-block-actions">
@@ -6615,9 +6665,9 @@ function renderWeeklyPlanner(main) {
     <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Weekly Planner</div>
       <div class="planner-week-nav">
-        <button class="btn" onclick="plannerChangeWeek('prev')">← Previous week</button>
-        <button class="btn" onclick="plannerChangeWeek('current')">Current week</button>
-        <button class="btn" onclick="plannerChangeWeek('next')">Next week →</button>
+        <button class="btn" data-planner-week-nav="prev" id="planner-week-prev">← Previous week</button>
+        <button class="btn" data-planner-week-nav="current" id="planner-week-current">Current week</button>
+        <button class="btn" data-planner-week-nav="next" id="planner-week-next">Next week →</button>
       </div>
       <div class="planner-week-label">Week: ${plannerWeekLabel()}</div>
     </div>
@@ -6700,6 +6750,8 @@ function renderWeeklyPlanner(main) {
       </div>`}
     </div>
   `;
+
+  plannerBindInteractions(main);
 }
 
 // ── Apps Script additions needed ──

@@ -2,14 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.2
- * Last updated: 2026-03-31
+ * THIS FILE IS VERSION: 1.12.3
+ * Last updated: 2026-04-01
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.3 - Legacy planner retired from sidebar; new Planner shell page added (Phase 1)
  * v1.12.2 - Weekly Planner stabilization (canonical week key + reliable cell creation/events)
  * v1.12.1 - Weekly Planner regression fix (week navigation + drag/drop reliability after persistence restore)
  * v1.12.0 - Weekly Planner persistence and app view restore improvements
@@ -30,12 +31,12 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.2';
+const APP_VERSION = '1.12.3';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
 const RESTORABLE_VIEWS = new Set([
-  'dashboard', 'students', 'overview', 'bulk-assess', 'daily-log', 'plan-log', 'weekly-planner',
+  'dashboard', 'students', 'overview', 'bulk-assess', 'daily-log', 'planner', 'plan-log', 'weekly-planner',
   'coverage', 'standards-judgments', 'progression-placement', 'admin', 'curriculum', 'standards', 'progressions'
 ]);
 let systemThemeMediaQuery = null;
@@ -43,7 +44,8 @@ let systemThemeMediaQuery = null;
 function loadUIState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(APP_UI_STATE_STORAGE_KEY) || '{}');
-    const currentView = RESTORABLE_VIEWS.has(parsed?.currentView) ? parsed.currentView : 'dashboard';
+    let currentView = RESTORABLE_VIEWS.has(parsed?.currentView) ? parsed.currentView : 'dashboard';
+    if (currentView === 'plan-log' || currentView === 'weekly-planner') currentView = 'planner';
     return { currentView };
   } catch (e) {
     return { currentView: 'dashboard' };
@@ -741,6 +743,7 @@ function renderView() {
     case 'overview':                renderClassOverview(main); break;
     case 'bulk-assess':             renderBulkAssess(main); break;
     case 'daily-log':               renderDailyLog(main); break;
+    case 'planner':                 renderPlanner(main); break;
     case 'plan-log':                renderPlanLog(main); break;
     case 'weekly-planner':          renderWeeklyPlanner(main); break;
     case 'coverage':                renderCoverage(main); break;
@@ -752,6 +755,35 @@ function renderView() {
     case 'progressions':            renderProgressions(main); break;
     default:                        renderDashboard(main);
   }
+}
+
+function renderPlanner(main) {
+  main.innerHTML = `
+    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
+      <div class="topbar-title">Planner</div>
+      <div style="font-size:12px;color:var(--text3)">New weekly planner is being rolled out.</div>
+    </div>
+    <div class="content planner-shell-layout">
+      <section class="card planner-shell-board">
+        <div class="card-head">
+          <div class="card-title">Week Board</div>
+          <div style="font-size:12px;color:var(--text3)">Placeholder</div>
+        </div>
+        <div class="planner-shell-placeholder">
+          Weekly planning board placeholder. Legacy planner remains in code during migration.
+        </div>
+      </section>
+      <aside class="card planner-shell-drawer">
+        <div class="card-head">
+          <div class="card-title">Right Drawer</div>
+          <div style="font-size:12px;color:var(--text3)">Placeholder</div>
+        </div>
+        <div class="planner-shell-placeholder">
+          Planner details drawer placeholder.
+        </div>
+      </aside>
+    </div>
+  `;
 }
 
 // ── DASHBOARD ──

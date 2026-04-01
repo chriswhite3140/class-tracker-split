@@ -1070,6 +1070,24 @@ body[data-text-size="large"] {
   font-size: var(--label-size) !important;
 }
 
+/* ── PLANNER SHELL ── */
+.planner-shell-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 14px;
+}
+
+.planner-shell-board,
+.planner-shell-drawer {
+  min-height: 300px;
+}
+
+.planner-shell-placeholder {
+  padding: 14px;
+  color: var(--text3);
+  font-size: var(--helper-size);
+}
+
 
 /* ── WEEKLY PLANNER ── */
 .planner-week-nav {
@@ -1329,6 +1347,7 @@ body[data-text-size="large"] {
   .content { padding: 14px 16px; }
   .detail-header { padding: 12px 14px; }
   .stats-row { grid-template-columns: repeat(3, 1fr) !important; }
+  .planner-shell-layout { grid-template-columns: 1fr; }
 }
 
 /* Mobile (< 768px) — collapse sidebar to icon strip, full-width main */

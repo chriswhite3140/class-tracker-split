@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.1
+ * THIS FILE IS VERSION: 1.12.2
  * Last updated: 2026-03-31
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.2 - Weekly Planner stabilization (canonical week key + reliable cell creation/events)
  * v1.12.1 - Weekly Planner regression fix (week navigation + drag/drop reliability after persistence restore)
  * v1.12.0 - Weekly Planner persistence and app view restore improvements
  * v1.11.0 - Assessable Components layer for partial/cumulative descriptor mastery
@@ -29,7 +30,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.1';
+const APP_VERSION = '1.12.2';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -5920,7 +5921,17 @@ const PLANNER_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const PLANNER_WEEKLY_FOCUS_DEFAULTS = ['Literacy', 'Maths', 'Phonics', 'Reading', 'Writing'];
 
 function toIsoDate(date) {
-  return date.toISOString().split('T')[0];
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseIsoDateLocal(isoDate) {
+  if (!isValidIsoDate(isoDate)) return null;
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, day);
 }
 
 function getWeekStart(dateLike = new Date()) {
@@ -5933,18 +5944,22 @@ function getWeekStart(dateLike = new Date()) {
 }
 
 function addDaysToDate(isoDate, days) {
-  const d = new Date(`${isoDate}T00:00:00`);
+  const d = parseIsoDateLocal(isoDate);
+  if (!d) return toIsoDate(getWeekStart());
   d.setDate(d.getDate() + days);
   return toIsoDate(d);
 }
 
 function isValidIsoDate(value) {
-  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  return d.getFullYear() === year && d.getMonth() === (month - 1) && d.getDate() === day;
 }
 
 function plannerNormalizeWeekStart(value) {
   if (!isValidIsoDate(value)) return toIsoDate(getWeekStart());
-  return toIsoDate(getWeekStart(new Date(`${value}T00:00:00`)));
+  return toIsoDate(getWeekStart(parseIsoDateLocal(value)));
 }
 
 function normalizePlannerSettings(raw = {}) {
@@ -6104,7 +6119,7 @@ function plannerGetDisplayFocus(block, weekData = getPlannerWeekData()) {
 }
 
 function plannerWeekLabel() {
-  const start = new Date(`${getPlannerWeekKey()}T00:00:00`);
+  const start = parseIsoDateLocal(getPlannerWeekKey());
   const end = new Date(start);
   end.setDate(start.getDate() + 4);
   const fmt = { day: 'numeric', month: 'short' };
@@ -6249,16 +6264,19 @@ function plannerDeleteBlock(blockId) {
 }
 
 function plannerStartDrag(ev, blockId) {
+  const blockEl = ev.target?.closest?.('[data-planner-block-id]');
+  if (!blockEl) return;
   if (ev.dataTransfer) {
     ev.dataTransfer.effectAllowed = 'move';
     ev.dataTransfer.setData('text/plain', blockId);
   }
   state.weeklyPlanner.draggingBlockId = blockId;
-  ev.currentTarget.classList.add('is-dragging');
+  blockEl.classList.add('is-dragging');
 }
 
 function plannerEndDrag(ev) {
-  ev.currentTarget.classList.remove('is-dragging');
+  const blockEl = ev.target?.closest?.('[data-planner-block-id]');
+  if (blockEl) blockEl.classList.remove('is-dragging');
   state.weeklyPlanner.draggingBlockId = null;
   document.querySelectorAll('.planner-cell').forEach(cell => cell.classList.remove('drop-over'));
 }
@@ -6562,29 +6580,54 @@ function plannerRemoveWeeklyFocusEntry(entryId) {
 
 function plannerBindInteractions(main) {
   if (!main) return;
+  if (main.dataset.plannerBound === '1') return;
+  main.dataset.plannerBound = '1';
 
-  main.querySelectorAll('[data-planner-week-nav]').forEach(btn => {
-    btn.addEventListener('click', () => plannerChangeWeek(btn.dataset.plannerWeekNav));
+  main.addEventListener('click', (ev) => {
+    const navBtn = ev.target.closest('[data-planner-week-nav]');
+    if (navBtn && main.contains(navBtn)) {
+      plannerChangeWeek(navBtn.dataset.plannerWeekNav);
+      return;
+    }
+
+    const emptyCell = ev.target.closest('[data-planner-empty-cell]');
+    if (emptyCell && main.contains(emptyCell)) {
+      const day = Number(emptyCell.dataset.day);
+      const period = Number(emptyCell.dataset.period);
+      plannerOpenBlockModal(day, period);
+    }
   });
 
-  main.querySelectorAll('[data-planner-cell]').forEach(cell => {
+  main.addEventListener('dragstart', (ev) => {
+    const blockEl = ev.target.closest('[data-planner-block-id]');
+    if (!blockEl || !main.contains(blockEl)) return;
+    plannerStartDrag(ev, blockEl.dataset.plannerBlockId);
+  });
+
+  main.addEventListener('dragend', (ev) => {
+    const blockEl = ev.target.closest('[data-planner-block-id]');
+    if (!blockEl || !main.contains(blockEl)) return;
+    plannerEndDrag(ev);
+  });
+
+  main.addEventListener('dragover', (ev) => {
+    const cell = ev.target.closest('[data-planner-cell]');
+    if (!cell || !main.contains(cell)) return;
+    plannerDragOver(ev);
+  });
+
+  main.addEventListener('dragleave', (ev) => {
+    const cell = ev.target.closest('[data-planner-cell]');
+    if (!cell || !main.contains(cell)) return;
+    plannerDragLeave(ev);
+  });
+
+  main.addEventListener('drop', (ev) => {
+    const cell = ev.target.closest('[data-planner-cell]');
+    if (!cell || !main.contains(cell)) return;
     const day = Number(cell.dataset.day);
     const period = Number(cell.dataset.period);
-    cell.addEventListener('dragover', (ev) => plannerDragOver(ev));
-    cell.addEventListener('dragleave', (ev) => plannerDragLeave(ev));
-    cell.addEventListener('drop', (ev) => plannerDrop(ev, day, period));
-  });
-
-  main.querySelectorAll('[data-planner-empty-cell]').forEach(cell => {
-    const day = Number(cell.dataset.day);
-    const period = Number(cell.dataset.period);
-    cell.addEventListener('click', () => plannerOpenBlockModal(day, period));
-  });
-
-  main.querySelectorAll('[data-planner-block-id]').forEach(blockEl => {
-    const blockId = blockEl.dataset.plannerBlockId;
-    blockEl.addEventListener('dragstart', (ev) => plannerStartDrag(ev, blockId));
-    blockEl.addEventListener('dragend', (ev) => plannerEndDrag(ev));
+    plannerDrop(ev, day, period);
   });
 }
 
@@ -6600,7 +6643,7 @@ function renderWeeklyPlanner(main) {
 
   const dayHeaders = PLANNER_DAYS.map((day, idx) => {
     const dayDate = addDaysToDate(weekKey, idx);
-    return `<th><button class="planner-day-btn" onclick="plannerToggleDayView(${idx})">${day}<span>${new Date(`${dayDate}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span></button></th>`;
+    return `<th><button class="planner-day-btn" onclick="plannerToggleDayView(${idx})">${day}<span>${parseIsoDateLocal(dayDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span></button></th>`;
   }).join('');
 
   const bodyRows = [];

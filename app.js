@@ -2,15 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.2
- * Last updated: 2026-03-31
+ * THIS FILE IS VERSION: 1.13.0
+ * Last updated: 2026-04-01
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
- * v1.12.2 - Weekly Planner stabilization (canonical week key + reliable cell creation/events)
+ * v1.13.0 - Weekly Planner core rebuild (single-state model, status/type/priority, reliable rescheduling)
  * v1.12.1 - Weekly Planner regression fix (week navigation + drag/drop reliability after persistence restore)
  * v1.12.0 - Weekly Planner persistence and app view restore improvements
  * v1.11.0 - Assessable Components layer for partial/cumulative descriptor mastery
@@ -30,7 +30,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.2';
+const APP_VERSION = '1.13.0';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -5918,6 +5918,21 @@ function renderPlanLog(main) {
 
 const WEEKLY_PLANNER_STORAGE_KEY = 'ct_weekly_planner_v1';
 const PLANNER_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const PLANNER_STATUS = {
+  planned: 'Planned',
+  taught: 'Taught',
+  partial: 'Partially taught',
+  deferred: 'Deferred',
+  skipped: 'Skipped',
+};
+const PLANNER_TYPES = {
+  teaching: 'Teaching',
+  event: 'Event',
+  admin: 'Admin',
+  assessment: 'Assessment',
+  specialist: 'Specialist',
+};
+const PLANNER_PRIORITIES = { high: 'High', medium: 'Medium', low: 'Low' };
 const PLANNER_WEEKLY_FOCUS_DEFAULTS = ['Literacy', 'Maths', 'Phonics', 'Reading', 'Writing'];
 
 function toIsoDate(date) {
@@ -5932,6 +5947,13 @@ function parseIsoDateLocal(isoDate) {
   if (!isValidIsoDate(isoDate)) return null;
   const [year, month, day] = isoDate.split('-').map(Number);
   return new Date(year, month - 1, day);
+}
+
+function isValidIsoDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  return d.getFullYear() === year && d.getMonth() === (month - 1) && d.getDate() === day;
 }
 
 function getWeekStart(dateLike = new Date()) {
@@ -5950,45 +5972,56 @@ function addDaysToDate(isoDate, days) {
   return toIsoDate(d);
 }
 
-function isValidIsoDate(value) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split('-').map(Number);
-  const d = new Date(year, month - 1, day);
-  return d.getFullYear() === year && d.getMonth() === (month - 1) && d.getDate() === day;
-}
-
 function plannerNormalizeWeekStart(value) {
   if (!isValidIsoDate(value)) return toIsoDate(getWeekStart());
   return toIsoDate(getWeekStart(parseIsoDateLocal(value)));
-}
-
-function normalizePlannerSettings(raw = {}) {
-  const periodsPerDay = Math.min(12, Math.max(3, Number(raw.periodsPerDay) || 6));
-  const recessAfter = Math.min(periodsPerDay - 1, Math.max(0, Number(raw.recessAfter) || 2));
-  const lunchAfter = Math.min(periodsPerDay - 1, Math.max(0, Number(raw.lunchAfter) || 4));
-  const dayStart = /^\d{2}:\d{2}$/.test(raw.dayStart || '') ? raw.dayStart : '09:00';
-  const periodLength = Math.min(120, Math.max(20, Number(raw.periodLength) || 50));
-  return { dayStart, periodLength, periodsPerDay, recessAfter, lunchAfter };
 }
 
 function plannerNormalizeFocusKey(value = '') {
   return String(value || '').trim().toLowerCase();
 }
 
-function normalizePlannerBlock(raw = {}) {
-  const duration = Number(raw.duration) === 2 ? 2 : 1;
-  const period = Math.max(1, Number(raw.period) || 1);
-  const day = Math.min(4, Math.max(0, Number(raw.day) || 0));
+function plannerMakeBlockId() {
+  return `wp_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`;
+}
+
+function normalizePlannerSettings(raw = {}) {
+  const periodsPerDay = Math.min(12, Math.max(3, Number(raw.periodsPerDay) || 6));
+  const recessAfter = Math.min(periodsPerDay - 1, Math.max(0, Number(raw.recessAfter) || 2));
+  const lunchAfter = Math.min(periodsPerDay - 1, Math.max(0, Number(raw.lunchAfter) || 4));
   return {
-    ...raw,
-    id: raw.id || `wp_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+    dayStart: /^\d{2}:\d{2}$/.test(raw.dayStart || '') ? raw.dayStart : '09:00',
+    periodLength: Math.min(120, Math.max(20, Number(raw.periodLength) || 50)),
+    periodsPerDay,
+    recessAfter,
+    recessLength: Math.min(120, Math.max(0, Number(raw.recessLength) || 20)),
+    lunchAfter,
+    lunchLength: Math.min(120, Math.max(0, Number(raw.lunchLength) || 40)),
+  };
+}
+
+function normalizePlannerBlock(raw = {}, weekKey = getPlannerWeekKey()) {
+  const day = Math.min(4, Math.max(0, Number(raw.day) || 0));
+  const period = Math.max(1, Number(raw.period) || 1);
+  const duration = Math.min(4, Math.max(1, Number(raw.duration) || 1));
+  const blockDate = isValidIsoDate(raw.date) ? raw.date : addDaysToDate(weekKey, day);
+  const status = Object.prototype.hasOwnProperty.call(PLANNER_STATUS, raw.status) ? raw.status : 'planned';
+  const type = Object.prototype.hasOwnProperty.call(PLANNER_TYPES, raw.type) ? raw.type : 'teaching';
+  const priority = Object.prototype.hasOwnProperty.call(PLANNER_PRIORITIES, raw.priority) ? raw.priority : 'medium';
+  const title = String(raw.title || raw.subject || '').trim();
+  return {
+    id: raw.id || plannerMakeBlockId(),
+    date: blockDate,
     day,
     period,
     duration,
-    title: String(raw.title || raw.subject || ''),
-    subject: String(raw.subject || raw.title || ''),
-    focus: String(raw.focus || ''),
-    notes: String(raw.notes || ''),
+    subject: String(raw.subject || title || '').trim(),
+    title,
+    focus: String(raw.focus || '').trim(),
+    notes: String(raw.notes || '').trim(),
+    status,
+    type,
+    priority,
   };
 }
 
@@ -6002,30 +6035,24 @@ function normalizeWeeklyFocusEntries(rawEntries = []) {
     }))
     .filter(entry => entry.subject);
   if (normalized.length) return normalized;
-  return PLANNER_WEEKLY_FOCUS_DEFAULTS.map(subject => ({
-    id: `wf_${plannerNormalizeFocusKey(subject)}`,
-    subject,
-    focus: '',
-  }));
+  return PLANNER_WEEKLY_FOCUS_DEFAULTS.map(subject => ({ id: `wf_${plannerNormalizeFocusKey(subject)}`, subject, focus: '' }));
 }
 
 function loadWeeklyPlannerState() {
   const defaults = {
+    selectedWeekMonday: toIsoDate(getWeekStart()),
     settings: normalizePlannerSettings(),
-    currentWeekStart: toIsoDate(getWeekStart()),
     weeks: {},
-    dayViewDay: null,
+    selectedDayView: null,
     draggingBlockId: null,
   };
   try {
-    const raw = localStorage.getItem(WEEKLY_PLANNER_STORAGE_KEY);
-    if (!raw) return defaults;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(localStorage.getItem(WEEKLY_PLANNER_STORAGE_KEY) || '{}');
     return {
+      selectedWeekMonday: plannerNormalizeWeekStart(parsed?.selectedWeekMonday || parsed?.currentWeekStart || defaults.selectedWeekMonday),
       settings: normalizePlannerSettings(parsed?.settings || {}),
-      currentWeekStart: plannerNormalizeWeekStart(parsed?.currentWeekStart || defaults.currentWeekStart),
       weeks: parsed?.weeks && typeof parsed.weeks === 'object' ? parsed.weeks : {},
-      dayViewDay: Number.isInteger(parsed?.dayViewDay) ? parsed.dayViewDay : null,
+      selectedDayView: Number.isInteger(parsed?.selectedDayView) ? parsed.selectedDayView : (Number.isInteger(parsed?.dayViewDay) ? parsed.dayViewDay : null),
       draggingBlockId: null,
     };
   } catch (e) {
@@ -6036,76 +6063,65 @@ function loadWeeklyPlannerState() {
 function saveWeeklyPlannerState() {
   const wp = state.weeklyPlanner || loadWeeklyPlannerState();
   const payload = {
+    selectedWeekMonday: plannerNormalizeWeekStart(wp.selectedWeekMonday),
     settings: normalizePlannerSettings(wp.settings),
-    currentWeekStart: wp.currentWeekStart,
     weeks: wp.weeks || {},
-    dayViewDay: Number.isInteger(wp.dayViewDay) ? wp.dayViewDay : null,
+    selectedDayView: Number.isInteger(wp.selectedDayView) ? wp.selectedDayView : null,
   };
   try { localStorage.setItem(WEEKLY_PLANNER_STORAGE_KEY, JSON.stringify(payload)); } catch (e) {}
 }
 
 function getPlannerWeekKey() {
   if (!state.weeklyPlanner) state.weeklyPlanner = loadWeeklyPlannerState();
-  const normalized = plannerNormalizeWeekStart(state.weeklyPlanner.currentWeekStart || toIsoDate(getWeekStart()));
-  if (state.weeklyPlanner.currentWeekStart !== normalized) {
-    state.weeklyPlanner.currentWeekStart = normalized;
-    saveWeeklyPlannerState();
-  }
+  const normalized = plannerNormalizeWeekStart(state.weeklyPlanner.selectedWeekMonday);
+  if (state.weeklyPlanner.selectedWeekMonday !== normalized) state.weeklyPlanner.selectedWeekMonday = normalized;
   return normalized;
 }
 
-function getPlannerWeekData(weekKey = null) {
+function getPlannerWeekData(weekKey = getPlannerWeekKey()) {
   const wp = state.weeklyPlanner;
-  const key = weekKey || getPlannerWeekKey();
+  const key = plannerNormalizeWeekStart(weekKey);
   if (!wp.weeks[key]) wp.weeks[key] = { blocks: [], weeklyFocusEntries: normalizeWeeklyFocusEntries([]) };
-  if (!Array.isArray(wp.weeks[key].blocks)) wp.weeks[key].blocks = [];
-  wp.weeks[key].blocks = wp.weeks[key].blocks.map(normalizePlannerBlock);
+  wp.weeks[key].blocks = (Array.isArray(wp.weeks[key].blocks) ? wp.weeks[key].blocks : []).map(raw => normalizePlannerBlock(raw, key));
   wp.weeks[key].weeklyFocusEntries = normalizeWeeklyFocusEntries(wp.weeks[key].weeklyFocusEntries);
   return wp.weeks[key];
 }
 
-function getPlannerBlocks() {
-  return getPlannerWeekData().blocks;
-}
-
-function findPlannerBlock(blockId) {
-  return getPlannerBlocks().find(b => b.id === blockId);
-}
+function getPlannerBlocks(weekKey = getPlannerWeekKey()) { return getPlannerWeekData(weekKey).blocks; }
+function findPlannerBlock(blockId, weekKey = getPlannerWeekKey()) { return getPlannerBlocks(weekKey).find(b => b.id === blockId); }
 
 function plannerBlockCoversPeriod(block, period) {
-  const duration = Number(block.duration) === 2 ? 2 : 1;
-  return period >= block.period && period < (block.period + duration);
+  return period >= block.period && period < (block.period + (block.duration || 1));
 }
 
-function getPlannerBlockAt(day, period, skipId = null) {
-  return getPlannerBlocks().find(b => b.day === day && plannerBlockCoversPeriod(b, period) && b.id !== skipId);
+function getPlannerBlockAt(day, period, skipId = null, weekKey = getPlannerWeekKey()) {
+  return getPlannerBlocks(weekKey).find(b => b.day === day && plannerBlockCoversPeriod(b, period) && b.id !== skipId);
 }
 
-function plannerCanPlaceBlock(day, period, duration = 1, skipId = null) {
+function plannerCanPlaceBlock(day, period, duration = 1, skipId = null, weekKey = getPlannerWeekKey()) {
   const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
-  const normalizedDuration = Number(duration) === 2 ? 2 : 1;
+  const normalizedDuration = Math.min(4, Math.max(1, Number(duration) || 1));
   if (period < 1 || period > settings.periodsPerDay) return false;
   if (period + normalizedDuration - 1 > settings.periodsPerDay) return false;
   for (let p = period; p < period + normalizedDuration; p++) {
-    if (getPlannerBlockAt(day, p, skipId)) return false;
+    if (getPlannerBlockAt(day, p, skipId, weekKey)) return false;
   }
   return true;
 }
 
-function plannerCanPlaceBlockInCollection(collection, day, period, duration = 1, skipId = null, periodsPerDay = 12) {
-  const normalizedDuration = Number(duration) === 2 ? 2 : 1;
-  if (period < 1 || period > periodsPerDay) return false;
-  if (period + normalizedDuration - 1 > periodsPerDay) return false;
-  for (let p = period; p < period + normalizedDuration; p++) {
-    const clash = (collection || []).find(b => b.day === day && plannerBlockCoversPeriod(b, p) && b.id !== skipId);
-    if (clash) return false;
-  }
-  return true;
+function plannerRelocateBlock(blockId, targetDay, targetPeriod, opts = {}) {
+  const weekKey = opts.weekKey || getPlannerWeekKey();
+  const block = findPlannerBlock(blockId, weekKey);
+  if (!block) return { ok: false, reason: 'Block not found.' };
+  if (!plannerCanPlaceBlock(targetDay, targetPeriod, block.duration, block.id, weekKey)) return { ok: false, reason: 'Target slot is occupied.' };
+  block.day = targetDay;
+  block.period = targetPeriod;
+  block.date = addDaysToDate(weekKey, targetDay);
+  return { ok: true, block };
 }
 
 function plannerGetWeeklyFocusForBlock(block, weekData = getPlannerWeekData()) {
   const key = plannerNormalizeFocusKey(block.title || block.subject);
-  if (!key) return '';
   const match = (weekData.weeklyFocusEntries || []).find(entry => plannerNormalizeFocusKey(entry.subject) === key);
   return (match?.focus || '').trim();
 }
@@ -6114,140 +6130,109 @@ function plannerGetDisplayFocus(block, weekData = getPlannerWeekData()) {
   const customFocus = (block.focus || '').trim();
   if (customFocus) return { text: customFocus, inherited: false };
   const inheritedFocus = plannerGetWeeklyFocusForBlock(block, weekData);
-  if (inheritedFocus) return { text: inheritedFocus, inherited: true };
-  return { text: 'Add focus', inherited: false };
+  return inheritedFocus ? { text: inheritedFocus, inherited: true } : { text: 'Add focus', inherited: false };
 }
 
 function plannerWeekLabel() {
   const start = parseIsoDateLocal(getPlannerWeekKey());
   const end = new Date(start);
   end.setDate(start.getDate() + 4);
-  const fmt = { day: 'numeric', month: 'short' };
-  return `${start.toLocaleDateString('en-AU', fmt)} – ${end.toLocaleDateString('en-AU', fmt)}`;
+  return `${start.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`;
+}
+
+function plannerBuildDayTimeline(settings) {
+  const [h, m] = settings.dayStart.split(':').map(Number);
+  let cursor = h * 60 + m;
+  const periods = [];
+  for (let p = 1; p <= settings.periodsPerDay; p++) {
+    const start = cursor;
+    const end = start + settings.periodLength;
+    periods.push({ period: p, start, end });
+    cursor = end;
+    if (settings.recessAfter === p) cursor += settings.recessLength;
+    if (settings.lunchAfter === p) cursor += settings.lunchLength;
+  }
+  return periods;
+}
+
+function minutesToLabel(total) {
+  const hh = String(Math.floor(total / 60)).padStart(2, '0');
+  const mm = String(total % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
 
 function plannerGetTimeForPeriod(periodNumber) {
   const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
-  const [h, m] = settings.dayStart.split(':').map(Number);
-  const startMinutes = h * 60 + m + ((periodNumber - 1) * settings.periodLength);
-  const endMinutes = startMinutes + settings.periodLength;
-  const toLabel = (mins) => {
-    const hh = String(Math.floor(mins / 60)).padStart(2, '0');
-    const mm = String(mins % 60).padStart(2, '0');
-    return `${hh}:${mm}`;
-  };
-  return `${toLabel(startMinutes)}–${toLabel(endMinutes)}`;
+  const row = plannerBuildDayTimeline(settings).find(item => item.period === periodNumber);
+  return row ? `${minutesToLabel(row.start)}–${minutesToLabel(row.end)}` : '';
 }
 
 function plannerChangeWeek(direction) {
   const current = getPlannerWeekKey();
-  if (direction === 'current') {
-    state.weeklyPlanner.currentWeekStart = toIsoDate(getWeekStart());
-  } else if (direction === 'next' || direction === 'prev') {
-    const delta = direction === 'next' ? 7 : -7;
-    state.weeklyPlanner.currentWeekStart = addDaysToDate(current, delta);
-  } else {
-    return;
-  }
-  state.weeklyPlanner.currentWeekStart = plannerNormalizeWeekStart(state.weeklyPlanner.currentWeekStart);
+  if (direction === 'current') state.weeklyPlanner.selectedWeekMonday = toIsoDate(getWeekStart());
+  else if (direction === 'next') state.weeklyPlanner.selectedWeekMonday = addDaysToDate(current, 7);
+  else if (direction === 'prev') state.weeklyPlanner.selectedWeekMonday = addDaysToDate(current, -7);
+  else return;
+  state.weeklyPlanner.selectedWeekMonday = plannerNormalizeWeekStart(state.weeklyPlanner.selectedWeekMonday);
   saveWeeklyPlannerState();
   renderView();
 }
 
 function plannerUpdateSetting(field, value) {
-  if (!state.weeklyPlanner) state.weeklyPlanner = loadWeeklyPlannerState();
-  const next = { ...state.weeklyPlanner.settings, [field]: value };
-  state.weeklyPlanner.settings = normalizePlannerSettings(next);
+  state.weeklyPlanner.settings = normalizePlannerSettings({ ...state.weeklyPlanner.settings, [field]: value });
   saveWeeklyPlannerState();
   renderView();
 }
 
 function plannerOpenBlockModal(day, period, blockId = null) {
-  const existing = blockId ? findPlannerBlock(blockId) : null;
+  const block = blockId ? findPlannerBlock(blockId) : null;
   const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
-  const weekData = getPlannerWeekData();
-  const inheritedFocus = existing ? plannerGetWeeklyFocusForBlock(existing, weekData) : '';
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.id = 'modal-overlay';
   modal.innerHTML = `
     <div class="modal" style="max-width:560px;width:95%">
-      <div class="modal-head">
-        <div class="modal-title">${existing ? 'Edit lesson block' : 'Quick add lesson block'}</div>
-        <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-head"><div class="modal-title">${block ? 'Edit lesson block' : 'Quick add lesson block'}</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="grid-column:1 / -1"><label class="form-label">Subject / title</label><input id="wp-title" class="form-input" value="${escapeHtml(block?.title || '')}"></div>
+        <div class="form-group"><label class="form-label">Duration (periods)</label><input id="wp-duration" class="form-input" type="number" min="1" max="4" value="${block?.duration || 1}"></div>
+        <div class="form-group"><label class="form-label">Status</label><select id="wp-status" class="form-input">${Object.entries(PLANNER_STATUS).map(([k,v]) => `<option value="${k}" ${k === (block?.status || 'planned') ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label">Type</label><select id="wp-type" class="form-input">${Object.entries(PLANNER_TYPES).map(([k,v]) => `<option value="${k}" ${k === (block?.type || 'teaching') ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label">Priority</label><select id="wp-priority" class="form-input">${Object.entries(PLANNER_PRIORITIES).map(([k,v]) => `<option value="${k}" ${k === (block?.priority || 'medium') ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="form-group" style="grid-column:1 / -1"><label class="form-label">Focus (optional override)</label><input id="wp-focus" class="form-input" value="${escapeHtml(block?.focus || '')}"></div>
+        <div class="form-group" style="grid-column:1 / -1"><label class="form-label">Notes (optional)</label><textarea id="wp-notes" class="form-input" style="min-height:70px">${escapeHtml(block?.notes || '')}</textarea></div>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Subject / title</label>
-          <input id="wp-title" class="form-input" placeholder="e.g. Literacy, Maths" value="${escapeHtml(existing?.title || '')}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Focus (optional block override)</label>
-          <input id="wp-focus" class="form-input" placeholder="Leave blank to inherit Weekly Focus" value="${escapeHtml(existing?.focus || '')}">
-          <div style="font-size:12px;color:var(--text3);margin-top:4px">${inheritedFocus ? `Weekly Focus for this subject: ${escapeHtml(inheritedFocus)}` : 'No Weekly Focus match yet for this subject/title.'}</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Duration</label>
-          <select id="wp-duration" class="form-input">
-            <option value="1" ${(existing?.duration || 1) === 1 ? 'selected' : ''}>1 period</option>
-            <option value="2" ${(existing?.duration || 1) === 2 ? 'selected' : ''}>2 periods</option>
-          </select>
-          ${period >= settings.periodsPerDay ? `<div style="font-size:12px;color:var(--status-warn-text);margin-top:4px">This is the final period, so duration is limited by available periods.</div>` : ''}
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Notes (optional)</label>
-          <textarea id="wp-notes" class="form-input" style="min-height:70px" placeholder="Optional notes">${escapeHtml(existing?.notes || '')}</textarea>
-        </div>
-      </div>
-      <div class="modal-foot">
-        <button class="btn" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="plannerSaveBlockFromModal(${day}, ${period}, ${blockId ? `'${blockId}'` : 'null'})">${existing ? 'Save changes' : 'Create block'}</button>
-      </div>
+      <div class="modal-foot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="plannerSaveBlockFromModal(${day}, ${period}, ${blockId ? `'${blockId}'` : 'null'})">${block ? 'Save changes' : 'Create block'}</button></div>
     </div>`;
   document.body.appendChild(modal);
-  const focusInput = document.getElementById('wp-focus');
-  if (focusInput) focusInput.focus();
+  const durationInput = document.getElementById('wp-duration');
+  if (durationInput && period >= settings.periodsPerDay) durationInput.value = '1';
 }
 
 function plannerSaveBlockFromModal(day, period, blockId = null) {
-  const title = document.getElementById('wp-title')?.value?.trim() || '';
-  const focus = document.getElementById('wp-focus')?.value?.trim() || '';
-  const notes = document.getElementById('wp-notes')?.value?.trim() || '';
-  const duration = Number(document.getElementById('wp-duration')?.value || 1) === 2 ? 2 : 1;
-  if (!title && !focus) {
-    toast('Add at least a title or a focus', 'error');
-    return;
-  }
+  const title = (document.getElementById('wp-title')?.value || '').trim();
+  const focus = (document.getElementById('wp-focus')?.value || '').trim();
+  if (!title && !focus) return toast('Add at least a title or focus.', 'error');
+  const payload = {
+    title,
+    subject: title,
+    focus,
+    notes: (document.getElementById('wp-notes')?.value || '').trim(),
+    duration: Math.min(4, Math.max(1, Number(document.getElementById('wp-duration')?.value) || 1)),
+    status: document.getElementById('wp-status')?.value || 'planned',
+    type: document.getElementById('wp-type')?.value || 'teaching',
+    priority: document.getElementById('wp-priority')?.value || 'medium',
+  };
 
   if (blockId) {
     const block = findPlannerBlock(blockId);
     if (!block) return;
-    if (!plannerCanPlaceBlock(block.day, block.period, duration, blockId)) {
-      toast('Not enough free periods for this duration.', 'error');
-      return;
-    }
-    block.title = title;
-    block.subject = title;
-    block.focus = focus;
-    block.notes = notes;
-    block.duration = duration;
+    if (!plannerCanPlaceBlock(block.day, block.period, payload.duration, block.id)) return toast('Not enough free periods for this duration.', 'error');
+    Object.assign(block, payload);
   } else {
-    if (!plannerCanPlaceBlock(day, period, duration)) {
-      toast('That slot does not have enough free periods for this block.', 'error');
-      return;
-    }
-    getPlannerBlocks().push({
-      id: `wp_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
-      day,
-      period,
-      duration,
-      subject: title,
-      title,
-      focus,
-      notes,
-    });
+    if (!plannerCanPlaceBlock(day, period, payload.duration)) return toast('Target slot does not fit this duration.', 'error');
+    getPlannerBlocks().push(normalizePlannerBlock({ ...payload, day, period }, getPlannerWeekKey()));
   }
-
   closeModal();
   saveWeeklyPlannerState();
   renderView();
@@ -6256,54 +6241,27 @@ function plannerSaveBlockFromModal(day, period, blockId = null) {
 function plannerDeleteBlock(blockId) {
   const blocks = getPlannerBlocks();
   const idx = blocks.findIndex(b => b.id === blockId);
-  if (idx === -1) return;
-  if (!confirm('Delete this lesson block?')) return;
+  if (idx === -1 || !confirm('Delete this lesson block?')) return;
   blocks.splice(idx, 1);
   saveWeeklyPlannerState();
   renderView();
 }
 
-function plannerStartDrag(ev, blockId) {
-  const blockEl = ev.target?.closest?.('[data-planner-block-id]');
-  if (!blockEl) return;
-  if (ev.dataTransfer) {
-    ev.dataTransfer.effectAllowed = 'move';
-    ev.dataTransfer.setData('text/plain', blockId);
-  }
-  state.weeklyPlanner.draggingBlockId = blockId;
-  blockEl.classList.add('is-dragging');
-}
-
-function plannerEndDrag(ev) {
-  const blockEl = ev.target?.closest?.('[data-planner-block-id]');
-  if (blockEl) blockEl.classList.remove('is-dragging');
-  state.weeklyPlanner.draggingBlockId = null;
-  document.querySelectorAll('.planner-cell').forEach(cell => cell.classList.remove('drop-over'));
-}
-
-function plannerDragOver(ev) {
-  ev.preventDefault();
-  ev.currentTarget.classList.add('drop-over');
-}
-
-function plannerDragLeave(ev) {
-  ev.currentTarget.classList.remove('drop-over');
-}
-
-function plannerDrop(ev, day, period) {
-  ev.preventDefault();
-  ev.currentTarget.classList.remove('drop-over');
-  const blockId = ev.dataTransfer.getData('text/plain') || state.weeklyPlanner.draggingBlockId;
-  if (!blockId) return;
+function plannerOpenMoveModal(blockId) {
   const block = findPlannerBlock(blockId);
   if (!block) return;
-  if (block.day === day && block.period === period) return;
-  if (!plannerCanPlaceBlock(day, period, block.duration || 1, blockId)) {
-    toast('Target slot is already occupied. Use Duplicate or Move instead.', 'error');
-    return;
-  }
-  block.day = day;
-  block.period = period;
+  const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modal-overlay';
+  modal.innerHTML = `<div class="modal" style="max-width:500px;width:94%"><div class="modal-head"><div class="modal-title">Move lesson block</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="form-group"><label class="form-label">Day</label><select id="wp-move-day" class="form-input">${PLANNER_DAYS.map((name, idx) => `<option value="${idx}" ${idx===block.day?'selected':''}>${name}</option>`).join('')}</select></div><div class="form-group"><label class="form-label">Period</label><select id="wp-move-period" class="form-input">${Array.from({length: settings.periodsPerDay}, (_, i) => i + 1).map(p => `<option value="${p}" ${p===block.period?'selected':''}>Period ${p}</option>`).join('')}</select></div></div><div class="modal-foot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="plannerConfirmMove('${blockId}')">Move block</button></div></div>`;
+  document.body.appendChild(modal);
+}
+
+function plannerConfirmMove(blockId) {
+  const result = plannerRelocateBlock(blockId, Number(document.getElementById('wp-move-day')?.value || 0), Number(document.getElementById('wp-move-period')?.value || 1));
+  if (!result.ok) return toast(result.reason, 'error');
+  closeModal();
   saveWeeklyPlannerState();
   renderView();
 }
@@ -6315,40 +6273,7 @@ function plannerOpenDuplicateModal(blockId) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.id = 'modal-overlay';
-  modal.innerHTML = `
-    <div class="modal" style="max-width:520px;width:94%">
-      <div class="modal-head">
-        <div class="modal-title">Duplicate lesson block</div>
-        <button class="modal-close" onclick="closeModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group"><label class="form-label">Block</label><div style="font-size:13px;color:var(--text)">${escapeHtml(block.title || 'Untitled')}</div><div style="font-size:12px;color:var(--text3)">${escapeHtml(block.focus || 'No focus set')}</div></div>
-        <div class="form-group">
-          <label class="form-label">Duplicate mode</label>
-          <select id="wp-dup-mode" class="form-input" onchange="plannerUpdateDuplicateModeUI()">
-            <option value="single">Single slot</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="selected-days">Selected days (this week)</option>
-            <option value="all-weekdays">All weekdays (this week)</option>
-          </select>
-        </div>
-        <div id="wp-dup-single" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="form-group"><label class="form-label">Target day</label>
-            <select id="wp-dup-day" class="form-input">${PLANNER_DAYS.map((name, idx) => `<option value="${idx}" ${idx===block.day?'selected':''}>${name}</option>`).join('')}</select>
-          </div>
-          <div class="form-group"><label class="form-label">Target period</label>
-            <select id="wp-dup-period" class="form-input">${Array.from({length: settings.periodsPerDay}, (_, i) => i + 1).map(p => `<option value="${p}" ${p===block.period?'selected':''}>Period ${p}</option>`).join('')}</select>
-          </div>
-        </div>
-        <div id="wp-dup-selected-days" style="display:none;gap:8px;flex-wrap:wrap">
-          ${PLANNER_DAYS.map((name, idx) => `<label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text)"><input type="checkbox" class="wp-dup-day-check" value="${idx}" ${idx === block.day ? '' : 'checked'}> ${name}</label>`).join('')}
-        </div>
-      </div>
-      <div class="modal-foot">
-        <button class="btn" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="plannerConfirmDuplicate('${blockId}')">Duplicate</button>
-      </div>
-    </div>`;
+  modal.innerHTML = `<div class="modal" style="max-width:520px;width:94%"><div class="modal-head"><div class="modal-title">Duplicate lesson block</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">Duplicate mode</label><select id="wp-dup-mode" class="form-input" onchange="plannerUpdateDuplicateModeUI()"><option value="single">Single slot</option><option value="tomorrow">Tomorrow</option><option value="selected-days">Selected days</option><option value="all-weekdays">All weekdays</option></select></div><div id="wp-dup-single" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="form-group"><label class="form-label">Target day</label><select id="wp-dup-day" class="form-input">${PLANNER_DAYS.map((name, idx) => `<option value="${idx}" ${idx===block.day?'selected':''}>${name}</option>`).join('')}</select></div><div class="form-group"><label class="form-label">Target period</label><select id="wp-dup-period" class="form-input">${Array.from({length: settings.periodsPerDay}, (_, i) => i + 1).map(p => `<option value="${p}" ${p===block.period?'selected':''}>Period ${p}</option>`).join('')}</select></div></div><div id="wp-dup-selected-days" style="display:none;gap:8px;flex-wrap:wrap">${PLANNER_DAYS.map((name, idx) => `<label style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" class="wp-dup-day-check" value="${idx}" ${idx !== block.day ? 'checked' : ''}>${name}</label>`).join('')}</div></div><div class="modal-foot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="plannerConfirmDuplicate('${blockId}')">Duplicate</button></div></div>`;
   document.body.appendChild(modal);
   plannerUpdateDuplicateModeUI();
 }
@@ -6366,104 +6291,25 @@ function plannerConfirmDuplicate(blockId) {
   if (!block) return;
   const mode = document.getElementById('wp-dup-mode')?.value || 'single';
   const targets = [];
-  if (mode === 'single') {
-    targets.push({
-      day: Number(document.getElementById('wp-dup-day')?.value || 0),
-      period: Number(document.getElementById('wp-dup-period')?.value || 1),
-    });
-  } else if (mode === 'tomorrow') {
-    if (block.day >= 4) {
-      toast('No tomorrow slot available from Friday in this week.', 'error');
-      return;
-    }
-    targets.push({ day: block.day + 1, period: block.period });
-  } else if (mode === 'all-weekdays') {
-    PLANNER_DAYS.forEach((_, day) => {
-      if (day !== block.day) targets.push({ day, period: block.period });
-    });
-  } else {
-    document.querySelectorAll('.wp-dup-day-check:checked').forEach(el => {
-      const day = Number(el.value);
-      targets.push({ day, period: block.period });
-    });
-  }
-  if (!targets.length) {
-    toast('Select at least one target day.', 'error');
-    return;
-  }
+  if (mode === 'single') targets.push({ day: Number(document.getElementById('wp-dup-day')?.value || 0), period: Number(document.getElementById('wp-dup-period')?.value || 1) });
+  if (mode === 'tomorrow' && block.day < 4) targets.push({ day: block.day + 1, period: block.period });
+  if (mode === 'all-weekdays') PLANNER_DAYS.forEach((_, day) => { if (day !== block.day) targets.push({ day, period: block.period }); });
+  if (mode === 'selected-days') document.querySelectorAll('.wp-dup-day-check:checked').forEach(el => targets.push({ day: Number(el.value), period: block.period }));
   let copied = 0;
-  let skipped = 0;
-  targets.forEach(target => {
-    const isSameSlot = target.day === block.day && target.period === block.period;
-    if (isSameSlot || !plannerCanPlaceBlock(target.day, target.period, block.duration || 1)) {
-      skipped += 1;
-      return;
-    }
-    getPlannerBlocks().push({
-      ...block,
-      id: `wp_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
-      day: target.day,
-      period: target.period,
-    });
+  for (const target of targets) {
+    if (target.day === block.day && target.period === block.period) continue;
+    if (!plannerCanPlaceBlock(target.day, target.period, block.duration)) continue;
+    getPlannerBlocks().push(normalizePlannerBlock({ ...block, id: plannerMakeBlockId(), day: target.day, period: target.period }, getPlannerWeekKey()));
     copied += 1;
-  });
-  if (!copied) {
-    toast('No valid free slots for duplication.', 'error');
-    return;
   }
-  closeModal();
-  saveWeeklyPlannerState();
-  renderView();
-  toast(skipped ? `Duplicated to ${copied} slot(s); skipped ${skipped} occupied slot(s).` : `Duplicated to ${copied} slot(s).`, 'success');
-}
-
-function plannerOpenMoveModal(blockId) {
-  const block = findPlannerBlock(blockId);
-  if (!block) return;
-  const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
-  const modal = document.createElement('div');
-  modal.className = 'modal-overlay';
-  modal.id = 'modal-overlay';
-  modal.innerHTML = `
-    <div class="modal" style="max-width:500px;width:94%">
-      <div class="modal-head">
-        <div class="modal-title">Move lesson block</div>
-        <button class="modal-close" onclick="closeModal()">✕</button>
-      </div>
-      <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label class="form-label">Day</label>
-          <select id="wp-move-day" class="form-input">${PLANNER_DAYS.map((name, idx) => `<option value="${idx}" ${idx===block.day?'selected':''}>${name}</option>`).join('')}</select>
-        </div>
-        <div class="form-group"><label class="form-label">Period</label>
-          <select id="wp-move-period" class="form-input">${Array.from({length: settings.periodsPerDay}, (_, i) => i + 1).map(p => `<option value="${p}" ${p===block.period?'selected':''}>Period ${p}</option>`).join('')}</select>
-        </div>
-      </div>
-      <div class="modal-foot">
-        <button class="btn" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="plannerConfirmMove('${blockId}')">Move block</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-}
-
-function plannerConfirmMove(blockId) {
-  const block = findPlannerBlock(blockId);
-  if (!block) return;
-  const day = Number(document.getElementById('wp-move-day')?.value || 0);
-  const period = Number(document.getElementById('wp-move-period')?.value || 1);
-  if (!plannerCanPlaceBlock(day, period, block.duration || 1, blockId)) {
-    toast('Target slot already has a lesson block', 'error');
-    return;
-  }
-  block.day = day;
-  block.period = period;
+  if (!copied) return toast('No valid free slots for duplication.', 'error');
   closeModal();
   saveWeeklyPlannerState();
   renderView();
 }
 
 function plannerToggleDayView(dayIndex) {
-  state.weeklyPlanner.dayViewDay = state.weeklyPlanner.dayViewDay === dayIndex ? null : dayIndex;
+  state.weeklyPlanner.selectedDayView = state.weeklyPlanner.selectedDayView === dayIndex ? null : dayIndex;
   saveWeeklyPlannerState();
   renderView();
 }
@@ -6471,14 +6317,9 @@ function plannerToggleDayView(dayIndex) {
 function plannerMoveWithinDay(blockId, direction) {
   const block = findPlannerBlock(blockId);
   if (!block) return;
-  const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
   const targetPeriod = block.period + direction;
-  if (targetPeriod < 1 || targetPeriod > settings.periodsPerDay) return;
-  if (!plannerCanPlaceBlock(block.day, targetPeriod, block.duration || 1, block.id)) {
-    toast('That period already has a lesson block', 'error');
-    return;
-  }
-  block.period = targetPeriod;
+  const result = plannerRelocateBlock(blockId, block.day, targetPeriod);
+  if (!result.ok) return toast(result.reason, 'error');
   saveWeeklyPlannerState();
   renderView();
 }
@@ -6486,9 +6327,8 @@ function plannerMoveWithinDay(blockId, direction) {
 function plannerFindNextAvailableSlot(block, startDay = block.day, startPeriod = block.period + 1) {
   const settings = normalizePlannerSettings(state.weeklyPlanner.settings);
   for (let day = startDay; day < PLANNER_DAYS.length; day++) {
-    const periodStart = day === startDay ? startPeriod : 1;
-    for (let period = periodStart; period <= settings.periodsPerDay; period++) {
-      if (plannerCanPlaceBlock(day, period, block.duration || 1, block.id)) return { day, period };
+    for (let period = day === startDay ? startPeriod : 1; period <= settings.periodsPerDay; period++) {
+      if (plannerCanPlaceBlock(day, period, block.duration, block.id)) return { day, period };
     }
   }
   return null;
@@ -6496,17 +6336,10 @@ function plannerFindNextAvailableSlot(block, startDay = block.day, startPeriod =
 
 function plannerMoveToTomorrow(blockId) {
   const block = findPlannerBlock(blockId);
-  if (!block) return;
-  const targetDay = block.day + 1;
-  if (targetDay > 4) {
-    toast('No tomorrow slot left in this week.', 'error');
-    return;
-  }
-  if (!plannerCanPlaceBlock(targetDay, block.period, block.duration || 1, block.id)) {
-    toast('Tomorrow slot is occupied. Try next available slot or carry over.', 'error');
-    return;
-  }
-  block.day = targetDay;
+  if (!block || block.day >= 4) return toast('No tomorrow slot left in this week.', 'error');
+  const result = plannerRelocateBlock(blockId, block.day + 1, block.period);
+  if (!result.ok) return toast(result.reason, 'error');
+  result.block.status = 'deferred';
   saveWeeklyPlannerState();
   renderView();
 }
@@ -6515,36 +6348,82 @@ function plannerMoveToNextAvailableSlot(blockId) {
   const block = findPlannerBlock(blockId);
   if (!block) return;
   const slot = plannerFindNextAvailableSlot(block);
-  if (!slot) {
-    toast('No free slot available for this block this week.', 'error');
-    return;
-  }
-  block.day = slot.day;
-  block.period = slot.period;
+  if (!slot) return toast('No free slot available for this block this week.', 'error');
+  const result = plannerRelocateBlock(blockId, slot.day, slot.period);
+  if (!result.ok) return toast(result.reason, 'error');
+  result.block.status = 'deferred';
   saveWeeklyPlannerState();
   renderView();
 }
 
 function plannerCarryOverBlock(blockId) {
-  const block = findPlannerBlock(blockId);
+  const weekKey = getPlannerWeekKey();
+  const block = findPlannerBlock(blockId, weekKey);
   if (!block) return;
-  const currentWeekKey = getPlannerWeekKey();
-  const nextWeekKey = addDaysToDate(currentWeekKey, 7);
-  const currentWeek = getPlannerWeekData(currentWeekKey);
+  const nextWeekKey = addDaysToDate(weekKey, 7);
+  if (!plannerCanPlaceBlock(block.day, block.period, block.duration, null, nextWeekKey)) return toast('Next week slot is occupied.', 'error');
+  const currentWeek = getPlannerWeekData(weekKey);
   const nextWeek = getPlannerWeekData(nextWeekKey);
-  const periodsPerDay = normalizePlannerSettings(state.weeklyPlanner.settings).periodsPerDay;
-  if (!plannerCanPlaceBlockInCollection(nextWeek.blocks, block.day, block.period, block.duration || 1, null, periodsPerDay)) {
-    toast('Cannot carry over: target slot in next week is unavailable.', 'error');
-    return;
-  }
   currentWeek.blocks = currentWeek.blocks.filter(b => b.id !== blockId);
-  nextWeek.blocks.push({
-    ...block,
-    id: `wp_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
-  });
+  nextWeek.blocks.push(normalizePlannerBlock({ ...block, id: plannerMakeBlockId(), status: 'deferred' }, nextWeekKey));
   saveWeeklyPlannerState();
   renderView();
-  toast('Block carried over to the same slot next week.', 'success');
+}
+
+function plannerSetBlockMeta(blockId, field, value) {
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  if (field === 'status' && PLANNER_STATUS[value]) block.status = value;
+  if (field === 'type' && PLANNER_TYPES[value]) block.type = value;
+  if (field === 'priority' && PLANNER_PRIORITIES[value]) block.priority = value;
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerMarkSkipped(blockId) { plannerSetBlockMeta(blockId, 'status', 'skipped'); }
+
+function plannerExtendBlock(blockId) {
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  const targetDuration = block.duration + 1;
+  if (!plannerCanPlaceBlock(block.day, block.period, targetDuration, block.id)) return toast('Cannot extend: next period is occupied.', 'error');
+  block.duration = targetDuration;
+  block.status = 'partial';
+  saveWeeklyPlannerState();
+  renderView();
+}
+
+function plannerExtendAndMoveNext(blockId) {
+  const block = findPlannerBlock(blockId);
+  if (!block) return;
+  const afterPeriod = block.period + block.duration;
+  const nextBlock = getPlannerBlocks().find(b => b.day === block.day && b.period === afterPeriod && b.id !== block.id);
+  if (!nextBlock) return plannerExtendBlock(blockId);
+  const slot = plannerFindNextAvailableSlot(nextBlock, block.day, nextBlock.period + 1);
+  if (!slot) return toast('Cannot move next block; no free slot found.', 'error');
+  const moved = plannerRelocateBlock(nextBlock.id, slot.day, slot.period);
+  if (!moved.ok) return toast(moved.reason, 'error');
+  plannerExtendBlock(blockId);
+}
+
+function plannerHandleBlockAction(blockId, action, value = null) {
+  if (action === 'edit') {
+    const block = findPlannerBlock(blockId);
+    if (!block) return;
+    return plannerOpenBlockModal(block.day, block.period, blockId);
+  }
+  if (action === 'delete') return plannerDeleteBlock(blockId);
+  if (action === 'duplicate') return plannerOpenDuplicateModal(blockId);
+  if (action === 'move') return plannerOpenMoveModal(blockId);
+  if (action === 'tomorrow') return plannerMoveToTomorrow(blockId);
+  if (action === 'next-slot') return plannerMoveToNextAvailableSlot(blockId);
+  if (action === 'carry-next-week') return plannerCarryOverBlock(blockId);
+  if (action === 'skip') return plannerMarkSkipped(blockId);
+  if (action === 'extend') return plannerExtendBlock(blockId);
+  if (action === 'extend-move-next') return plannerExtendAndMoveNext(blockId);
+  if (action === 'status') return plannerSetBlockMeta(blockId, 'status', value);
+  if (action === 'type') return plannerSetBlockMeta(blockId, 'type', value);
+  if (action === 'priority') return plannerSetBlockMeta(blockId, 'priority', value);
 }
 
 function plannerUpdateWeeklyFocusEntry(entryId, field, value) {
@@ -6552,20 +6431,14 @@ function plannerUpdateWeeklyFocusEntry(entryId, field, value) {
   const entry = (weekData.weeklyFocusEntries || []).find(item => item.id === entryId);
   if (!entry) return;
   entry[field] = String(value || '').trim();
-  if (field === 'subject' && !entry.subject) {
-    weekData.weeklyFocusEntries = weekData.weeklyFocusEntries.filter(item => item.id !== entryId);
-  }
+  if (field === 'subject' && !entry.subject) weekData.weeklyFocusEntries = weekData.weeklyFocusEntries.filter(item => item.id !== entryId);
   saveWeeklyPlannerState();
   renderView();
 }
 
 function plannerAddWeeklyFocusEntry() {
   const weekData = getPlannerWeekData();
-  weekData.weeklyFocusEntries.push({
-    id: `wf_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
-    subject: '',
-    focus: '',
-  });
+  weekData.weeklyFocusEntries.push({ id: `wf_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`, subject: '', focus: '' });
   saveWeeklyPlannerState();
   renderView();
 }
@@ -6577,222 +6450,133 @@ function plannerRemoveWeeklyFocusEntry(entryId) {
   renderView();
 }
 
+function plannerStartDrag(ev, blockId) {
+  if (ev.dataTransfer) {
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', blockId);
+  }
+  state.weeklyPlanner.draggingBlockId = blockId;
+}
+
+function plannerEndDrag() {
+  state.weeklyPlanner.draggingBlockId = null;
+  document.querySelectorAll('.planner-cell').forEach(cell => cell.classList.remove('drop-over'));
+}
 
 function plannerBindInteractions(main) {
-  if (!main) return;
-  if (main.dataset.plannerBound === '1') return;
+  if (!main || main.dataset.plannerBound === '1') return;
   main.dataset.plannerBound = '1';
 
   main.addEventListener('click', (ev) => {
     const navBtn = ev.target.closest('[data-planner-week-nav]');
-    if (navBtn && main.contains(navBtn)) {
-      plannerChangeWeek(navBtn.dataset.plannerWeekNav);
-      return;
-    }
+    if (navBtn) return plannerChangeWeek(navBtn.dataset.plannerWeekNav);
 
     const emptyCell = ev.target.closest('[data-planner-empty-cell]');
-    if (emptyCell && main.contains(emptyCell)) {
-      const day = Number(emptyCell.dataset.day);
-      const period = Number(emptyCell.dataset.period);
-      plannerOpenBlockModal(day, period);
-    }
+    if (emptyCell) return plannerOpenBlockModal(Number(emptyCell.dataset.day), Number(emptyCell.dataset.period));
+
+    const dayBtn = ev.target.closest('[data-planner-day-toggle]');
+    if (dayBtn) return plannerToggleDayView(Number(dayBtn.dataset.plannerDayToggle));
+
+    const actionBtn = ev.target.closest('[data-planner-action]');
+    if (actionBtn) return plannerHandleBlockAction(actionBtn.dataset.blockId, actionBtn.dataset.plannerAction, actionBtn.dataset.value || null);
+
+    const wfAdd = ev.target.closest('[data-planner-focus-add]');
+    if (wfAdd) return plannerAddWeeklyFocusEntry();
+
+    const wfRemove = ev.target.closest('[data-planner-focus-remove]');
+    if (wfRemove) return plannerRemoveWeeklyFocusEntry(wfRemove.dataset.entryId);
+  });
+
+  main.addEventListener('change', (ev) => {
+    const setting = ev.target.closest('[data-planner-setting]');
+    if (setting) return plannerUpdateSetting(setting.dataset.plannerSetting, setting.value);
+
+    const wfField = ev.target.closest('[data-planner-focus-field]');
+    if (wfField) return plannerUpdateWeeklyFocusEntry(wfField.dataset.entryId, wfField.dataset.plannerFocusField, wfField.value);
+
+    const metaSelect = ev.target.closest('[data-planner-meta]');
+    if (metaSelect) return plannerHandleBlockAction(metaSelect.dataset.blockId, metaSelect.dataset.plannerMeta, metaSelect.value);
   });
 
   main.addEventListener('dragstart', (ev) => {
     const blockEl = ev.target.closest('[data-planner-block-id]');
-    if (!blockEl || !main.contains(blockEl)) return;
+    if (!blockEl) return;
     plannerStartDrag(ev, blockEl.dataset.plannerBlockId);
+    blockEl.classList.add('is-dragging');
   });
 
   main.addEventListener('dragend', (ev) => {
     const blockEl = ev.target.closest('[data-planner-block-id]');
-    if (!blockEl || !main.contains(blockEl)) return;
-    plannerEndDrag(ev);
+    if (blockEl) blockEl.classList.remove('is-dragging');
+    plannerEndDrag();
   });
 
   main.addEventListener('dragover', (ev) => {
     const cell = ev.target.closest('[data-planner-cell]');
-    if (!cell || !main.contains(cell)) return;
-    plannerDragOver(ev);
+    if (!cell) return;
+    ev.preventDefault();
+    cell.classList.add('drop-over');
   });
 
   main.addEventListener('dragleave', (ev) => {
     const cell = ev.target.closest('[data-planner-cell]');
-    if (!cell || !main.contains(cell)) return;
-    plannerDragLeave(ev);
+    if (cell) cell.classList.remove('drop-over');
   });
 
   main.addEventListener('drop', (ev) => {
     const cell = ev.target.closest('[data-planner-cell]');
-    if (!cell || !main.contains(cell)) return;
-    const day = Number(cell.dataset.day);
-    const period = Number(cell.dataset.period);
-    plannerDrop(ev, day, period);
+    if (!cell) return;
+    ev.preventDefault();
+    cell.classList.remove('drop-over');
+    const blockId = ev.dataTransfer?.getData('text/plain') || state.weeklyPlanner.draggingBlockId;
+    if (!blockId) return;
+    const moved = plannerRelocateBlock(blockId, Number(cell.dataset.day), Number(cell.dataset.period));
+    if (!moved.ok) return toast(moved.reason, 'error');
+    saveWeeklyPlannerState();
+    renderView();
   });
 }
 
+function plannerTypeClass(type) { return `planner-type-${type || 'teaching'}`; }
+function plannerStatusClass(status) { return `planner-status-${status || 'planned'}`; }
+function plannerPriorityClass(priority) { return `planner-priority-${priority || 'medium'}`; }
+
 function renderWeeklyPlanner(main) {
   if (!state.weeklyPlanner) state.weeklyPlanner = loadWeeklyPlannerState();
-  const wp = state.weeklyPlanner;
-  wp.settings = normalizePlannerSettings(wp.settings);
-
-  const settings = wp.settings;
+  state.weeklyPlanner.settings = normalizePlannerSettings(state.weeklyPlanner.settings);
+  const settings = state.weeklyPlanner.settings;
+  const weekKey = getPlannerWeekKey();
   const weekData = getPlannerWeekData();
   const blocks = weekData.blocks;
-  const weekKey = getPlannerWeekKey();
 
   const dayHeaders = PLANNER_DAYS.map((day, idx) => {
     const dayDate = addDaysToDate(weekKey, idx);
-    return `<th><button class="planner-day-btn" onclick="plannerToggleDayView(${idx})">${day}<span>${parseIsoDateLocal(dayDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span></button></th>`;
+    return `<th><button class="planner-day-btn" data-planner-day-toggle="${idx}">${day}<span>${parseIsoDateLocal(dayDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span></button></th>`;
   }).join('');
 
   const bodyRows = [];
   const coveredTracker = {};
   for (let period = 1; period <= settings.periodsPerDay; period++) {
     const cells = PLANNER_DAYS.map((_, dayIdx) => {
-      const skipKey = `${dayIdx}-${period}`;
-      if (coveredTracker[skipKey]) {
-        return `<td class="planner-cell planner-covered"><span>Continues from previous period</span></td>`;
-      }
+      if (coveredTracker[`${dayIdx}-${period}`]) return `<td class="planner-cell planner-covered"><span>Continues</span></td>`;
       const block = blocks.find(b => b.day === dayIdx && b.period === period);
-      if (!block) {
-        return `<td class="planner-cell planner-empty" data-planner-cell="1" data-planner-empty-cell="1" data-day="${dayIdx}" data-period="${period}"><span>+ Add</span></td>`;
-      }
-
-      const duration = block.duration || 1;
-      for (let covered = period + 1; covered < period + duration; covered++) {
-        coveredTracker[`${dayIdx}-${covered}`] = true;
-      }
+      if (!block) return `<td class="planner-cell planner-empty" data-planner-cell="1" data-planner-empty-cell="1" data-day="${dayIdx}" data-period="${period}"><span>+ Add</span></td>`;
+      for (let p = period + 1; p < period + block.duration; p++) coveredTracker[`${dayIdx}-${p}`] = true;
       const col = subjectCol(block.subject || block.title || 'English');
       const bg = subjectBg(block.subject || block.title || 'English');
       const focusDisplay = plannerGetDisplayFocus(block, weekData);
-      return `<td class="planner-cell" data-planner-cell="1" data-day="${dayIdx}" data-period="${period}">
-        <div class="planner-block ${duration === 2 ? 'planner-block-span-2' : ''}" draggable="true" data-planner-block-id="${block.id}" style="--planner-block-col:${col};--planner-block-bg:${bg}">
-          <div class="planner-block-top">
-            <button class="planner-block-title" onclick="plannerOpenBlockModal(${dayIdx}, ${period}, '${block.id}')">${escapeHtml(block.title || 'Untitled')}</button>
-            <div class="planner-block-actions">
-              <button class="planner-mini-btn" onclick="event.stopPropagation();plannerOpenDuplicateModal('${block.id}')">Duplicate</button>
-              <button class="planner-mini-btn" onclick="event.stopPropagation();plannerOpenMoveModal('${block.id}')">Move</button>
-            </div>
-          </div>
-          <div class="planner-focus">${escapeHtml(focusDisplay.text)}${focusDisplay.inherited ? '<span class="planner-focus-chip">Weekly focus</span>' : ''}</div>
-          <div class="planner-duration">Duration: ${duration} period${duration === 2 ? 's' : ''}</div>
-          ${block.notes ? `<div class="planner-notes">${escapeHtml(block.notes)}</div>` : ''}
-          <div class="planner-inline-actions">
-            <button class="planner-mini-btn" onclick="event.stopPropagation();plannerOpenBlockModal(${dayIdx}, ${period}, '${block.id}')">Edit</button>
-            <button class="planner-mini-btn" onclick="event.stopPropagation();plannerMoveToTomorrow('${block.id}')">Tomorrow</button>
-            <button class="planner-mini-btn" onclick="event.stopPropagation();plannerMoveToNextAvailableSlot('${block.id}')">Next slot</button>
-            <button class="planner-mini-btn" onclick="event.stopPropagation();plannerCarryOverBlock('${block.id}')">Carry over</button>
-            <button class="planner-mini-btn" onclick="event.stopPropagation();plannerDeleteBlock('${block.id}')">Delete</button>
-          </div>
-        </div>
-      </td>`;
+      return `<td class="planner-cell" data-planner-cell="1" data-day="${dayIdx}" data-period="${period}"><div class="planner-block ${plannerTypeClass(block.type)} ${plannerStatusClass(block.status)} ${plannerPriorityClass(block.priority)} ${block.duration > 1 ? 'planner-block-span-2' : ''}" draggable="true" data-planner-block-id="${block.id}" style="--planner-block-col:${col};--planner-block-bg:${bg}"><div class="planner-block-top"><button class="planner-block-title" data-planner-action="edit" data-block-id="${block.id}">${escapeHtml(block.title || 'Untitled')}</button><div class="planner-block-actions"><button class="planner-mini-btn" data-planner-action="duplicate" data-block-id="${block.id}">Duplicate</button><button class="planner-mini-btn" data-planner-action="move" data-block-id="${block.id}">Move</button></div></div><div class="planner-meta-row"><span class="planner-badge">${PLANNER_STATUS[block.status]}</span><span class="planner-badge">${PLANNER_TYPES[block.type]}</span><span class="planner-badge">${PLANNER_PRIORITIES[block.priority]}</span></div><div class="planner-focus">${escapeHtml(focusDisplay.text)}${focusDisplay.inherited ? '<span class="planner-focus-chip">Weekly focus</span>' : ''}</div>${block.notes ? `<div class="planner-notes">${escapeHtml(block.notes)}</div>` : ''}<div class="planner-inline-actions"><button class="planner-mini-btn" data-planner-action="tomorrow" data-block-id="${block.id}">Tomorrow</button><button class="planner-mini-btn" data-planner-action="next-slot" data-block-id="${block.id}">Next slot</button><button class="planner-mini-btn" data-planner-action="carry-next-week" data-block-id="${block.id}">Carry week</button><button class="planner-mini-btn" data-planner-action="skip" data-block-id="${block.id}">Skipped</button><button class="planner-mini-btn" data-planner-action="extend" data-block-id="${block.id}">Extend</button><button class="planner-mini-btn" data-planner-action="extend-move-next" data-block-id="${block.id}">Extend+move</button><button class="planner-mini-btn" data-planner-action="delete" data-block-id="${block.id}">Delete</button></div><div class="planner-meta-controls"><select class="planner-mini-select" data-planner-meta="status" data-block-id="${block.id}">${Object.entries(PLANNER_STATUS).map(([k,v]) => `<option value="${k}" ${k===block.status?'selected':''}>${v}</option>`).join('')}</select><select class="planner-mini-select" data-planner-meta="type" data-block-id="${block.id}">${Object.entries(PLANNER_TYPES).map(([k,v]) => `<option value="${k}" ${k===block.type?'selected':''}>${v}</option>`).join('')}</select><select class="planner-mini-select" data-planner-meta="priority" data-block-id="${block.id}">${Object.entries(PLANNER_PRIORITIES).map(([k,v]) => `<option value="${k}" ${k===block.priority?'selected':''}>${v}</option>`).join('')}</select></div></div></td>`;
     }).join('');
 
     bodyRows.push(`<tr><td class="planner-period-col"><div>Period ${period}</div><span>${plannerGetTimeForPeriod(period)}</span></td>${cells}</tr>`);
-
-    if (settings.recessAfter === period) {
-      bodyRows.push(`<tr><td></td><td colspan="5" class="planner-break-row">Recess break</td></tr>`);
-    }
-    if (settings.lunchAfter === period) {
-      bodyRows.push(`<tr><td></td><td colspan="5" class="planner-break-row">Lunch break</td></tr>`);
-    }
+    if (settings.recessAfter === period) bodyRows.push(`<tr><td></td><td colspan="5" class="planner-break-row">Recess · ${settings.recessLength} min</td></tr>`);
+    if (settings.lunchAfter === period) bodyRows.push(`<tr><td></td><td colspan="5" class="planner-break-row">Lunch · ${settings.lunchLength} min</td></tr>`);
   }
 
-  const dayView = Number.isInteger(wp.dayViewDay) ? wp.dayViewDay : null;
-  const dayViewBlocks = dayView === null
-    ? []
-    : blocks.filter(b => b.day === dayView).sort((a, b) => a.period - b.period);
+  const dayView = Number.isInteger(state.weeklyPlanner.selectedDayView) ? state.weeklyPlanner.selectedDayView : null;
+  const dayViewBlocks = dayView === null ? [] : blocks.filter(b => b.day === dayView).sort((a,b) => a.period - b.period);
 
-  main.innerHTML = `
-    <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
-      <div class="topbar-title">Weekly Planner</div>
-      <div class="planner-week-nav">
-        <button class="btn" data-planner-week-nav="prev" id="planner-week-prev">← Previous week</button>
-        <button class="btn" data-planner-week-nav="current" id="planner-week-current">Current week</button>
-        <button class="btn" data-planner-week-nav="next" id="planner-week-next">Next week →</button>
-      </div>
-      <div class="planner-week-label">Week: ${plannerWeekLabel()}</div>
-    </div>
-    <div class="content">
-      <details class="card planner-settings">
-        <summary class="card-head" style="cursor:pointer;list-style:none">
-          <div class="card-title">Planner settings</div>
-          <div style="font-size:12px;color:var(--text3)">Adjust timetable structure</div>
-        </summary>
-        <div style="padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
-          <div class="form-group" style="margin-bottom:0"><label class="form-label">Day start time</label><input class="form-input" type="time" value="${settings.dayStart}" onchange="plannerUpdateSetting('dayStart', this.value)"></div>
-          <div class="form-group" style="margin-bottom:0"><label class="form-label">Period length (minutes)</label><input class="form-input" type="number" min="20" max="120" value="${settings.periodLength}" onchange="plannerUpdateSetting('periodLength', this.value)"></div>
-          <div class="form-group" style="margin-bottom:0"><label class="form-label">Periods per day</label><input class="form-input" type="number" min="3" max="12" value="${settings.periodsPerDay}" onchange="plannerUpdateSetting('periodsPerDay', this.value)"></div>
-          <div class="form-group" style="margin-bottom:0"><label class="form-label">Recess after period</label><input class="form-input" type="number" min="0" max="${Math.max(1, settings.periodsPerDay - 1)}" value="${settings.recessAfter}" onchange="plannerUpdateSetting('recessAfter', this.value)"></div>
-          <div class="form-group" style="margin-bottom:0"><label class="form-label">Lunch after period</label><input class="form-input" type="number" min="0" max="${Math.max(1, settings.periodsPerDay - 1)}" value="${settings.lunchAfter}" onchange="plannerUpdateSetting('lunchAfter', this.value)"></div>
-        </div>
-      </details>
-      <details class="card planner-settings">
-        <summary class="card-head" style="cursor:pointer;list-style:none">
-          <div class="card-title">Weekly Focus</div>
-          <div style="font-size:12px;color:var(--text3)">Set short focus prompts for recurring blocks</div>
-        </summary>
-        <div style="padding:14px;display:flex;flex-direction:column;gap:8px">
-          ${(weekData.weeklyFocusEntries || []).map(entry => `
-            <div class="planner-weekly-focus-row">
-              <input class="form-input" placeholder="Subject / lesson type" value="${escapeHtml(entry.subject)}" onchange="plannerUpdateWeeklyFocusEntry('${entry.id}', 'subject', this.value)">
-              <input class="form-input" placeholder="Weekly focus (short)" value="${escapeHtml(entry.focus)}" onchange="plannerUpdateWeeklyFocusEntry('${entry.id}', 'focus', this.value)">
-              <button class="btn" onclick="plannerRemoveWeeklyFocusEntry('${entry.id}')">Remove</button>
-            </div>
-          `).join('')}
-          <div><button class="btn" onclick="plannerAddWeeklyFocusEntry()">+ Add weekly focus row</button></div>
-        </div>
-      </details>
-
-      <div class="card" style="overflow:auto">
-        <table class="planner-grid">
-          <thead>
-            <tr>
-              <th>Time</th>
-              ${dayHeaders}
-            </tr>
-          </thead>
-          <tbody>
-            ${bodyRows.join('')}
-          </tbody>
-        </table>
-      </div>
-
-      ${dayView === null ? '' : `
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">${PLANNER_DAYS[dayView]} day view</div>
-          <button class="btn" onclick="plannerToggleDayView(${dayView})">Close day view</button>
-        </div>
-        <div style="padding:14px">
-          ${dayViewBlocks.length ? dayViewBlocks.map(block => {
-            const displayFocus = plannerGetDisplayFocus(block, weekData);
-            return `
-            <div class="planner-day-item">
-              <div>
-                <div class="planner-day-item-title">Period ${block.period} · ${plannerGetTimeForPeriod(block.period)}</div>
-                <div style="font-size:13px;color:var(--text)">${escapeHtml(block.title || 'Untitled')}</div>
-                <div style="font-size:13px;color:var(--text-muted)">${escapeHtml(displayFocus.text)} ${displayFocus.inherited ? '· Weekly focus' : ''}</div>
-                <div style="font-size:12px;color:var(--text3)">Duration: ${block.duration || 1} period${(block.duration || 1) === 2 ? 's' : ''}</div>
-                ${block.notes ? `<div style="font-size:12px;color:var(--text3);margin-top:4px">${escapeHtml(block.notes)}</div>` : ''}
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-                <button class="btn" onclick="plannerMoveWithinDay('${block.id}', -1)">↑ Earlier</button>
-                <button class="btn" onclick="plannerMoveWithinDay('${block.id}', 1)">↓ Later</button>
-                <button class="btn" onclick="plannerMoveToTomorrow('${block.id}')">Tomorrow</button>
-                <button class="btn" onclick="plannerMoveToNextAvailableSlot('${block.id}')">Next slot</button>
-                <button class="btn" onclick="plannerCarryOverBlock('${block.id}')">Carry over</button>
-                <button class="btn" onclick="plannerOpenBlockModal(${block.day}, ${block.period}, '${block.id}')">Edit</button>
-                <button class="btn" onclick="plannerOpenMoveModal('${block.id}')">Move</button>
-              </div>
-            </div>
-          `;
-          }).join('') : `<div style="font-size:13px;color:var(--text3)">No blocks yet for this day.</div>`}
-        </div>
-      </div>`}
-    </div>
-  `;
+  main.innerHTML = `<div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px"><div class="topbar-title">Weekly Planner</div><div class="planner-week-nav"><button class="btn" data-planner-week-nav="prev">← Previous week</button><button class="btn" data-planner-week-nav="current">Current week</button><button class="btn" data-planner-week-nav="next">Next week →</button></div><div class="planner-week-label">Week: ${plannerWeekLabel()}</div></div><div class="content"><details class="card planner-settings"><summary class="card-head" style="cursor:pointer;list-style:none"><div class="card-title">Planner settings</div><div style="font-size:12px;color:var(--text3)">Adjust timetable structure</div></summary><div style="padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"><div class="form-group" style="margin-bottom:0"><label class="form-label">Day start time</label><input class="form-input" type="time" value="${settings.dayStart}" data-planner-setting="dayStart"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Period length (minutes)</label><input class="form-input" type="number" min="20" max="120" value="${settings.periodLength}" data-planner-setting="periodLength"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Periods per day</label><input class="form-input" type="number" min="3" max="12" value="${settings.periodsPerDay}" data-planner-setting="periodsPerDay"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Recess after period</label><input class="form-input" type="number" min="0" max="${Math.max(1, settings.periodsPerDay - 1)}" value="${settings.recessAfter}" data-planner-setting="recessAfter"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Recess length (minutes)</label><input class="form-input" type="number" min="0" max="120" value="${settings.recessLength}" data-planner-setting="recessLength"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Lunch after period</label><input class="form-input" type="number" min="0" max="${Math.max(1, settings.periodsPerDay - 1)}" value="${settings.lunchAfter}" data-planner-setting="lunchAfter"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Lunch length (minutes)</label><input class="form-input" type="number" min="0" max="120" value="${settings.lunchLength}" data-planner-setting="lunchLength"></div></div></details><details class="card planner-settings"><summary class="card-head" style="cursor:pointer;list-style:none"><div class="card-title">Weekly Focus</div><div style="font-size:12px;color:var(--text3)">Set short prompts for recurring blocks</div></summary><div style="padding:14px;display:flex;flex-direction:column;gap:8px">${(weekData.weeklyFocusEntries || []).map(entry => `<div class="planner-weekly-focus-row"><input class="form-input" placeholder="Subject / lesson type" value="${escapeHtml(entry.subject)}" data-planner-focus-field="subject" data-entry-id="${entry.id}"><input class="form-input" placeholder="Weekly focus" value="${escapeHtml(entry.focus)}" data-planner-focus-field="focus" data-entry-id="${entry.id}"><button class="btn" data-planner-focus-remove="1" data-entry-id="${entry.id}">Remove</button></div>`).join('')}<div><button class="btn" data-planner-focus-add="1">+ Add weekly focus row</button></div></div></details><div class="card" style="overflow:auto"><table class="planner-grid"><thead><tr><th>Time</th>${dayHeaders}</tr></thead><tbody>${bodyRows.join('')}</tbody></table></div>${dayView === null ? '' : `<div class="card"><div class="card-head"><div class="card-title">${PLANNER_DAYS[dayView]} day view</div><button class="btn" data-planner-day-toggle="${dayView}">Close day view</button></div><div style="padding:14px">${dayViewBlocks.length ? dayViewBlocks.map(block => `<div class="planner-day-item"><div><div class="planner-day-item-title">Period ${block.period} · ${plannerGetTimeForPeriod(block.period)}</div><div style="font-size:13px;color:var(--text)">${escapeHtml(block.title || 'Untitled')}</div><div style="font-size:12px;color:var(--text3)">${PLANNER_STATUS[block.status]} · ${PLANNER_TYPES[block.type]} · ${PLANNER_PRIORITIES[block.priority]}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn" data-planner-action="status" data-value="taught" data-block-id="${block.id}">Mark taught</button><button class="btn" data-planner-action="status" data-value="partial" data-block-id="${block.id}">Partial</button><button class="btn" data-planner-action="tomorrow" data-block-id="${block.id}">Tomorrow</button><button class="btn" data-planner-action="next-slot" data-block-id="${block.id}">Next slot</button><button class="btn" data-planner-action="carry-next-week" data-block-id="${block.id}">Next week</button><button class="btn" data-planner-action="move" data-block-id="${block.id}">Move</button><button class="btn" data-planner-action="edit" data-block-id="${block.id}">Edit</button><button class="btn" data-planner-action="delete" data-block-id="${block.id}">Delete</button></div></div>`).join('') : `<div style="font-size:13px;color:var(--text3)">No blocks yet for this day.</div>`}</div></div>`}</div>`;
 
   plannerBindInteractions(main);
 }

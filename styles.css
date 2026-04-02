@@ -1088,6 +1088,110 @@ body[data-text-size="large"] {
   font-size: var(--helper-size);
 }
 
+.planner-board-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(170px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px;
+}
+
+.planner-board-column {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-alt);
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+}
+
+.planner-board-column-head {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  font-size: var(--label-size);
+  color: var(--text3);
+}
+
+.planner-board-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.planner-board-empty {
+  color: var(--text3);
+  font-size: var(--helper-size);
+  padding: 6px 2px;
+}
+
+.planner-lesson-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.planner-lesson-card:hover {
+  border-color: var(--status-info-border);
+  background: var(--status-info-bg);
+}
+
+.planner-lesson-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.planner-lesson-description {
+  font-size: var(--helper-size);
+  color: var(--text2);
+}
+
+.planner-lesson-subject,
+.planner-lesson-status {
+  font-size: var(--label-size);
+  color: var(--text3);
+}
+
+.planner-drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+}
+
+.planner-drawer-label {
+  font-size: var(--label-size);
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.planner-drawer-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.planner-drawer-meta {
+  font-size: var(--helper-size);
+  color: var(--text2);
+}
+
+.planner-drawer-description {
+  font-size: var(--helper-size);
+  color: var(--text);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
 
 /* ── WEEKLY PLANNER ── */
 .planner-week-nav {

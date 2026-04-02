@@ -2,14 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.3
- * Last updated: 2026-04-01
+ * THIS FILE IS VERSION: 1.12.4
+ * Last updated: 2026-04-02
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.4 - Planner lesson card foundation (core data model + weekly board + drawer selection)
  * v1.12.3 - Legacy planner retired from sidebar; new Planner shell page added (Phase 1)
  * v1.12.2 - Weekly Planner stabilization (canonical week key + reliable cell creation/events)
  * v1.12.1 - Weekly Planner regression fix (week navigation + drag/drop reliability after persistence restore)
@@ -31,7 +32,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.3';
+const APP_VERSION = '1.12.4';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -225,6 +226,12 @@ let state = {
   classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
   planLog: loadPlanLogState(),
   weeklyPlanner: loadWeeklyPlannerState(),
+  lessonPlans: [],
+  plannerUi: {
+    selectedWeekMonday: toIsoDate(getWeekStart()),
+    selectedLessonId: null,
+    drawerOpen: false,
+  },
   themePreference: 'auto',
   textSizePreference: 'standard',
   adminAccordion: {
@@ -758,32 +765,138 @@ function renderView() {
 }
 
 function renderPlanner(main) {
+  const plannerDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+  const selectedWeekMonday = state.plannerUi?.selectedWeekMonday || toIsoDate(getWeekStart());
+  const selectedWeekDate = parseIsoDateLocal(selectedWeekMonday) || getWeekStart();
+  const selectedLesson = state.lessonPlans.find(lesson => lesson.id === state.plannerUi?.selectedLessonId) || null;
+  const drawerOpen = !!state.plannerUi?.drawerOpen && !!selectedLesson;
+  const weekLabel = selectedWeekDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const boardColumns = plannerDays.map(dayKey => {
+    const dayDate = new Date(selectedWeekDate);
+    const dayIndex = plannerDays.indexOf(dayKey);
+    dayDate.setDate(dayDate.getDate() + dayIndex);
+    const dayLabel = dayDate.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+    const lessons = getLessonsForDay(selectedWeekMonday, dayKey);
+    const lessonCards = lessons.length
+      ? lessons.map(renderPlannerLessonCard).join('')
+      : `<div class="planner-board-empty">No lessons yet</div>`;
+    return `<section class="planner-board-column">
+      <div class="planner-board-column-head">${dayLabel}</div>
+      <div class="planner-board-cards">${lessonCards}</div>
+    </section>`;
+  }).join('');
+
+  const unscheduledLessons = getLessonsForDay(selectedWeekMonday, 'unscheduled');
+  const unscheduledCards = unscheduledLessons.length
+    ? unscheduledLessons.map(renderPlannerLessonCard).join('')
+    : `<div class="planner-board-empty">No unscheduled lessons</div>`;
+
+  const drawerContent = drawerOpen
+    ? `<div class="planner-drawer-content">
+        <div class="planner-drawer-label">Selected lesson</div>
+        <div class="planner-drawer-title">${escapeHtml(selectedLesson.title || 'Untitled')}</div>
+        <div class="planner-drawer-meta">Status: ${escapeHtml(selectedLesson.status || 'planned')}</div>
+        ${selectedLesson.subject ? `<div class="planner-drawer-meta">Subject: ${escapeHtml(selectedLesson.subject)}</div>` : ''}
+        <div class="planner-drawer-meta">Day: ${escapeHtml(selectedLesson.dayKey || 'unscheduled')}</div>
+        <div class="planner-drawer-description">${escapeHtml(selectedLesson.shortDescription || 'No short description yet.')}</div>
+      </div>`
+    : `<div class="planner-shell-placeholder">Click a lesson card to open planner details.</div>`;
+
   main.innerHTML = `
     <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Planner</div>
-      <div style="font-size:12px;color:var(--text3)">New weekly planner is being rolled out.</div>
+      <div style="font-size:12px;color:var(--text3)">Week of ${weekLabel}</div>
+      <button class="btn btn-primary" style="margin-left:auto" onclick="createLessonPlan()">+ Add Lesson</button>
     </div>
     <div class="content planner-shell-layout">
       <section class="card planner-shell-board">
         <div class="card-head">
           <div class="card-title">Week Board</div>
-          <div style="font-size:12px;color:var(--text3)">Placeholder</div>
+          <div style="font-size:12px;color:var(--text3)">${getLessonsForWeek(selectedWeekMonday).length} lessons</div>
         </div>
-        <div class="planner-shell-placeholder">
-          Weekly planning board placeholder. Legacy planner remains in code during migration.
+        <div class="planner-board-grid">
+          ${boardColumns}
+          <section class="planner-board-column planner-board-column-unscheduled">
+            <div class="planner-board-column-head">Unscheduled</div>
+            <div class="planner-board-cards">${unscheduledCards}</div>
+          </section>
         </div>
       </section>
       <aside class="card planner-shell-drawer">
         <div class="card-head">
           <div class="card-title">Right Drawer</div>
-          <div style="font-size:12px;color:var(--text3)">Placeholder</div>
+          <div style="font-size:12px;color:var(--text3)">${drawerOpen ? 'Open' : 'Closed'}</div>
         </div>
-        <div class="planner-shell-placeholder">
-          Planner details drawer placeholder.
-        </div>
+        ${drawerContent}
       </aside>
     </div>
   `;
+}
+
+function plannerLessonId() {
+  return `lesson_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`;
+}
+
+function renderPlannerLessonCard(lesson) {
+  return `<button class="planner-lesson-card" onclick="openPlannerLessonDrawer('${lesson.id}')">
+    <div class="planner-lesson-title">${escapeHtml(lesson.title || 'Untitled')}</div>
+    <div class="planner-lesson-description">${escapeHtml(lesson.shortDescription || 'No short description')}</div>
+    ${lesson.subject ? `<div class="planner-lesson-subject">${escapeHtml(lesson.subject)}</div>` : ''}
+    <div class="planner-lesson-status">${escapeHtml(lesson.status || 'planned')}</div>
+  </button>`;
+}
+
+function createLessonPlan(lesson = {}) {
+  const defaultWeek = state.plannerUi?.selectedWeekMonday || toIsoDate(getWeekStart());
+  const nextLesson = {
+    id: plannerLessonId(),
+    weekKey: defaultWeek,
+    dayKey: 'unscheduled',
+    title: 'New Lesson',
+    shortDescription: '',
+    status: 'planned',
+    ...lesson,
+  };
+  state.lessonPlans.push(nextLesson);
+  state.plannerUi.selectedLessonId = nextLesson.id;
+  state.plannerUi.drawerOpen = true;
+  renderView();
+  return nextLesson;
+}
+
+function updateLessonPlan(lessonId, updates = {}) {
+  const idx = state.lessonPlans.findIndex(lesson => lesson.id === lessonId);
+  if (idx < 0) return null;
+  state.lessonPlans[idx] = { ...state.lessonPlans[idx], ...updates };
+  renderView();
+  return state.lessonPlans[idx];
+}
+
+function deleteLessonPlan(lessonId) {
+  const before = state.lessonPlans.length;
+  state.lessonPlans = state.lessonPlans.filter(lesson => lesson.id !== lessonId);
+  if (state.plannerUi.selectedLessonId === lessonId) {
+    state.plannerUi.selectedLessonId = null;
+    state.plannerUi.drawerOpen = false;
+  }
+  if (state.lessonPlans.length !== before) renderView();
+}
+
+function getLessonsForWeek(weekKey) {
+  return state.lessonPlans
+    .filter(lesson => lesson.weekKey === weekKey)
+    .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+}
+
+function getLessonsForDay(weekKey, dayKey) {
+  return getLessonsForWeek(weekKey).filter(lesson => (lesson.dayKey || 'unscheduled') === dayKey);
+}
+
+function openPlannerLessonDrawer(lessonId) {
+  state.plannerUi.selectedLessonId = lessonId;
+  state.plannerUi.drawerOpen = true;
+  renderView();
 }
 
 // ── DASHBOARD ──

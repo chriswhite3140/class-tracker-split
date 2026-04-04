@@ -2,14 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.3
- * Last updated: 2026-04-01
+ * THIS FILE IS VERSION: 1.12.4
+ * Last updated: 2026-04-02
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.4 - Planner lesson cards now open drawer reliably with basic lesson field editing
  * v1.12.3 - Legacy planner retired from sidebar; new Planner shell page added (Phase 1)
  * v1.12.2 - Weekly Planner stabilization (canonical week key + reliable cell creation/events)
  * v1.12.1 - Weekly Planner regression fix (week navigation + drag/drop reliability after persistence restore)
@@ -31,7 +32,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.3';
+const APP_VERSION = '1.12.4';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -225,6 +226,11 @@ let state = {
   classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
   planLog: loadPlanLogState(),
   weeklyPlanner: loadWeeklyPlannerState(),
+  lessonPlans: [],
+  plannerUi: {
+    selectedLessonId: null,
+    drawerOpen: false,
+  },
   themePreference: 'auto',
   textSizePreference: 'standard',
   adminAccordion: {
@@ -758,32 +764,139 @@ function renderView() {
 }
 
 function renderPlanner(main) {
+  const plannerDays = [
+    { key: 'mon', label: 'Monday' },
+    { key: 'tue', label: 'Tuesday' },
+    { key: 'wed', label: 'Wednesday' },
+    { key: 'thu', label: 'Thursday' },
+    { key: 'fri', label: 'Friday' },
+  ];
+
+  if (!Array.isArray(state.lessonPlans)) state.lessonPlans = [];
+  plannerSeedLessonPlansFromWeeklyBlocks();
+  if (!state.plannerUi || typeof state.plannerUi !== 'object') {
+    state.plannerUi = { selectedLessonId: null, drawerOpen: false };
+  }
+
+  const selectedLesson = state.lessonPlans.find(lesson => lesson.id === state.plannerUi.selectedLessonId) || null;
+  if (!selectedLesson) {
+    state.plannerUi.selectedLessonId = null;
+    state.plannerUi.drawerOpen = false;
+  }
+
+  const boardColumns = plannerDays.map(day => {
+    const dayLessons = state.lessonPlans.filter(lesson => lesson.dayKey === day.key);
+    return `
+      <section class="planner-lesson-column">
+        <div class="planner-lesson-column-head">${day.label}</div>
+        <div class="planner-lesson-column-body">
+          ${dayLessons.length === 0
+            ? `<div class="planner-lesson-empty">No lessons</div>`
+            : dayLessons.map(lesson => `
+              <button
+                class="planner-lesson-card ${state.plannerUi.selectedLessonId === lesson.id ? 'is-selected' : ''}"
+                onclick="plannerOpenLessonDrawer('${lesson.id}')"
+                type="button"
+              >
+                <div class="planner-lesson-card-title">${escapeHtml(lesson.title || 'Untitled lesson')}</div>
+                <div class="planner-lesson-card-meta">${escapeHtml(lesson.subject || 'No subject')}</div>
+                ${lesson.shortDescription ? `<div class="planner-lesson-card-desc">${escapeHtml(lesson.shortDescription)}</div>` : ''}
+              </button>
+            `).join('')
+          }
+        </div>
+      </section>
+    `;
+  }).join('');
+
   main.innerHTML = `
     <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Planner</div>
-      <div style="font-size:12px;color:var(--text3)">New weekly planner is being rolled out.</div>
+      <div style="font-size:12px;color:var(--text3)">Weekly board with lesson drawer editing.</div>
     </div>
     <div class="content planner-shell-layout">
       <section class="card planner-shell-board">
         <div class="card-head">
           <div class="card-title">Week Board</div>
-          <div style="font-size:12px;color:var(--text3)">Placeholder</div>
+          <div style="font-size:12px;color:var(--text3)">Click a lesson card to edit</div>
         </div>
-        <div class="planner-shell-placeholder">
-          Weekly planning board placeholder. Legacy planner remains in code during migration.
+        <div class="planner-lesson-board">
+          ${boardColumns}
         </div>
       </section>
       <aside class="card planner-shell-drawer">
         <div class="card-head">
-          <div class="card-title">Right Drawer</div>
-          <div style="font-size:12px;color:var(--text3)">Placeholder</div>
+          <div class="card-title">Lesson Drawer</div>
+          <div style="font-size:12px;color:var(--text3)">${state.plannerUi.drawerOpen && selectedLesson ? 'Editing selected lesson' : 'Select a lesson card'}</div>
         </div>
-        <div class="planner-shell-placeholder">
-          Planner details drawer placeholder.
-        </div>
+        ${state.plannerUi.drawerOpen && selectedLesson ? `
+          <div style="padding:16px">
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input class="form-input" type="text" value="${escapeHtml(selectedLesson.title || '')}" oninput="plannerUpdateSelectedLessonField('title', this.value)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Short description</label>
+              <textarea class="form-input" rows="3" oninput="plannerUpdateSelectedLessonField('shortDescription', this.value)">${escapeHtml(selectedLesson.shortDescription || '')}</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input class="form-input" type="text" value="${escapeHtml(selectedLesson.subject || '')}" oninput="plannerUpdateSelectedLessonField('subject', this.value)">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Day</label>
+              <select class="form-input" onchange="plannerUpdateSelectedLessonField('dayKey', this.value)">
+                ${plannerDays.map(day => `<option value="${day.key}" ${selectedLesson.dayKey === day.key ? 'selected' : ''}>${day.label}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        ` : `
+          <div class="planner-shell-placeholder">
+            Select any lesson card from the weekly board to open editing.
+          </div>
+        `}
       </aside>
     </div>
   `;
+}
+
+function plannerSeedLessonPlansFromWeeklyBlocks() {
+  if (state.lessonPlans.length > 0) return;
+  const weekData = getPlannerWeekData();
+  const seeded = (weekData.blocks || [])
+    .slice()
+    .sort((a, b) => (a.day - b.day) || (a.period - b.period))
+    .map(block => ({
+      id: `lesson_${block.id}`,
+      title: block.title || '',
+      shortDescription: block.notes || '',
+      subject: block.subject || '',
+      dayKey: ['mon', 'tue', 'wed', 'thu', 'fri'][Math.max(0, Math.min(4, Number(block.day) || 0))],
+    }));
+  state.lessonPlans = seeded;
+}
+
+function plannerOpenLessonDrawer(lessonId) {
+  const lessonExists = state.lessonPlans.some(lesson => lesson.id === lessonId);
+  if (!lessonExists) return;
+  state.plannerUi.selectedLessonId = lessonId;
+  state.plannerUi.drawerOpen = true;
+  renderView();
+}
+
+function plannerUpdateSelectedLessonField(field, value) {
+  const editableFields = new Set(['title', 'shortDescription', 'subject', 'dayKey']);
+  if (!editableFields.has(field)) return;
+  const selectedId = state.plannerUi?.selectedLessonId;
+  if (!selectedId) return;
+  const idx = state.lessonPlans.findIndex(lesson => lesson.id === selectedId);
+  if (idx < 0) return;
+
+  const nextValue = field === 'dayKey'
+    ? (['mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
+    : value;
+  state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
+  renderView();
 }
 
 // ── DASHBOARD ──

@@ -2,14 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.4
- * Last updated: 2026-04-02
+ * THIS FILE IS VERSION: 1.12.5
+ * Last updated: 2026-04-04
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.5 - Planner top bar now includes a visible + Add Lesson action that creates a new editable lesson card
  * v1.12.4 - Planner lesson cards now open drawer reliably with basic lesson field editing
  * v1.12.3 - Legacy planner retired from sidebar; new Planner shell page added (Phase 1)
  * v1.12.2 - Weekly Planner stabilization (canonical week key + reliable cell creation/events)
@@ -32,7 +33,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.4';
+const APP_VERSION = '1.12.5';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -812,7 +813,10 @@ function renderPlanner(main) {
   main.innerHTML = `
     <div class="topbar" style="flex-wrap:wrap;gap:10px;padding:14px 24px">
       <div class="topbar-title">Planner</div>
-      <div style="font-size:12px;color:var(--text3)">Weekly board with lesson drawer editing.</div>
+      <div class="topbar-actions" style="margin-left:auto">
+        <div style="font-size:12px;color:var(--text3)">Weekly board with lesson drawer editing.</div>
+        <button class="btn btn-primary" type="button" onclick="plannerAddLesson()">+ Add Lesson</button>
+      </div>
     </div>
     <div class="content planner-shell-layout">
       <section class="card planner-shell-board">
@@ -880,6 +884,23 @@ function plannerOpenLessonDrawer(lessonId) {
   const lessonExists = state.lessonPlans.some(lesson => lesson.id === lessonId);
   if (!lessonExists) return;
   state.plannerUi.selectedLessonId = lessonId;
+  state.plannerUi.drawerOpen = true;
+  renderView();
+}
+
+function plannerAddLesson() {
+  const plannerDays = ['mon', 'tue', 'wed', 'thu', 'fri'];
+  const hasUnscheduledColumn = plannerDays.includes('unscheduled');
+  const newLesson = {
+    id: `lesson_new_${Date.now()}`,
+    title: 'New Lesson',
+    shortDescription: '',
+    subject: '',
+    dayKey: hasUnscheduledColumn ? 'unscheduled' : 'mon',
+    status: 'planned',
+  };
+  state.lessonPlans.push(newLesson);
+  state.plannerUi.selectedLessonId = newLesson.id;
   state.plannerUi.drawerOpen = true;
   renderView();
 }

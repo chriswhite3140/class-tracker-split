@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.7
+ * THIS FILE IS VERSION: 1.12.8
  * Last updated: 2026-04-04
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.8 - Planner lesson plans now persist in localStorage across refresh
  * v1.12.7 - Planner drawer text fields now keep focus while typing (no per-keystroke full rerender)
  * v1.12.6 - Planner + Add Lesson button placement fixed so it stays visible in the header
  * v1.12.5 - Planner top bar now includes a visible + Add Lesson action that creates a new editable lesson card
@@ -35,7 +36,8 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.7';
+const APP_VERSION = '1.12.8';
+const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -229,7 +231,7 @@ let state = {
   classSettings: loadClassSettings(),  // class/teacher group config — loaded from localStorage
   planLog: loadPlanLogState(),
   weeklyPlanner: loadWeeklyPlannerState(),
-  lessonPlans: [],
+  lessonPlans: loadLessonPlansState(),
   plannerUi: {
     selectedLessonId: null,
     drawerOpen: false,
@@ -882,6 +884,7 @@ function plannerSeedLessonPlansFromWeeklyBlocks() {
       dayKey: ['mon', 'tue', 'wed', 'thu', 'fri'][Math.max(0, Math.min(4, Number(block.day) || 0))],
     }));
   state.lessonPlans = seeded;
+  saveLessonPlansState();
 }
 
 function plannerOpenLessonDrawer(lessonId) {
@@ -904,6 +907,7 @@ function plannerAddLesson() {
     status: 'planned',
   };
   state.lessonPlans.push(newLesson);
+  saveLessonPlansState();
   state.plannerUi.selectedLessonId = newLesson.id;
   state.plannerUi.drawerOpen = true;
   renderView();
@@ -921,7 +925,39 @@ function plannerUpdateSelectedLessonField(field, value) {
     ? (['mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
     : value;
   state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
+  saveLessonPlansState();
   if (field === 'dayKey') renderView();
+}
+
+function normalizeLessonPlan(raw = {}) {
+  const validDayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'unscheduled'];
+  const dayKey = validDayKeys.includes(raw.dayKey) ? raw.dayKey : 'mon';
+  return {
+    id: String(raw.id || `lesson_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`),
+    title: String(raw.title || ''),
+    shortDescription: String(raw.shortDescription || ''),
+    subject: String(raw.subject || ''),
+    dayKey,
+    status: String(raw.status || 'planned'),
+  };
+}
+
+function loadLessonPlansState() {
+  try {
+    const raw = localStorage.getItem(LESSON_PLANS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(normalizeLessonPlan) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLessonPlansState() {
+  try {
+    const lessonPlans = Array.isArray(state.lessonPlans) ? state.lessonPlans.map(normalizeLessonPlan) : [];
+    localStorage.setItem(LESSON_PLANS_STORAGE_KEY, JSON.stringify(lessonPlans));
+  } catch (e) {}
 }
 
 // ── DASHBOARD ──

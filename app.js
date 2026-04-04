@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.8
+ * THIS FILE IS VERSION: 1.12.9
  * Last updated: 2026-04-04
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.9 - Planner weekly board now includes an Unscheduled column (before Monday)
  * v1.12.8 - Planner lesson plans now persist in localStorage across refresh
  * v1.12.7 - Planner drawer text fields now keep focus while typing (no per-keystroke full rerender)
  * v1.12.6 - Planner + Add Lesson button placement fixed so it stays visible in the header
@@ -36,7 +37,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.8';
+const APP_VERSION = '1.12.9';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -770,6 +771,7 @@ function renderView() {
 
 function renderPlanner(main) {
   const plannerDays = [
+    { key: 'unscheduled', label: 'Unscheduled' },
     { key: 'mon', label: 'Monday' },
     { key: 'tue', label: 'Tuesday' },
     { key: 'wed', label: 'Wednesday' },
@@ -896,14 +898,12 @@ function plannerOpenLessonDrawer(lessonId) {
 }
 
 function plannerAddLesson() {
-  const plannerDays = ['mon', 'tue', 'wed', 'thu', 'fri'];
-  const hasUnscheduledColumn = plannerDays.includes('unscheduled');
   const newLesson = {
     id: `lesson_new_${Date.now()}`,
     title: 'New Lesson',
     shortDescription: '',
     subject: '',
-    dayKey: hasUnscheduledColumn ? 'unscheduled' : 'mon',
+    dayKey: 'unscheduled',
     status: 'planned',
   };
   state.lessonPlans.push(newLesson);
@@ -922,7 +922,7 @@ function plannerUpdateSelectedLessonField(field, value) {
   if (idx < 0) return;
 
   const nextValue = field === 'dayKey'
-    ? (['mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
+    ? (['unscheduled', 'mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
     : value;
   state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
   saveLessonPlansState();

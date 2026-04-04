@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.6
+ * THIS FILE IS VERSION: 1.12.7
  * Last updated: 2026-04-04
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.7 - Planner drawer text fields now keep focus while typing (no per-keystroke full rerender)
  * v1.12.6 - Planner + Add Lesson button placement fixed so it stays visible in the header
  * v1.12.5 - Planner top bar now includes a visible + Add Lesson action that creates a new editable lesson card
  * v1.12.4 - Planner lesson cards now open drawer reliably with basic lesson field editing
@@ -34,7 +35,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.6';
+const APP_VERSION = '1.12.7';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -920,7 +921,7 @@ function plannerUpdateSelectedLessonField(field, value) {
     ? (['mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
     : value;
   state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
-  renderView();
+  if (field === 'dayKey') renderView();
 }
 
 // ── DASHBOARD ──

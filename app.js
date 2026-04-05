@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.9
+ * THIS FILE IS VERSION: 1.12.10
  * Last updated: 2026-04-04
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.10 - Planner lesson cards now support drag-and-drop movement between columns
  * v1.12.9 - Planner weekly board now includes an Unscheduled column (before Monday)
  * v1.12.8 - Planner lesson plans now persist in localStorage across refresh
  * v1.12.7 - Planner drawer text fields now keep focus while typing (no per-keystroke full rerender)
@@ -37,7 +38,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.9';
+const APP_VERSION = '1.12.10';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -236,6 +237,7 @@ let state = {
   plannerUi: {
     selectedLessonId: null,
     drawerOpen: false,
+    draggingLessonId: null,
   },
   themePreference: 'auto',
   textSizePreference: 'standard',
@@ -782,7 +784,7 @@ function renderPlanner(main) {
   if (!Array.isArray(state.lessonPlans)) state.lessonPlans = [];
   plannerSeedLessonPlansFromWeeklyBlocks();
   if (!state.plannerUi || typeof state.plannerUi !== 'object') {
-    state.plannerUi = { selectedLessonId: null, drawerOpen: false };
+    state.plannerUi = { selectedLessonId: null, drawerOpen: false, draggingLessonId: null };
   }
 
   const selectedLesson = state.lessonPlans.find(lesson => lesson.id === state.plannerUi.selectedLessonId) || null;
@@ -796,13 +798,16 @@ function renderPlanner(main) {
     return `
       <section class="planner-lesson-column">
         <div class="planner-lesson-column-head">${day.label}</div>
-        <div class="planner-lesson-column-body">
+        <div class="planner-lesson-column-body" ondragover="plannerAllowLessonDrop(event)" ondrop="plannerDropLessonToDay(event, '${day.key}')" ondragleave="plannerLessonDropLeave(event)">
           ${dayLessons.length === 0
             ? `<div class="planner-lesson-empty">No lessons</div>`
             : dayLessons.map(lesson => `
               <button
                 class="planner-lesson-card ${state.plannerUi.selectedLessonId === lesson.id ? 'is-selected' : ''}"
                 onclick="plannerOpenLessonDrawer('${lesson.id}')"
+                draggable="true"
+                ondragstart="plannerStartLessonDrag(event, '${lesson.id}')"
+                ondragend="plannerEndLessonDrag(event)"
                 type="button"
               >
                 <div class="planner-lesson-card-title">${escapeHtml(lesson.title || 'Untitled lesson')}</div>
@@ -894,6 +899,50 @@ function plannerOpenLessonDrawer(lessonId) {
   if (!lessonExists) return;
   state.plannerUi.selectedLessonId = lessonId;
   state.plannerUi.drawerOpen = true;
+  renderView();
+}
+
+function plannerStartLessonDrag(ev, lessonId) {
+  state.plannerUi.draggingLessonId = lessonId;
+  if (ev?.dataTransfer) {
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', lessonId);
+  }
+}
+
+function plannerAllowLessonDrop(ev) {
+  ev.preventDefault();
+  const zone = ev.currentTarget;
+  if (zone) zone.classList.add('drop-over');
+}
+
+function plannerLessonDropLeave(ev) {
+  const zone = ev.currentTarget;
+  if (zone) zone.classList.remove('drop-over');
+}
+
+function plannerEndLessonDrag() {
+  state.plannerUi.draggingLessonId = null;
+  document.querySelectorAll('.planner-lesson-column-body.drop-over').forEach(el => el.classList.remove('drop-over'));
+}
+
+function plannerDropLessonToDay(ev, targetDayKey) {
+  ev.preventDefault();
+  const zone = ev.currentTarget;
+  if (zone) zone.classList.remove('drop-over');
+  const lessonId = ev?.dataTransfer?.getData('text/plain') || state.plannerUi.draggingLessonId;
+  if (!lessonId) return;
+
+  const idx = state.lessonPlans.findIndex(lesson => lesson.id === lessonId);
+  if (idx < 0) return;
+  if (state.lessonPlans[idx].dayKey === targetDayKey) {
+    plannerEndLessonDrag();
+    return;
+  }
+
+  state.lessonPlans[idx] = { ...state.lessonPlans[idx], dayKey: targetDayKey };
+  saveLessonPlansState();
+  state.plannerUi.draggingLessonId = null;
   renderView();
 }
 

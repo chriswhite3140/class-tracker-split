@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.11
+ * THIS FILE IS VERSION: 1.12.12
  * Last updated: 2026-04-04
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.12 - Planner lesson cards now include a quick delete action
  * v1.12.11 - Planner lesson cards now include a quick duplicate action
  * v1.12.10 - Planner lesson cards now support drag-and-drop movement between columns
  * v1.12.9 - Planner weekly board now includes an Unscheduled column (before Monday)
@@ -39,7 +40,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.11';
+const APP_VERSION = '1.12.12';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -818,6 +819,7 @@ function renderPlanner(main) {
                 </button>
                 <div class="planner-inline-actions">
                   <button class="planner-mini-btn" type="button" onclick="plannerDuplicateLesson('${lesson.id}')">Duplicate</button>
+                  <button class="planner-mini-btn" type="button" onclick="plannerDeleteLesson('${lesson.id}')">Delete</button>
                 </div>
               </div>
             `).join('')
@@ -980,6 +982,21 @@ function plannerDuplicateLesson(lessonId) {
     status: lesson.status || 'planned',
   };
   state.lessonPlans.push(duplicatedLesson);
+  saveLessonPlansState();
+  renderView();
+}
+
+function plannerDeleteLesson(lessonId) {
+  const lesson = state.lessonPlans.find(item => item.id === lessonId);
+  if (!lesson) return;
+  const confirmed = confirm(`Delete lesson "${lesson.title || 'Untitled lesson'}"?`);
+  if (!confirmed) return;
+
+  state.lessonPlans = state.lessonPlans.filter(item => item.id !== lessonId);
+  if (state.plannerUi?.selectedLessonId === lessonId) {
+    state.plannerUi.selectedLessonId = null;
+    state.plannerUi.drawerOpen = false;
+  }
   saveLessonPlansState();
   renderView();
 }

@@ -1163,7 +1163,7 @@ body[data-text-size="large"] {
 
 .planner-lesson-card-top {
   position: relative;
-  padding-right: 46px;
+  padding-right: 40px;
 }
 
 .planner-lesson-title-input {
@@ -1192,7 +1192,7 @@ body[data-text-size="large"] {
 
 .planner-lesson-icon-actions {
   display: inline-flex;
-  gap: 3px;
+  gap: 2px;
   justify-content: flex-end;
   position: absolute;
   top: 1px;
@@ -1200,25 +1200,26 @@ body[data-text-size="large"] {
 }
 
 .planner-card-icon-btn {
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--border2);
+  width: 16px;
+  height: 16px;
+  border: 1px solid transparent;
   border-radius: 6px;
-  background: var(--surface);
+  background: transparent;
   color: var(--text3);
-  font-size: 9px;
+  font-size: 8px;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.42;
+  opacity: 0.34;
 }
 
 .planner-lesson-card:hover .planner-card-icon-btn,
 .planner-lesson-card:focus-within .planner-card-icon-btn {
   opacity: 1;
-  border-color: var(--border);
+  border-color: var(--border2);
+  background: var(--surface);
   color: var(--text-muted);
 }
 

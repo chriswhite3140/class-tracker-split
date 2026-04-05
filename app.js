@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.13
+ * THIS FILE IS VERSION: 1.12.14
  * Last updated: 2026-04-05
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.14 - Planner lesson cards now support direct inline title editing with compact icon actions
  * v1.12.13 - Planner lesson cards now support quick title rename + inline subject picker
  * v1.12.12 - Planner lesson cards now include a quick delete action
  * v1.12.11 - Planner lesson cards now include a quick duplicate action
@@ -41,7 +42,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.13';
+const APP_VERSION = '1.12.14';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -807,26 +808,37 @@ function renderPlanner(main) {
             ? `<div class="planner-lesson-empty">No lessons</div>`
             : dayLessons.map(lesson => `
               <div class="planner-lesson-card-wrap">
-                <button
+                <div
                   class="planner-lesson-card ${state.plannerUi.selectedLessonId === lesson.id ? 'is-selected' : ''}"
                   onclick="plannerOpenLessonDrawer('${lesson.id}')"
                   draggable="true"
                   ondragstart="plannerStartLessonDrag(event, '${lesson.id}')"
                   ondragend="plannerEndLessonDrag(event)"
-                  type="button"
                 >
-                  <div class="planner-lesson-card-title">${escapeHtml(lesson.title || 'Untitled lesson')}</div>
-                  <div class="planner-lesson-card-meta">${escapeHtml(lesson.subject || 'No subject')}</div>
+                  <div class="planner-lesson-card-top">
+                    <input
+                      class="planner-lesson-title-input"
+                      type="text"
+                      value="${escapeHtml(lesson.title || '')}"
+                      placeholder="Untitled lesson"
+                      aria-label="Lesson title"
+                      onclick="event.stopPropagation()"
+                      oninput="plannerQuickUpdateLessonField('${lesson.id}', 'title', this.value, false)"
+                      onblur="plannerQuickUpdateLessonField('${lesson.id}', 'title', this.value.trim(), true)"
+                      onkeydown="plannerHandleQuickTitleKeydown(event, this)"
+                    >
+                    <div class="planner-lesson-icon-actions" onclick="event.stopPropagation()">
+                      <button class="planner-card-icon-btn" type="button" title="Duplicate lesson" aria-label="Duplicate lesson" onclick="event.stopPropagation();plannerDuplicateLesson('${lesson.id}')">⧉</button>
+                      <button class="planner-card-icon-btn planner-card-icon-btn-danger" type="button" title="Delete lesson" aria-label="Delete lesson" onclick="event.stopPropagation();plannerDeleteLesson('${lesson.id}')">✕</button>
+                    </div>
+                  </div>
+                  <div class="planner-lesson-card-meta">
+                    <select class="planner-inline-select" onclick="event.stopPropagation()" onchange="plannerQuickUpdateLessonField('${lesson.id}', 'subject', this.value)" aria-label="Quick subject for ${escapeHtml(lesson.title || 'Untitled lesson')}">
+                      <option value="">No subject</option>
+                      ${subjectOptions.map(subject => `<option value="${escapeHtml(subject)}" ${lesson.subject === subject ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('')}
+                    </select>
+                  </div>
                   ${lesson.shortDescription ? `<div class="planner-lesson-card-desc">${escapeHtml(lesson.shortDescription)}</div>` : ''}
-                </button>
-                <div class="planner-inline-actions">
-                  <button class="planner-mini-btn" type="button" onclick="plannerQuickEditLessonTitle('${lesson.id}')">Rename</button>
-                  <select class="planner-inline-select" onchange="plannerQuickUpdateLessonField('${lesson.id}', 'subject', this.value)" aria-label="Quick subject for ${escapeHtml(lesson.title || 'Untitled lesson')}">
-                    <option value="">No subject</option>
-                    ${subjectOptions.map(subject => `<option value="${escapeHtml(subject)}" ${lesson.subject === subject ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('')}
-                  </select>
-                  <button class="planner-mini-btn" type="button" onclick="plannerDuplicateLesson('${lesson.id}')">Duplicate</button>
-                  <button class="planner-mini-btn" type="button" onclick="plannerDeleteLesson('${lesson.id}')">Delete</button>
                 </div>
               </div>
             `).join('')
@@ -1014,15 +1026,7 @@ function plannerDeleteLesson(lessonId) {
   renderView();
 }
 
-function plannerQuickEditLessonTitle(lessonId) {
-  const lesson = state.lessonPlans.find(item => item.id === lessonId);
-  if (!lesson) return;
-  const nextTitle = prompt('Quick edit lesson title', lesson.title || '');
-  if (nextTitle === null) return;
-  plannerQuickUpdateLessonField(lessonId, 'title', nextTitle.trim());
-}
-
-function plannerQuickUpdateLessonField(lessonId, field, value) {
+function plannerQuickUpdateLessonField(lessonId, field, value, rerender = true) {
   const editableFields = new Set(['title', 'subject', 'dayKey', 'shortDescription']);
   if (!editableFields.has(field)) return;
   const idx = state.lessonPlans.findIndex(lesson => lesson.id === lessonId);
@@ -1032,7 +1036,13 @@ function plannerQuickUpdateLessonField(lessonId, field, value) {
     : value;
   state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
   saveLessonPlansState();
-  renderView();
+  if (rerender) renderView();
+}
+
+function plannerHandleQuickTitleKeydown(ev, inputEl) {
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  inputEl?.blur();
 }
 
 function plannerUpdateSelectedLessonField(field, value) {

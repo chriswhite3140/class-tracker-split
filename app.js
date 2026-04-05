@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.15
+ * THIS FILE IS VERSION: 1.12.16
  * Last updated: 2026-04-05
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.16 - Planner lesson cards now use tighter spacing and denser visual balance for weekly scanning
  * v1.12.15 - Planner lesson cards now use inline two-step delete arming and improved wrapped title space
  * v1.12.14 - Planner lesson cards now support direct inline title editing with compact icon actions
  * v1.12.13 - Planner lesson cards now support quick title rename + inline subject picker
@@ -43,7 +44,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.15';
+const APP_VERSION = '1.12.16';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';

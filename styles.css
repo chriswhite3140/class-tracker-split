@@ -1138,6 +1138,11 @@ body[data-text-size="large"] {
   gap: 4px;
 }
 
+.planner-lesson-card-wrap {
+  display: grid;
+  gap: 4px;
+}
+
 .planner-lesson-card:hover {
   border-color: var(--status-info-border);
   background: var(--status-info-bg);

@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.10
+ * THIS FILE IS VERSION: 1.12.11
  * Last updated: 2026-04-04
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.11 - Planner lesson cards now include a quick duplicate action
  * v1.12.10 - Planner lesson cards now support drag-and-drop movement between columns
  * v1.12.9 - Planner weekly board now includes an Unscheduled column (before Monday)
  * v1.12.8 - Planner lesson plans now persist in localStorage across refresh
@@ -38,7 +39,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.10';
+const APP_VERSION = '1.12.11';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -802,18 +803,23 @@ function renderPlanner(main) {
           ${dayLessons.length === 0
             ? `<div class="planner-lesson-empty">No lessons</div>`
             : dayLessons.map(lesson => `
-              <button
-                class="planner-lesson-card ${state.plannerUi.selectedLessonId === lesson.id ? 'is-selected' : ''}"
-                onclick="plannerOpenLessonDrawer('${lesson.id}')"
-                draggable="true"
-                ondragstart="plannerStartLessonDrag(event, '${lesson.id}')"
-                ondragend="plannerEndLessonDrag(event)"
-                type="button"
-              >
-                <div class="planner-lesson-card-title">${escapeHtml(lesson.title || 'Untitled lesson')}</div>
-                <div class="planner-lesson-card-meta">${escapeHtml(lesson.subject || 'No subject')}</div>
-                ${lesson.shortDescription ? `<div class="planner-lesson-card-desc">${escapeHtml(lesson.shortDescription)}</div>` : ''}
-              </button>
+              <div class="planner-lesson-card-wrap">
+                <button
+                  class="planner-lesson-card ${state.plannerUi.selectedLessonId === lesson.id ? 'is-selected' : ''}"
+                  onclick="plannerOpenLessonDrawer('${lesson.id}')"
+                  draggable="true"
+                  ondragstart="plannerStartLessonDrag(event, '${lesson.id}')"
+                  ondragend="plannerEndLessonDrag(event)"
+                  type="button"
+                >
+                  <div class="planner-lesson-card-title">${escapeHtml(lesson.title || 'Untitled lesson')}</div>
+                  <div class="planner-lesson-card-meta">${escapeHtml(lesson.subject || 'No subject')}</div>
+                  ${lesson.shortDescription ? `<div class="planner-lesson-card-desc">${escapeHtml(lesson.shortDescription)}</div>` : ''}
+                </button>
+                <div class="planner-inline-actions">
+                  <button class="planner-mini-btn" type="button" onclick="plannerDuplicateLesson('${lesson.id}')">Duplicate</button>
+                </div>
+              </div>
             `).join('')
           }
         </div>
@@ -959,6 +965,22 @@ function plannerAddLesson() {
   saveLessonPlansState();
   state.plannerUi.selectedLessonId = newLesson.id;
   state.plannerUi.drawerOpen = true;
+  renderView();
+}
+
+function plannerDuplicateLesson(lessonId) {
+  const lesson = state.lessonPlans.find(item => item.id === lessonId);
+  if (!lesson) return;
+  const duplicatedLesson = {
+    id: `lesson_copy_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+    title: lesson.title || '',
+    shortDescription: lesson.shortDescription || '',
+    subject: lesson.subject || '',
+    dayKey: lesson.dayKey || 'unscheduled',
+    status: lesson.status || 'planned',
+  };
+  state.lessonPlans.push(duplicatedLesson);
+  saveLessonPlansState();
   renderView();
 }
 

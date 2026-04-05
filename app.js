@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.14
+ * THIS FILE IS VERSION: 1.12.15
  * Last updated: 2026-04-05
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.15 - Planner lesson cards now use inline two-step delete arming and improved wrapped title space
  * v1.12.14 - Planner lesson cards now support direct inline title editing with compact icon actions
  * v1.12.13 - Planner lesson cards now support quick title rename + inline subject picker
  * v1.12.12 - Planner lesson cards now include a quick delete action
@@ -42,7 +43,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.14';
+const APP_VERSION = '1.12.15';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -788,7 +789,10 @@ function renderPlanner(main) {
   if (!Array.isArray(state.lessonPlans)) state.lessonPlans = [];
   plannerSeedLessonPlansFromWeeklyBlocks();
   if (!state.plannerUi || typeof state.plannerUi !== 'object') {
-    state.plannerUi = { selectedLessonId: null, drawerOpen: false, draggingLessonId: null };
+    state.plannerUi = { selectedLessonId: null, drawerOpen: false, draggingLessonId: null, armedDeleteLessonId: null };
+  }
+  if (!Object.prototype.hasOwnProperty.call(state.plannerUi, 'armedDeleteLessonId')) {
+    state.plannerUi.armedDeleteLessonId = null;
   }
 
   const selectedLesson = state.lessonPlans.find(lesson => lesson.id === state.plannerUi.selectedLessonId) || null;
@@ -816,20 +820,18 @@ function renderPlanner(main) {
                   ondragend="plannerEndLessonDrag(event)"
                 >
                   <div class="planner-lesson-card-top">
-                    <input
+                    <textarea
                       class="planner-lesson-title-input"
-                      type="text"
-                      value="${escapeHtml(lesson.title || '')}"
+                      rows="2"
                       placeholder="Untitled lesson"
                       aria-label="Lesson title"
                       onclick="event.stopPropagation()"
                       oninput="plannerQuickUpdateLessonField('${lesson.id}', 'title', this.value, false)"
                       onblur="plannerQuickUpdateLessonField('${lesson.id}', 'title', this.value.trim(), true)"
-                      onkeydown="plannerHandleQuickTitleKeydown(event, this)"
-                    >
+                    >${escapeHtml(lesson.title || '')}</textarea>
                     <div class="planner-lesson-icon-actions" onclick="event.stopPropagation()">
                       <button class="planner-card-icon-btn" type="button" title="Duplicate lesson" aria-label="Duplicate lesson" onclick="event.stopPropagation();plannerDuplicateLesson('${lesson.id}')">⧉</button>
-                      <button class="planner-card-icon-btn planner-card-icon-btn-danger" type="button" title="Delete lesson" aria-label="Delete lesson" onclick="event.stopPropagation();plannerDeleteLesson('${lesson.id}')">✕</button>
+                      <button class="planner-card-icon-btn planner-card-icon-btn-danger ${state.plannerUi.armedDeleteLessonId === lesson.id ? 'is-armed' : ''}" type="button" title="${state.plannerUi.armedDeleteLessonId === lesson.id ? 'Click again to delete' : 'Delete lesson'}" aria-label="Delete lesson" onclick="event.stopPropagation();plannerToggleLessonDelete('${lesson.id}')">${state.plannerUi.armedDeleteLessonId === lesson.id ? '!' : '✕'}</button>
                     </div>
                   </div>
                   <div class="planner-lesson-card-meta">
@@ -930,6 +932,7 @@ function plannerSeedLessonPlansFromWeeklyBlocks() {
 function plannerOpenLessonDrawer(lessonId) {
   const lessonExists = state.lessonPlans.some(lesson => lesson.id === lessonId);
   if (!lessonExists) return;
+  state.plannerUi.armedDeleteLessonId = null;
   state.plannerUi.selectedLessonId = lessonId;
   state.plannerUi.drawerOpen = true;
   renderView();
@@ -1007,17 +1010,26 @@ function plannerDuplicateLesson(lessonId) {
     status: lesson.status || 'planned',
   };
   state.lessonPlans.push(duplicatedLesson);
+  state.plannerUi.armedDeleteLessonId = null;
   saveLessonPlansState();
+  renderView();
+}
+
+function plannerToggleLessonDelete(lessonId) {
+  if (state.plannerUi?.armedDeleteLessonId === lessonId) {
+    plannerDeleteLesson(lessonId);
+    return;
+  }
+  state.plannerUi.armedDeleteLessonId = lessonId;
   renderView();
 }
 
 function plannerDeleteLesson(lessonId) {
   const lesson = state.lessonPlans.find(item => item.id === lessonId);
   if (!lesson) return;
-  const confirmed = confirm(`Delete lesson "${lesson.title || 'Untitled lesson'}"?`);
-  if (!confirmed) return;
 
   state.lessonPlans = state.lessonPlans.filter(item => item.id !== lessonId);
+  state.plannerUi.armedDeleteLessonId = null;
   if (state.plannerUi?.selectedLessonId === lessonId) {
     state.plannerUi.selectedLessonId = null;
     state.plannerUi.drawerOpen = false;
@@ -1034,15 +1046,10 @@ function plannerQuickUpdateLessonField(lessonId, field, value, rerender = true) 
   const nextValue = field === 'dayKey'
     ? (['unscheduled', 'mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
     : value;
+  state.plannerUi.armedDeleteLessonId = null;
   state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
   saveLessonPlansState();
   if (rerender) renderView();
-}
-
-function plannerHandleQuickTitleKeydown(ev, inputEl) {
-  if (ev.key !== 'Enter') return;
-  ev.preventDefault();
-  inputEl?.blur();
 }
 
 function plannerUpdateSelectedLessonField(field, value) {

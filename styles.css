@@ -1162,14 +1162,12 @@ body[data-text-size="large"] {
 }
 
 .planner-lesson-card-top {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
   gap: 6px;
 }
 
 .planner-lesson-title-input {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   border: 1px solid transparent;
   background: transparent;
   color: var(--text);
@@ -1177,6 +1175,11 @@ body[data-text-size="large"] {
   font-weight: 600;
   border-radius: 6px;
   padding: 2px 4px;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  line-height: 1.3;
+  font-family: inherit;
 }
 
 .planner-lesson-title-input:focus {
@@ -1186,9 +1189,9 @@ body[data-text-size="large"] {
 }
 
 .planner-lesson-icon-actions {
-  display: inline-flex;
+  display: flex;
   gap: 4px;
-  flex: 0 0 auto;
+  justify-content: flex-end;
 }
 
 .planner-card-icon-btn {
@@ -1213,6 +1216,12 @@ body[data-text-size="large"] {
 
 .planner-card-icon-btn-danger:hover {
   border-color: var(--status-danger-border);
+  color: var(--status-danger-text);
+}
+
+.planner-card-icon-btn-danger.is-armed {
+  border-color: var(--status-danger-border);
+  background: var(--status-danger-bg);
   color: var(--status-danger-text);
 }
 

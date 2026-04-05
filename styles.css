@@ -1387,6 +1387,16 @@ body[data-text-size="large"] {
   color: var(--blue);
 }
 
+.planner-inline-select {
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 10px;
+  border-radius: 6px;
+  padding: 2px 6px;
+  min-width: 98px;
+}
+
 .planner-break-row {
   background: var(--surface-alt) !important;
   color: var(--text3);

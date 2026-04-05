@@ -2,14 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.12
- * Last updated: 2026-04-04
+ * THIS FILE IS VERSION: 1.12.13
+ * Last updated: 2026-04-05
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.13 - Planner lesson cards now support quick title rename + inline subject picker
  * v1.12.12 - Planner lesson cards now include a quick delete action
  * v1.12.11 - Planner lesson cards now include a quick duplicate action
  * v1.12.10 - Planner lesson cards now support drag-and-drop movement between columns
@@ -40,7 +41,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.12';
+const APP_VERSION = '1.12.13';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -794,6 +795,7 @@ function renderPlanner(main) {
     state.plannerUi.selectedLessonId = null;
     state.plannerUi.drawerOpen = false;
   }
+  const subjectOptions = plannerGetInlineLessonSubjects();
 
   const boardColumns = plannerDays.map(day => {
     const dayLessons = state.lessonPlans.filter(lesson => lesson.dayKey === day.key);
@@ -818,6 +820,11 @@ function renderPlanner(main) {
                   ${lesson.shortDescription ? `<div class="planner-lesson-card-desc">${escapeHtml(lesson.shortDescription)}</div>` : ''}
                 </button>
                 <div class="planner-inline-actions">
+                  <button class="planner-mini-btn" type="button" onclick="plannerQuickEditLessonTitle('${lesson.id}')">Rename</button>
+                  <select class="planner-inline-select" onchange="plannerQuickUpdateLessonField('${lesson.id}', 'subject', this.value)" aria-label="Quick subject for ${escapeHtml(lesson.title || 'Untitled lesson')}">
+                    <option value="">No subject</option>
+                    ${subjectOptions.map(subject => `<option value="${escapeHtml(subject)}" ${lesson.subject === subject ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('')}
+                  </select>
                   <button class="planner-mini-btn" type="button" onclick="plannerDuplicateLesson('${lesson.id}')">Duplicate</button>
                   <button class="planner-mini-btn" type="button" onclick="plannerDeleteLesson('${lesson.id}')">Delete</button>
                 </div>
@@ -883,6 +890,12 @@ function renderPlanner(main) {
       </aside>
     </div>
   `;
+}
+
+function plannerGetInlineLessonSubjects() {
+  const enabledSubjects = getEnabledSubjectsFromRows(state.curriculumCodes || []);
+  const lessonSubjects = (state.lessonPlans || []).map(lesson => lesson.subject).filter(Boolean);
+  return [...new Set([...enabledSubjects, ...lessonSubjects])];
 }
 
 function plannerSeedLessonPlansFromWeeklyBlocks() {
@@ -997,6 +1010,27 @@ function plannerDeleteLesson(lessonId) {
     state.plannerUi.selectedLessonId = null;
     state.plannerUi.drawerOpen = false;
   }
+  saveLessonPlansState();
+  renderView();
+}
+
+function plannerQuickEditLessonTitle(lessonId) {
+  const lesson = state.lessonPlans.find(item => item.id === lessonId);
+  if (!lesson) return;
+  const nextTitle = prompt('Quick edit lesson title', lesson.title || '');
+  if (nextTitle === null) return;
+  plannerQuickUpdateLessonField(lessonId, 'title', nextTitle.trim());
+}
+
+function plannerQuickUpdateLessonField(lessonId, field, value) {
+  const editableFields = new Set(['title', 'subject', 'dayKey', 'shortDescription']);
+  if (!editableFields.has(field)) return;
+  const idx = state.lessonPlans.findIndex(lesson => lesson.id === lessonId);
+  if (idx < 0) return;
+  const nextValue = field === 'dayKey'
+    ? (['unscheduled', 'mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
+    : value;
+  state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
   saveLessonPlansState();
   renderView();
 }

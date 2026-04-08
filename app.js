@@ -2,14 +2,15 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.18
- * Last updated: 2026-04-05
+ * THIS FILE IS VERSION: 1.12.19
+ * Last updated: 2026-04-06
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.19 - Planner lesson cards now use compact subject chips with click-to-edit dropdown
  * v1.12.18 - Planner lesson card quick-action icons now use quieter default styling with hover/focus reveal
  * v1.12.17 - Planner lesson card quick-action icons now use subtle default visibility with hover/focus emphasis
  * v1.12.16 - Planner lesson cards now use tighter spacing and denser visual balance for weekly scanning
@@ -46,7 +47,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.18';
+const APP_VERSION = '1.12.19';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -792,10 +793,13 @@ function renderPlanner(main) {
   if (!Array.isArray(state.lessonPlans)) state.lessonPlans = [];
   plannerSeedLessonPlansFromWeeklyBlocks();
   if (!state.plannerUi || typeof state.plannerUi !== 'object') {
-    state.plannerUi = { selectedLessonId: null, drawerOpen: false, draggingLessonId: null, armedDeleteLessonId: null };
+    state.plannerUi = { selectedLessonId: null, drawerOpen: false, draggingLessonId: null, armedDeleteLessonId: null, editingSubjectLessonId: null };
   }
   if (!Object.prototype.hasOwnProperty.call(state.plannerUi, 'armedDeleteLessonId')) {
     state.plannerUi.armedDeleteLessonId = null;
+  }
+  if (!Object.prototype.hasOwnProperty.call(state.plannerUi, 'editingSubjectLessonId')) {
+    state.plannerUi.editingSubjectLessonId = null;
   }
 
   const selectedLesson = state.lessonPlans.find(lesson => lesson.id === state.plannerUi.selectedLessonId) || null;
@@ -838,10 +842,13 @@ function renderPlanner(main) {
                     </div>
                   </div>
                   <div class="planner-lesson-card-meta">
-                    <select class="planner-inline-select" onclick="event.stopPropagation()" onchange="plannerQuickUpdateLessonField('${lesson.id}', 'subject', this.value)" aria-label="Quick subject for ${escapeHtml(lesson.title || 'Untitled lesson')}">
-                      <option value="">No subject</option>
-                      ${subjectOptions.map(subject => `<option value="${escapeHtml(subject)}" ${lesson.subject === subject ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('')}
-                    </select>
+                    ${state.plannerUi.editingSubjectLessonId === lesson.id
+                      ? `<select class="planner-inline-select planner-inline-select-compact" onclick="event.stopPropagation()" onchange="plannerQuickSelectLessonSubject('${lesson.id}', this.value)" onblur="plannerCloseLessonSubjectEditor('${lesson.id}')" aria-label="Quick subject for ${escapeHtml(lesson.title || 'Untitled lesson')}">
+                          <option value="">No subject</option>
+                          ${subjectOptions.map(subject => `<option value="${escapeHtml(subject)}" ${lesson.subject === subject ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('')}
+                        </select>`
+                      : `<button class="planner-subject-chip" type="button" onclick="event.stopPropagation();plannerOpenLessonSubjectEditor('${lesson.id}')" aria-label="Edit subject for ${escapeHtml(lesson.title || 'Untitled lesson')}">${escapeHtml(lesson.subject || 'No subject')}</button>`
+                    }
                   </div>
                   ${lesson.shortDescription ? `<div class="planner-lesson-card-desc">${escapeHtml(lesson.shortDescription)}</div>` : ''}
                 </div>
@@ -936,6 +943,7 @@ function plannerOpenLessonDrawer(lessonId) {
   const lessonExists = state.lessonPlans.some(lesson => lesson.id === lessonId);
   if (!lessonExists) return;
   state.plannerUi.armedDeleteLessonId = null;
+  state.plannerUi.editingSubjectLessonId = null;
   state.plannerUi.selectedLessonId = lessonId;
   state.plannerUi.drawerOpen = true;
   renderView();
@@ -1014,6 +1022,7 @@ function plannerDuplicateLesson(lessonId) {
   };
   state.lessonPlans.push(duplicatedLesson);
   state.plannerUi.armedDeleteLessonId = null;
+  state.plannerUi.editingSubjectLessonId = null;
   saveLessonPlansState();
   renderView();
 }
@@ -1033,6 +1042,7 @@ function plannerDeleteLesson(lessonId) {
 
   state.lessonPlans = state.lessonPlans.filter(item => item.id !== lessonId);
   state.plannerUi.armedDeleteLessonId = null;
+  if (state.plannerUi?.editingSubjectLessonId === lessonId) state.plannerUi.editingSubjectLessonId = null;
   if (state.plannerUi?.selectedLessonId === lessonId) {
     state.plannerUi.selectedLessonId = null;
     state.plannerUi.drawerOpen = false;
@@ -1050,9 +1060,28 @@ function plannerQuickUpdateLessonField(lessonId, field, value, rerender = true) 
     ? (['unscheduled', 'mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
     : value;
   state.plannerUi.armedDeleteLessonId = null;
+  if (field !== 'subject') state.plannerUi.editingSubjectLessonId = null;
   state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
   saveLessonPlansState();
   if (rerender) renderView();
+}
+
+function plannerOpenLessonSubjectEditor(lessonId) {
+  state.plannerUi.armedDeleteLessonId = null;
+  state.plannerUi.editingSubjectLessonId = lessonId;
+  renderView();
+}
+
+function plannerCloseLessonSubjectEditor(lessonId) {
+  if (state.plannerUi?.editingSubjectLessonId !== lessonId) return;
+  state.plannerUi.editingSubjectLessonId = null;
+  renderView();
+}
+
+function plannerQuickSelectLessonSubject(lessonId, value) {
+  plannerQuickUpdateLessonField(lessonId, 'subject', value, false);
+  state.plannerUi.editingSubjectLessonId = null;
+  renderView();
 }
 
 function plannerUpdateSelectedLessonField(field, value) {

@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.20
+ * THIS FILE IS VERSION: 1.12.21
  * Last updated: 2026-04-06
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.21 - Planner now includes week navigation (previous/current/next + this week) in the header
  * v1.12.20 - Planner lessons can now be copied to another day in the current or next week
  * v1.12.19 - Planner lesson cards now use compact subject chips with click-to-edit dropdown
  * v1.12.18 - Planner lesson card quick-action icons now use quieter default styling with hover/focus reveal
@@ -48,7 +49,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.20';
+const APP_VERSION = '1.12.21';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
@@ -805,6 +806,7 @@ function renderPlanner(main) {
   if (!Object.prototype.hasOwnProperty.call(state.plannerUi, 'activeWeekOffset')) {
     state.plannerUi.activeWeekOffset = 0;
   }
+  state.plannerUi.activeWeekOffset = Number.isFinite(Number(state.plannerUi.activeWeekOffset)) ? Number(state.plannerUi.activeWeekOffset) : 0;
 
   const selectedLesson = state.lessonPlans.find(lesson => lesson.id === state.plannerUi.selectedLessonId) || null;
   if (!selectedLesson) {
@@ -870,9 +872,11 @@ function renderPlanner(main) {
       <div>
         <div class="topbar-title">Planner</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">Weekly board with lesson drawer editing.</div>
-        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn ${state.plannerUi.activeWeekOffset === 0 ? 'btn-primary' : ''}" type="button" onclick="plannerSetLessonBoardWeek(0)">Current week</button>
-          <button class="btn ${state.plannerUi.activeWeekOffset === 1 ? 'btn-primary' : ''}" type="button" onclick="plannerSetLessonBoardWeek(1)">Next week</button>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button class="btn" type="button" onclick="plannerShiftLessonBoardWeek(-1)">← Previous week</button>
+          <span style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace">${plannerLessonBoardWeekLabel(state.plannerUi.activeWeekOffset)}</span>
+          <button class="btn" type="button" onclick="plannerShiftLessonBoardWeek(1)">Next week →</button>
+          <button class="btn ${state.plannerUi.activeWeekOffset === 0 ? 'btn-primary' : ''}" type="button" onclick="plannerSetLessonBoardWeek(0)">This week</button>
         </div>
       </div>
       <div class="topbar-actions">
@@ -1097,11 +1101,30 @@ function plannerQuickSelectLessonSubject(lessonId, value) {
 }
 
 function plannerSetLessonBoardWeek(weekOffset) {
-  const normalized = Number(weekOffset) === 1 ? 1 : 0;
-  state.plannerUi.activeWeekOffset = normalized;
+  const normalized = Number.isFinite(Number(weekOffset)) ? Number(weekOffset) : 0;
+  state.plannerUi.activeWeekOffset = Math.round(normalized);
   state.plannerUi.armedDeleteLessonId = null;
   state.plannerUi.editingSubjectLessonId = null;
   renderView();
+}
+
+function plannerShiftLessonBoardWeek(direction) {
+  const delta = Number(direction) < 0 ? -1 : 1;
+  plannerSetLessonBoardWeek((state.plannerUi?.activeWeekOffset || 0) + delta);
+}
+
+function plannerLessonBoardWeekLabel(weekOffset = 0) {
+  const now = new Date();
+  const start = getWeekStart(now);
+  start.setDate(start.getDate() + (Number(weekOffset) || 0) * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 4);
+  const fmt = { day: 'numeric', month: 'short' };
+  const range = `${start.toLocaleDateString('en-AU', fmt)} – ${end.toLocaleDateString('en-AU', fmt)}`;
+  if ((Number(weekOffset) || 0) === 0) return `This week · ${range}`;
+  if ((Number(weekOffset) || 0) === 1) return `Next week · ${range}`;
+  if ((Number(weekOffset) || 0) === -1) return `Last week · ${range}`;
+  return `Week ${Number(weekOffset) > 0 ? '+' : ''}${Number(weekOffset)} · ${range}`;
 }
 
 function plannerOpenCopyLessonModal(lessonId) {
@@ -1135,8 +1158,8 @@ function plannerOpenCopyLessonModal(lessonId) {
         <div class="form-group" style="margin-bottom:0">
           <label class="form-label">Target week</label>
           <select id="planner-copy-week" class="form-input">
-            <option value="0" ${(lesson.weekOffset || 0) === 0 ? 'selected' : ''}>Current week</option>
-            <option value="1" ${(lesson.weekOffset || 0) === 1 ? 'selected' : ''}>Next week</option>
+            <option value="${state.plannerUi.activeWeekOffset || 0}">Current viewed week</option>
+            <option value="${(state.plannerUi.activeWeekOffset || 0) + 1}">Next week</option>
           </select>
         </div>
       </div>
@@ -1152,7 +1175,8 @@ function plannerConfirmCopyLesson(lessonId) {
   const lesson = state.lessonPlans.find(item => item.id === lessonId);
   if (!lesson) return;
   const dayKey = String(document.getElementById('planner-copy-day')?.value || lesson.dayKey || 'unscheduled');
-  const weekOffset = Number(document.getElementById('planner-copy-week')?.value || 0) === 1 ? 1 : 0;
+  const weekOffsetRaw = Number(document.getElementById('planner-copy-week')?.value ?? (state.plannerUi.activeWeekOffset || 0));
+  const weekOffset = Number.isFinite(weekOffsetRaw) ? Math.round(weekOffsetRaw) : 0;
   const copiedLesson = {
     id: `lesson_copy_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
     title: lesson.title || '',
@@ -1190,7 +1214,8 @@ function plannerUpdateSelectedLessonField(field, value) {
 function normalizeLessonPlan(raw = {}) {
   const validDayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'unscheduled'];
   const dayKey = validDayKeys.includes(raw.dayKey) ? raw.dayKey : 'mon';
-  const weekOffset = Number(raw.weekOffset) === 1 ? 1 : 0;
+  const parsedWeekOffset = Number(raw.weekOffset);
+  const weekOffset = Number.isFinite(parsedWeekOffset) ? Math.round(parsedWeekOffset) : 0;
   return {
     id: String(raw.id || `lesson_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`),
     title: String(raw.title || ''),

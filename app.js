@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.23
+ * THIS FILE IS VERSION: 1.12.24
  * Last updated: 2026-04-06
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.24 - Planner subject dropdowns now use a fuller available subject list for the current class context
  * v1.12.23 - Planner lesson drawer subject control restored as a reliable selectable dropdown
  * v1.12.22 - Planner selected week now persists across refresh
  * v1.12.21 - Planner now includes week navigation (previous/current/next + this week) in the header
@@ -51,7 +52,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.23';
+const APP_VERSION = '1.12.24';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const PLANNER_BOARD_WEEK_STORAGE_KEY = 'ct_planner_board_week_offset_v1';
 const THEME_STORAGE_KEY = 'app_theme';
@@ -937,9 +938,10 @@ function renderPlanner(main) {
 }
 
 function plannerGetInlineLessonSubjects() {
-  const enabledSubjects = getEnabledSubjectsFromRows(state.curriculumCodes || []);
+  const enabledSubjectsFromData = getEnabledSubjectsFromRows(state.curriculumCodes || []);
+  const enabledKnownSubjects = Object.keys(SUBJECT_COLOURS || {}).filter(isSubjectEnabled);
   const lessonSubjects = (state.lessonPlans || []).map(lesson => lesson.subject).filter(Boolean);
-  return [...new Set([...enabledSubjects, ...lessonSubjects])];
+  return [...new Set([...enabledSubjectsFromData, ...enabledKnownSubjects, ...lessonSubjects])].sort((a, b) => a.localeCompare(b));
 }
 
 function plannerSeedLessonPlansFromWeeklyBlocks() {

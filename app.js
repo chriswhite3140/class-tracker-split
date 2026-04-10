@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.22
+ * THIS FILE IS VERSION: 1.12.23
  * Last updated: 2026-04-06
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.23 - Planner lesson drawer subject control restored as a reliable selectable dropdown
  * v1.12.22 - Planner selected week now persists across refresh
  * v1.12.21 - Planner now includes week navigation (previous/current/next + this week) in the header
  * v1.12.20 - Planner lessons can now be copied to another day in the current or next week
@@ -50,7 +51,7 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.22';
+const APP_VERSION = '1.12.23';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
 const PLANNER_BOARD_WEEK_STORAGE_KEY = 'ct_planner_board_week_offset_v1';
 const THEME_STORAGE_KEY = 'app_theme';
@@ -913,7 +914,10 @@ function renderPlanner(main) {
             </div>
             <div class="form-group">
               <label class="form-label">Subject</label>
-              <input class="form-input" type="text" value="${escapeHtml(selectedLesson.subject || '')}" oninput="plannerUpdateSelectedLessonField('subject', this.value)">
+              <select class="form-input" onchange="plannerUpdateSelectedLessonField('subject', this.value)">
+                <option value="">No subject</option>
+                ${subjectOptions.map(subject => `<option value="${escapeHtml(subject)}" ${selectedLesson.subject === subject ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('')}
+              </select>
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label class="form-label">Day</label>

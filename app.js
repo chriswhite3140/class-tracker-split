@@ -2,7 +2,7 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.21
+ * THIS FILE IS VERSION: 1.12.22
  * Last updated: 2026-04-06
  * ============================================================
  *
@@ -10,6 +10,7 @@
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.22 - Planner selected week now persists across refresh
  * v1.12.21 - Planner now includes week navigation (previous/current/next + this week) in the header
  * v1.12.20 - Planner lessons can now be copied to another day in the current or next week
  * v1.12.19 - Planner lesson cards now use compact subject chips with click-to-edit dropdown
@@ -49,8 +50,9 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.21';
+const APP_VERSION = '1.12.22';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
+const PLANNER_BOARD_WEEK_STORAGE_KEY = 'ct_planner_board_week_offset_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -249,6 +251,7 @@ let state = {
     selectedLessonId: null,
     drawerOpen: false,
     draggingLessonId: null,
+    activeWeekOffset: loadPlannerBoardWeekOffset(),
   },
   themePreference: 'auto',
   textSizePreference: 'standard',
@@ -804,7 +807,7 @@ function renderPlanner(main) {
     state.plannerUi.editingSubjectLessonId = null;
   }
   if (!Object.prototype.hasOwnProperty.call(state.plannerUi, 'activeWeekOffset')) {
-    state.plannerUi.activeWeekOffset = 0;
+    state.plannerUi.activeWeekOffset = loadPlannerBoardWeekOffset();
   }
   state.plannerUi.activeWeekOffset = Number.isFinite(Number(state.plannerUi.activeWeekOffset)) ? Number(state.plannerUi.activeWeekOffset) : 0;
 
@@ -1103,6 +1106,7 @@ function plannerQuickSelectLessonSubject(lessonId, value) {
 function plannerSetLessonBoardWeek(weekOffset) {
   const normalized = Number.isFinite(Number(weekOffset)) ? Number(weekOffset) : 0;
   state.plannerUi.activeWeekOffset = Math.round(normalized);
+  savePlannerBoardWeekOffset();
   state.plannerUi.armedDeleteLessonId = null;
   state.plannerUi.editingSubjectLessonId = null;
   renderView();
@@ -1188,6 +1192,7 @@ function plannerConfirmCopyLesson(lessonId) {
   };
   state.lessonPlans.push(copiedLesson);
   state.plannerUi.activeWeekOffset = weekOffset;
+  savePlannerBoardWeekOffset();
   state.plannerUi.armedDeleteLessonId = null;
   state.plannerUi.editingSubjectLessonId = null;
   saveLessonPlansState();
@@ -1242,6 +1247,25 @@ function saveLessonPlansState() {
   try {
     const lessonPlans = Array.isArray(state.lessonPlans) ? state.lessonPlans.map(normalizeLessonPlan) : [];
     localStorage.setItem(LESSON_PLANS_STORAGE_KEY, JSON.stringify(lessonPlans));
+  } catch (e) {}
+}
+
+function loadPlannerBoardWeekOffset() {
+  try {
+    const raw = localStorage.getItem(PLANNER_BOARD_WEEK_STORAGE_KEY);
+    if (raw === null) return 0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function savePlannerBoardWeekOffset() {
+  try {
+    const raw = Number(state?.plannerUi?.activeWeekOffset);
+    const weekOffset = Number.isFinite(raw) ? Math.round(raw) : 0;
+    localStorage.setItem(PLANNER_BOARD_WEEK_STORAGE_KEY, String(weekOffset));
   } catch (e) {}
 }
 

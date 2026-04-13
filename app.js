@@ -2,14 +2,26 @@
  * ============================================================
  * ClassTracker — Australian Curriculum Progress Tracker
  * ============================================================
- * THIS FILE IS VERSION: 1.12.12
- * Last updated: 2026-04-04
+ * THIS FILE IS VERSION: 1.12.24
+ * Last updated: 2026-04-06
  * ============================================================
  *
  * Author: Chris White
  * Repo:   https://github.com/chriswhite3140/class-tracker-split
  * Live:   https://chriswhite3140.github.io/class-tracker-split
  *
+ * v1.12.24 - Planner subject dropdowns now use a fuller available subject list for the current class context
+ * v1.12.23 - Planner lesson drawer subject control restored as a reliable selectable dropdown
+ * v1.12.22 - Planner selected week now persists across refresh
+ * v1.12.21 - Planner now includes week navigation (previous/current/next + this week) in the header
+ * v1.12.20 - Planner lessons can now be copied to another day in the current or next week
+ * v1.12.19 - Planner lesson cards now use compact subject chips with click-to-edit dropdown
+ * v1.12.18 - Planner lesson card quick-action icons now use quieter default styling with hover/focus reveal
+ * v1.12.17 - Planner lesson card quick-action icons now use subtle default visibility with hover/focus emphasis
+ * v1.12.16 - Planner lesson cards now use tighter spacing and denser visual balance for weekly scanning
+ * v1.12.15 - Planner lesson cards now use inline two-step delete arming and improved wrapped title space
+ * v1.12.14 - Planner lesson cards now support direct inline title editing with compact icon actions
+ * v1.12.13 - Planner lesson cards now support quick title rename + inline subject picker
  * v1.12.12 - Planner lesson cards now include a quick delete action
  * v1.12.11 - Planner lesson cards now include a quick duplicate action
  * v1.12.10 - Planner lesson cards now support drag-and-drop movement between columns
@@ -40,8 +52,9 @@
  * ============================================================
  */
 
-const APP_VERSION = '1.12.12';
+const APP_VERSION = '1.12.24';
 const LESSON_PLANS_STORAGE_KEY = 'ct_planner_lesson_plans_v1';
+const PLANNER_BOARD_WEEK_STORAGE_KEY = 'ct_planner_board_week_offset_v1';
 const THEME_STORAGE_KEY = 'app_theme';
 const TEXT_SIZE_STORAGE_KEY = 'app_text_size';
 const APP_UI_STATE_STORAGE_KEY = 'ct_ui_state_v1';
@@ -240,6 +253,7 @@ let state = {
     selectedLessonId: null,
     drawerOpen: false,
     draggingLessonId: null,
+    activeWeekOffset: loadPlannerBoardWeekOffset(),
   },
   themePreference: 'auto',
   textSizePreference: 'standard',
@@ -786,17 +800,28 @@ function renderPlanner(main) {
   if (!Array.isArray(state.lessonPlans)) state.lessonPlans = [];
   plannerSeedLessonPlansFromWeeklyBlocks();
   if (!state.plannerUi || typeof state.plannerUi !== 'object') {
-    state.plannerUi = { selectedLessonId: null, drawerOpen: false, draggingLessonId: null };
+    state.plannerUi = { selectedLessonId: null, drawerOpen: false, draggingLessonId: null, armedDeleteLessonId: null, editingSubjectLessonId: null };
   }
+  if (!Object.prototype.hasOwnProperty.call(state.plannerUi, 'armedDeleteLessonId')) {
+    state.plannerUi.armedDeleteLessonId = null;
+  }
+  if (!Object.prototype.hasOwnProperty.call(state.plannerUi, 'editingSubjectLessonId')) {
+    state.plannerUi.editingSubjectLessonId = null;
+  }
+  if (!Object.prototype.hasOwnProperty.call(state.plannerUi, 'activeWeekOffset')) {
+    state.plannerUi.activeWeekOffset = loadPlannerBoardWeekOffset();
+  }
+  state.plannerUi.activeWeekOffset = Number.isFinite(Number(state.plannerUi.activeWeekOffset)) ? Number(state.plannerUi.activeWeekOffset) : 0;
 
   const selectedLesson = state.lessonPlans.find(lesson => lesson.id === state.plannerUi.selectedLessonId) || null;
   if (!selectedLesson) {
     state.plannerUi.selectedLessonId = null;
     state.plannerUi.drawerOpen = false;
   }
+  const subjectOptions = plannerGetInlineLessonSubjects();
 
   const boardColumns = plannerDays.map(day => {
-    const dayLessons = state.lessonPlans.filter(lesson => lesson.dayKey === day.key);
+    const dayLessons = state.lessonPlans.filter(lesson => lesson.dayKey === day.key && (lesson.weekOffset || 0) === state.plannerUi.activeWeekOffset);
     return `
       <section class="planner-lesson-column">
         <div class="planner-lesson-column-head">${day.label}</div>
@@ -805,21 +830,39 @@ function renderPlanner(main) {
             ? `<div class="planner-lesson-empty">No lessons</div>`
             : dayLessons.map(lesson => `
               <div class="planner-lesson-card-wrap">
-                <button
+                <div
                   class="planner-lesson-card ${state.plannerUi.selectedLessonId === lesson.id ? 'is-selected' : ''}"
                   onclick="plannerOpenLessonDrawer('${lesson.id}')"
                   draggable="true"
                   ondragstart="plannerStartLessonDrag(event, '${lesson.id}')"
                   ondragend="plannerEndLessonDrag(event)"
-                  type="button"
                 >
-                  <div class="planner-lesson-card-title">${escapeHtml(lesson.title || 'Untitled lesson')}</div>
-                  <div class="planner-lesson-card-meta">${escapeHtml(lesson.subject || 'No subject')}</div>
+                  <div class="planner-lesson-card-top">
+                    <textarea
+                      class="planner-lesson-title-input"
+                      rows="2"
+                      placeholder="Untitled lesson"
+                      aria-label="Lesson title"
+                      onclick="event.stopPropagation()"
+                      oninput="plannerQuickUpdateLessonField('${lesson.id}', 'title', this.value, false)"
+                      onblur="plannerQuickUpdateLessonField('${lesson.id}', 'title', this.value.trim(), true)"
+                    >${escapeHtml(lesson.title || '')}</textarea>
+                    <div class="planner-lesson-icon-actions" onclick="event.stopPropagation()">
+                      <button class="planner-card-icon-btn" type="button" title="Copy to..." aria-label="Copy lesson to another day or week" onclick="event.stopPropagation();plannerOpenCopyLessonModal('${lesson.id}')">↪</button>
+                      <button class="planner-card-icon-btn" type="button" title="Duplicate lesson" aria-label="Duplicate lesson" onclick="event.stopPropagation();plannerDuplicateLesson('${lesson.id}')">⧉</button>
+                      <button class="planner-card-icon-btn planner-card-icon-btn-danger ${state.plannerUi.armedDeleteLessonId === lesson.id ? 'is-armed' : ''}" type="button" title="${state.plannerUi.armedDeleteLessonId === lesson.id ? 'Click again to delete' : 'Delete lesson'}" aria-label="Delete lesson" onclick="event.stopPropagation();plannerToggleLessonDelete('${lesson.id}')">${state.plannerUi.armedDeleteLessonId === lesson.id ? '!' : '✕'}</button>
+                    </div>
+                  </div>
+                  <div class="planner-lesson-card-meta">
+                    ${state.plannerUi.editingSubjectLessonId === lesson.id
+                      ? `<select class="planner-inline-select planner-inline-select-compact" onclick="event.stopPropagation()" onchange="plannerQuickSelectLessonSubject('${lesson.id}', this.value)" onblur="plannerCloseLessonSubjectEditor('${lesson.id}')" aria-label="Quick subject for ${escapeHtml(lesson.title || 'Untitled lesson')}">
+                          <option value="">No subject</option>
+                          ${subjectOptions.map(subject => `<option value="${escapeHtml(subject)}" ${lesson.subject === subject ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('')}
+                        </select>`
+                      : `<button class="planner-subject-chip" type="button" onclick="event.stopPropagation();plannerOpenLessonSubjectEditor('${lesson.id}')" aria-label="Edit subject for ${escapeHtml(lesson.title || 'Untitled lesson')}">${escapeHtml(lesson.subject || 'No subject')}</button>`
+                    }
+                  </div>
                   ${lesson.shortDescription ? `<div class="planner-lesson-card-desc">${escapeHtml(lesson.shortDescription)}</div>` : ''}
-                </button>
-                <div class="planner-inline-actions">
-                  <button class="planner-mini-btn" type="button" onclick="plannerDuplicateLesson('${lesson.id}')">Duplicate</button>
-                  <button class="planner-mini-btn" type="button" onclick="plannerDeleteLesson('${lesson.id}')">Delete</button>
                 </div>
               </div>
             `).join('')
@@ -834,6 +877,12 @@ function renderPlanner(main) {
       <div>
         <div class="topbar-title">Planner</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">Weekly board with lesson drawer editing.</div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button class="btn" type="button" onclick="plannerShiftLessonBoardWeek(-1)">← Previous week</button>
+          <span style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace">${plannerLessonBoardWeekLabel(state.plannerUi.activeWeekOffset)}</span>
+          <button class="btn" type="button" onclick="plannerShiftLessonBoardWeek(1)">Next week →</button>
+          <button class="btn ${state.plannerUi.activeWeekOffset === 0 ? 'btn-primary' : ''}" type="button" onclick="plannerSetLessonBoardWeek(0)">This week</button>
+        </div>
       </div>
       <div class="topbar-actions">
         <button class="btn btn-primary" id="planner-add-lesson-btn" type="button" onclick="plannerAddLesson()">+ Add Lesson</button>
@@ -866,7 +915,10 @@ function renderPlanner(main) {
             </div>
             <div class="form-group">
               <label class="form-label">Subject</label>
-              <input class="form-input" type="text" value="${escapeHtml(selectedLesson.subject || '')}" oninput="plannerUpdateSelectedLessonField('subject', this.value)">
+              <select class="form-input" onchange="plannerUpdateSelectedLessonField('subject', this.value)">
+                <option value="">No subject</option>
+                ${subjectOptions.map(subject => `<option value="${escapeHtml(subject)}" ${selectedLesson.subject === subject ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('')}
+              </select>
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label class="form-label">Day</label>
@@ -885,6 +937,13 @@ function renderPlanner(main) {
   `;
 }
 
+function plannerGetInlineLessonSubjects() {
+  const enabledSubjectsFromData = getEnabledSubjectsFromRows(state.curriculumCodes || []);
+  const enabledKnownSubjects = Object.keys(SUBJECT_COLOURS || {}).filter(isSubjectEnabled);
+  const lessonSubjects = (state.lessonPlans || []).map(lesson => lesson.subject).filter(Boolean);
+  return [...new Set([...enabledSubjectsFromData, ...enabledKnownSubjects, ...lessonSubjects])].sort((a, b) => a.localeCompare(b));
+}
+
 function plannerSeedLessonPlansFromWeeklyBlocks() {
   if (state.lessonPlans.length > 0) return;
   const weekData = getPlannerWeekData();
@@ -897,6 +956,7 @@ function plannerSeedLessonPlansFromWeeklyBlocks() {
       shortDescription: block.notes || '',
       subject: block.subject || '',
       dayKey: ['mon', 'tue', 'wed', 'thu', 'fri'][Math.max(0, Math.min(4, Number(block.day) || 0))],
+      weekOffset: 0,
     }));
   state.lessonPlans = seeded;
   saveLessonPlansState();
@@ -905,6 +965,8 @@ function plannerSeedLessonPlansFromWeeklyBlocks() {
 function plannerOpenLessonDrawer(lessonId) {
   const lessonExists = state.lessonPlans.some(lesson => lesson.id === lessonId);
   if (!lessonExists) return;
+  state.plannerUi.armedDeleteLessonId = null;
+  state.plannerUi.editingSubjectLessonId = null;
   state.plannerUi.selectedLessonId = lessonId;
   state.plannerUi.drawerOpen = true;
   renderView();
@@ -961,6 +1023,7 @@ function plannerAddLesson() {
     shortDescription: '',
     subject: '',
     dayKey: 'unscheduled',
+    weekOffset: state.plannerUi?.activeWeekOffset === 1 ? 1 : 0,
     status: 'planned',
   };
   state.lessonPlans.push(newLesson);
@@ -980,24 +1043,166 @@ function plannerDuplicateLesson(lessonId) {
     subject: lesson.subject || '',
     dayKey: lesson.dayKey || 'unscheduled',
     status: lesson.status || 'planned',
+    weekOffset: lesson.weekOffset || 0,
   };
   state.lessonPlans.push(duplicatedLesson);
+  state.plannerUi.armedDeleteLessonId = null;
+  state.plannerUi.editingSubjectLessonId = null;
   saveLessonPlansState();
+  renderView();
+}
+
+function plannerToggleLessonDelete(lessonId) {
+  if (state.plannerUi?.armedDeleteLessonId === lessonId) {
+    plannerDeleteLesson(lessonId);
+    return;
+  }
+  state.plannerUi.armedDeleteLessonId = lessonId;
   renderView();
 }
 
 function plannerDeleteLesson(lessonId) {
   const lesson = state.lessonPlans.find(item => item.id === lessonId);
   if (!lesson) return;
-  const confirmed = confirm(`Delete lesson "${lesson.title || 'Untitled lesson'}"?`);
-  if (!confirmed) return;
 
   state.lessonPlans = state.lessonPlans.filter(item => item.id !== lessonId);
+  state.plannerUi.armedDeleteLessonId = null;
+  if (state.plannerUi?.editingSubjectLessonId === lessonId) state.plannerUi.editingSubjectLessonId = null;
   if (state.plannerUi?.selectedLessonId === lessonId) {
     state.plannerUi.selectedLessonId = null;
     state.plannerUi.drawerOpen = false;
   }
   saveLessonPlansState();
+  renderView();
+}
+
+function plannerQuickUpdateLessonField(lessonId, field, value, rerender = true) {
+  const editableFields = new Set(['title', 'subject', 'dayKey', 'shortDescription']);
+  if (!editableFields.has(field)) return;
+  const idx = state.lessonPlans.findIndex(lesson => lesson.id === lessonId);
+  if (idx < 0) return;
+  const nextValue = field === 'dayKey'
+    ? (['unscheduled', 'mon', 'tue', 'wed', 'thu', 'fri'].includes(value) ? value : state.lessonPlans[idx].dayKey)
+    : value;
+  state.plannerUi.armedDeleteLessonId = null;
+  if (field !== 'subject') state.plannerUi.editingSubjectLessonId = null;
+  state.lessonPlans[idx] = { ...state.lessonPlans[idx], [field]: nextValue };
+  saveLessonPlansState();
+  if (rerender) renderView();
+}
+
+function plannerOpenLessonSubjectEditor(lessonId) {
+  state.plannerUi.armedDeleteLessonId = null;
+  state.plannerUi.editingSubjectLessonId = lessonId;
+  renderView();
+}
+
+function plannerCloseLessonSubjectEditor(lessonId) {
+  if (state.plannerUi?.editingSubjectLessonId !== lessonId) return;
+  state.plannerUi.editingSubjectLessonId = null;
+  renderView();
+}
+
+function plannerQuickSelectLessonSubject(lessonId, value) {
+  plannerQuickUpdateLessonField(lessonId, 'subject', value, false);
+  state.plannerUi.editingSubjectLessonId = null;
+  renderView();
+}
+
+function plannerSetLessonBoardWeek(weekOffset) {
+  const normalized = Number.isFinite(Number(weekOffset)) ? Number(weekOffset) : 0;
+  state.plannerUi.activeWeekOffset = Math.round(normalized);
+  savePlannerBoardWeekOffset();
+  state.plannerUi.armedDeleteLessonId = null;
+  state.plannerUi.editingSubjectLessonId = null;
+  renderView();
+}
+
+function plannerShiftLessonBoardWeek(direction) {
+  const delta = Number(direction) < 0 ? -1 : 1;
+  plannerSetLessonBoardWeek((state.plannerUi?.activeWeekOffset || 0) + delta);
+}
+
+function plannerLessonBoardWeekLabel(weekOffset = 0) {
+  const now = new Date();
+  const start = getWeekStart(now);
+  start.setDate(start.getDate() + (Number(weekOffset) || 0) * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 4);
+  const fmt = { day: 'numeric', month: 'short' };
+  const range = `${start.toLocaleDateString('en-AU', fmt)} – ${end.toLocaleDateString('en-AU', fmt)}`;
+  if ((Number(weekOffset) || 0) === 0) return `This week · ${range}`;
+  if ((Number(weekOffset) || 0) === 1) return `Next week · ${range}`;
+  if ((Number(weekOffset) || 0) === -1) return `Last week · ${range}`;
+  return `Week ${Number(weekOffset) > 0 ? '+' : ''}${Number(weekOffset)} · ${range}`;
+}
+
+function plannerOpenCopyLessonModal(lessonId) {
+  const lesson = state.lessonPlans.find(item => item.id === lessonId);
+  if (!lesson) return;
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:420px;width:94%">
+      <div class="modal-head">
+        <div class="modal-title">Copy lesson to...</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Lesson</label>
+          <div style="font-size:13px;color:var(--text)">${escapeHtml(lesson.title || 'Untitled lesson')}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target day</label>
+          <select id="planner-copy-day" class="form-input">
+            <option value="unscheduled" ${lesson.dayKey === 'unscheduled' ? 'selected' : ''}>Unscheduled</option>
+            <option value="mon" ${lesson.dayKey === 'mon' ? 'selected' : ''}>Monday</option>
+            <option value="tue" ${lesson.dayKey === 'tue' ? 'selected' : ''}>Tuesday</option>
+            <option value="wed" ${lesson.dayKey === 'wed' ? 'selected' : ''}>Wednesday</option>
+            <option value="thu" ${lesson.dayKey === 'thu' ? 'selected' : ''}>Thursday</option>
+            <option value="fri" ${lesson.dayKey === 'fri' ? 'selected' : ''}>Friday</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Target week</label>
+          <select id="planner-copy-week" class="form-input">
+            <option value="${state.plannerUi.activeWeekOffset || 0}">Current viewed week</option>
+            <option value="${(state.plannerUi.activeWeekOffset || 0) + 1}">Next week</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="plannerConfirmCopyLesson('${lessonId}')">Copy lesson</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function plannerConfirmCopyLesson(lessonId) {
+  const lesson = state.lessonPlans.find(item => item.id === lessonId);
+  if (!lesson) return;
+  const dayKey = String(document.getElementById('planner-copy-day')?.value || lesson.dayKey || 'unscheduled');
+  const weekOffsetRaw = Number(document.getElementById('planner-copy-week')?.value ?? (state.plannerUi.activeWeekOffset || 0));
+  const weekOffset = Number.isFinite(weekOffsetRaw) ? Math.round(weekOffsetRaw) : 0;
+  const copiedLesson = {
+    id: `lesson_copy_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+    title: lesson.title || '',
+    shortDescription: lesson.shortDescription || '',
+    subject: lesson.subject || '',
+    dayKey: ['unscheduled', 'mon', 'tue', 'wed', 'thu', 'fri'].includes(dayKey) ? dayKey : 'unscheduled',
+    status: lesson.status || 'planned',
+    weekOffset,
+  };
+  state.lessonPlans.push(copiedLesson);
+  state.plannerUi.activeWeekOffset = weekOffset;
+  savePlannerBoardWeekOffset();
+  state.plannerUi.armedDeleteLessonId = null;
+  state.plannerUi.editingSubjectLessonId = null;
+  saveLessonPlansState();
+  closeModal();
   renderView();
 }
 
@@ -1020,12 +1225,15 @@ function plannerUpdateSelectedLessonField(field, value) {
 function normalizeLessonPlan(raw = {}) {
   const validDayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'unscheduled'];
   const dayKey = validDayKeys.includes(raw.dayKey) ? raw.dayKey : 'mon';
+  const parsedWeekOffset = Number(raw.weekOffset);
+  const weekOffset = Number.isFinite(parsedWeekOffset) ? Math.round(parsedWeekOffset) : 0;
   return {
     id: String(raw.id || `lesson_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`),
     title: String(raw.title || ''),
     shortDescription: String(raw.shortDescription || ''),
     subject: String(raw.subject || ''),
     dayKey,
+    weekOffset,
     status: String(raw.status || 'planned'),
   };
 }
@@ -1045,6 +1253,25 @@ function saveLessonPlansState() {
   try {
     const lessonPlans = Array.isArray(state.lessonPlans) ? state.lessonPlans.map(normalizeLessonPlan) : [];
     localStorage.setItem(LESSON_PLANS_STORAGE_KEY, JSON.stringify(lessonPlans));
+  } catch (e) {}
+}
+
+function loadPlannerBoardWeekOffset() {
+  try {
+    const raw = localStorage.getItem(PLANNER_BOARD_WEEK_STORAGE_KEY);
+    if (raw === null) return 0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function savePlannerBoardWeekOffset() {
+  try {
+    const raw = Number(state?.plannerUi?.activeWeekOffset);
+    const weekOffset = Number.isFinite(raw) ? Math.round(raw) : 0;
+    localStorage.setItem(PLANNER_BOARD_WEEK_STORAGE_KEY, String(weekOffset));
   } catch (e) {}
 }
 
